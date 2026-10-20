@@ -1,0 +1,907 @@
+import 'package:flutter/material.dart';
+import 'models.dart';
+import 'theme.dart';
+import 'widgets.dart';
+
+class DiscoverScreen extends StatelessWidget {
+  const DiscoverScreen({super.key, required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) {
+    final people = store.discover;
+    return Column(children: [
+      Padding(
+          padding: const EdgeInsets.fromLTRB(24, 25, 24, 20),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  const Eyebrow('A little curiosity. A real connection.'),
+                  const SizedBox(height: 9),
+                  Text('Meet your kind\nof person.',
+                      style: Theme.of(context).textTheme.headlineLarge)
+                ])),
+            Padding(
+                padding: const EdgeInsets.only(top: 26),
+                child: RoundButton(
+                    icon: Icons.tune_rounded,
+                    label: 'Discovery preferences',
+                    onTap: () => showFilters(context, store))),
+          ])),
+      Expanded(
+          child: people.isEmpty
+              ? EmptyState(
+                  icon: Icons.wb_sunny_outlined,
+                  title: store.paused
+                      ? 'Take your time.'
+                      : 'A little pause,\nmore possibility.',
+                  detail: store.paused
+                      ? 'Your profile is paused. Your conversations are still here.'
+                      : 'You’ve met everyone in this preview who fits your preferences. Try widening your circle.',
+                  action: FilledButton(
+                      onPressed: () {
+                        if (store.paused) {
+                          store.paused = false;
+                          store.update();
+                        } else {
+                          showFilters(context, store);
+                        }
+                      },
+                      child: Text(store.paused
+                          ? 'Resume discovering'
+                          : 'Adjust preferences')))
+              : ListView(
+                  key: ValueKey(people.first.id),
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  children: [
+                      _PersonCard(
+                          person: people.first,
+                          onLike: () => showLikeComposer(
+                              context, store, people.first, 'photo'),
+                          onMore: () =>
+                              showSafety(context, store, people.first)),
+                      const SizedBox(height: 18),
+                      Wrap(spacing: 7, runSpacing: 8, children: [
+                        Tag(Icons.work_outline_rounded, people.first.job),
+                        Tag(Icons.near_me_outlined,
+                            '${people.first.distance} km away'),
+                        const Tag(
+                            Icons.favorite_border, 'Long-term relationship')
+                      ]),
+                      const SizedBox(height: 20),
+                      Container(
+                          padding: const EdgeInsets.all(23),
+                          decoration: BoxDecoration(
+                              color: const Color(0xFFF0ECE5),
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Eyebrow('My ideal Sunday'),
+                                const SizedBox(height: 14),
+                                Text(people.first.answer,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium
+                                        ?.copyWith(fontSize: 25, height: 1.4)),
+                                const SizedBox(height: 12),
+                                Align(
+                                    alignment: Alignment.centerRight,
+                                    child: RoundButton(
+                                        icon: Icons.favorite_border,
+                                        label: 'Like this prompt',
+                                        onTap: () => showLikeComposer(
+                                            context,
+                                            store,
+                                            people.first,
+                                            'My ideal Sunday'))),
+                              ])),
+                      const SizedBox(height: 22),
+                      Row(children: [
+                        RoundButton(
+                            icon: Icons.close_rounded,
+                            label: 'Pass on ${people.first.name}',
+                            onTap: () {
+                              final person = people.first;
+                              store.skip(person);
+                              ScaffoldMessenger.of(context)
+                                  .hideCurrentSnackBar();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content: Text('Passed on ${person.name}'),
+                                      action: SnackBarAction(
+                                          label: 'Undo',
+                                          textColor: Colors.white,
+                                          onPressed: () =>
+                                              store.undo(person))));
+                            }),
+                        const SizedBox(width: 13),
+                        const Expanded(
+                            child: Text(
+                                'Good things start with\nsomething in common.',
+                                style: TextStyle(
+                                    fontSize: 12,
+                                    height: 1.5,
+                                    color: KindredColors.muted))),
+                        Text('${store.remaining} likes left',
+                            style: const TextStyle(
+                                fontSize: 11, color: KindredColors.muted))
+                      ]),
+                      const SizedBox(height: 22),
+                      const Center(
+                          child: Eyebrow('Demo profiles · UI preview')),
+                    ])),
+    ]);
+  }
+}
+
+class _PersonCard extends StatelessWidget {
+  const _PersonCard(
+      {required this.person, required this.onLike, required this.onMore});
+  final Person person;
+  final VoidCallback onLike, onMore;
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+      borderRadius: BorderRadius.circular(23),
+      child: AspectRatio(
+          aspectRatio: .83,
+          child: Stack(fit: StackFit.expand, children: [
+            Portrait(person, radius: 0),
+            const DecoratedBox(
+                decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                  Colors.transparent,
+                  Colors.transparent,
+                  Color(0xB51B1820)
+                ],
+                        stops: [
+                  0,
+                  .45,
+                  1
+                ]))),
+            Positioned(
+                left: 17,
+                top: 17,
+                child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+                    decoration: BoxDecoration(
+                        color: KindredColors.paper.withValues(alpha: .94),
+                        borderRadius: BorderRadius.circular(30)),
+                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.auto_awesome_outlined,
+                          size: 13, color: KindredColors.coral),
+                      SizedBox(width: 6),
+                      Text('A fresh connection',
+                          style: TextStyle(
+                              fontSize: 10, fontWeight: FontWeight.w600))
+                    ]))),
+            Positioned(
+                right: 8,
+                top: 8,
+                child: IconButton(
+                    onPressed: onMore,
+                    tooltip: 'Profile options',
+                    icon: const Icon(Icons.more_horiz, color: Colors.white))),
+            Positioned(
+                left: 22,
+                right: 18,
+                bottom: 22,
+                child:
+                    Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Row(children: [
+                          Flexible(
+                              child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text('${person.name}, ${person.age}',
+                                      style: const TextStyle(
+                                          fontFamily: 'Lora',
+                                          fontSize: 33,
+                                          color: Colors.white,
+                                          letterSpacing: -.8)))),
+                          const SizedBox(width: 8),
+                          if (person.verified)
+                            const Tooltip(
+                                message: 'Selfie verified',
+                                child: Icon(Icons.verified,
+                                    color: Color(0xFFD9E5DE), size: 20))
+                        ]),
+                        const SizedBox(height: 5),
+                        const Text('A good story starts with hello.',
+                            style: TextStyle(fontSize: 12, color: Colors.white))
+                      ])),
+                  RoundButton(
+                      icon: Icons.favorite_border_rounded,
+                      label: 'Like ${person.name}’s photo',
+                      onTap: onLike,
+                      size: 52),
+                ])),
+          ])));
+}
+
+Future<void> showLikeComposer(BuildContext context, PreviewStore store,
+    Person person, String target) async {
+  if (store.remaining <= 0) {
+    showNotice(
+        context, 'You’ve used your 8 preview likes. Take a little breather.');
+    return;
+  }
+  final controller = TextEditingController();
+  final sent = await showKindredSheet<bool>(
+      context,
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Eyebrow('Make the first move'),
+        const SizedBox(height: 12),
+        Text('A little more than a like.',
+            style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 18),
+        Row(children: [
+          Portrait(person, height: 62, width: 54, radius: 10),
+          const SizedBox(width: 14),
+          Expanded(
+              child: Text(
+                  'You’re liking ${person.name}’s ${target == 'photo' ? 'photo' : 'answer to “$target”'}.'))
+        ]),
+        const SizedBox(height: 20),
+        TextField(
+            controller: controller,
+            maxLength: 150,
+            maxLines: 3,
+            autofocus: true,
+            decoration: const InputDecoration(
+                hintText:
+                    'What caught your attention?\nAdd a comment (optional).')),
+        const SizedBox(height: 14),
+        FilledButton(
+            onPressed: () {
+              store.like(person, target: target, comment: controller.text);
+              Navigator.pop(context, true);
+            },
+            child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.favorite_border, size: 18),
+                  SizedBox(width: 8),
+                  Text('Send like')
+                ])),
+        const SizedBox(height: 12),
+        const Text('Preview only. Your like won’t be sent to a real person.',
+            style: TextStyle(fontSize: 11, color: KindredColors.muted)),
+      ]));
+  // Wait for the sheet's reverse transition before disposing its field controller.
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  controller.dispose();
+  if (sent == true && context.mounted) {
+    showNotice(context, 'Like sent to ${person.name} in this preview.');
+  }
+}
+
+Future<void> showFilters(BuildContext context, PreviewStore store) async {
+  var ages = store.ages;
+  var distance = store.distance;
+  var verified = store.verifiedOnly;
+  await showKindredSheet(
+      context,
+      StatefulBuilder(
+          builder: (context, setState) =>
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Eyebrow('Your kind of connection'),
+                const SizedBox(height: 10),
+                Text('Widen your circle.\nOr make it a little closer.',
+                    style: Theme.of(context).textTheme.headlineMedium),
+                const SizedBox(height: 28),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(child: Text('Age range')),
+                      Text('${ages.start.round()}–${ages.end.round()}',
+                          style: const TextStyle(fontWeight: FontWeight.w600))
+                    ]),
+                RangeSlider(
+                    values: ages,
+                    min: 18,
+                    max: 60,
+                    divisions: 42,
+                    labels: RangeLabels(
+                        '${ages.start.round()}', '${ages.end.round()}'),
+                    onChanged: (value) => setState(() => ages = value)),
+                const SizedBox(height: 18),
+                Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Expanded(child: Text('Maximum distance')),
+                      Text('${distance.round()} km',
+                          style: const TextStyle(fontWeight: FontWeight.w600))
+                    ]),
+                Slider(
+                    value: distance,
+                    min: 1,
+                    max: 100,
+                    divisions: 99,
+                    label: '${distance.round()} km',
+                    onChanged: (value) => setState(() => distance = value)),
+                SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Selfie-verified profiles'),
+                    subtitle: const Text('A little extra peace of mind'),
+                    value: verified,
+                    onChanged: (value) => setState(() => verified = value)),
+                const SizedBox(height: 22),
+                FilledButton(
+                    onPressed: () {
+                      store.ages = ages;
+                      store.distance = distance;
+                      store.verifiedOnly = verified;
+                      store.update();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Show my people')),
+                Center(
+                    child: TextButton(
+                        onPressed: () => setState(() {
+                              ages = const RangeValues(24, 32);
+                              distance = 25;
+                              verified = false;
+                            }),
+                        child: const Text('Reset preferences'))),
+              ])));
+}
+
+class LikesScreen extends StatelessWidget {
+  const LikesScreen({super.key, required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) =>
+      ListView(padding: const EdgeInsets.all(24), children: [
+        const Eyebrow('The feeling could be mutual'),
+        const SizedBox(height: 10),
+        Text('You caught\nsomeone’s eye.',
+            style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: 10),
+        const Text('A little interest. A lovely place to start.',
+            style: TextStyle(color: KindredColors.muted)),
+        const SizedBox(height: 28),
+        if (store.incoming.isEmpty)
+          const EmptyState(
+              icon: Icons.favorite_border,
+              title: 'Room for something good.',
+              detail:
+                  'You’re all caught up. New likes will find their way here.'),
+        for (final p in store.incoming)
+          Padding(
+              padding: const EdgeInsets.only(bottom: 22),
+              child: Container(
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: KindredColors.line)),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Portrait(p, height: 240, width: double.infinity),
+                        Padding(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    Text('${p.name}, ${p.age}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge),
+                                    const SizedBox(width: 7),
+                                    const Icon(Icons.verified,
+                                        size: 17, color: KindredColors.green)
+                                  ]),
+                                  const SizedBox(height: 5),
+                                  const Text(
+                                      'Liked your answer to “My ideal Sunday”',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: KindredColors.muted)),
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                      '“I know just the place. Coffee and a bookstore sounds like a pretty perfect start.”',
+                                      style: TextStyle(
+                                          fontFamily: 'Lora',
+                                          fontSize: 20,
+                                          height: 1.45)),
+                                  const SizedBox(height: 20),
+                                  Row(children: [
+                                    RoundButton(
+                                        icon: Icons.close,
+                                        label: 'Remove ${p.name}’s like',
+                                        onTap: () => store.removeLike(p)),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                        child: FilledButton(
+                                            onPressed: () {
+                                              final chat = store.match(p);
+                                              Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute<void>(
+                                                      builder: (_) =>
+                                                          ChatScreen(
+                                                              store: store,
+                                                              chat: chat)));
+                                            },
+                                            child: const Text(
+                                                'Like back & say hello')))
+                                  ]),
+                                ])),
+                      ]))),
+        const Center(child: Eyebrow('Demo likes · UI preview')),
+      ]);
+}
+
+class MessagesScreen extends StatelessWidget {
+  const MessagesScreen({super.key, required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) =>
+      ListView(padding: const EdgeInsets.all(24), children: [
+        const Eyebrow('Less small talk. More possibility.'),
+        const SizedBox(height: 10),
+        Text('Let’s see\nwhere this goes.',
+            style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: 28),
+        Row(children: [
+          const Text('YOUR CONNECTIONS',
+              style: TextStyle(
+                  fontSize: 10, letterSpacing: 2, color: KindredColors.muted)),
+          const SizedBox(width: 8),
+          Text('${store.conversations.length}',
+              style: const TextStyle(fontSize: 12, color: KindredColors.coral))
+        ]),
+        const SizedBox(height: 16),
+        if (store.conversations.isEmpty)
+          const EmptyState(
+              icon: Icons.chat_bubble_outline,
+              title: 'Your next hello is out there.',
+              detail:
+                  'When a like becomes mutual, your conversation begins here.'),
+        for (final chat in store.conversations)
+          Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                leading:
+                    Portrait(chat.person, height: 62, width: 62, radius: 31),
+                title: Text(chat.person.name,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: Text(
+                    chat.messages.isEmpty
+                        ? 'Start with a little hello'
+                        : chat.messages.last.text,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 12, color: KindredColors.muted)),
+                trailing:
+                    const Icon(Icons.chevron_right, color: KindredColors.muted),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                        builder: (_) => ChatScreen(store: store, chat: chat))),
+              )),
+        const SizedBox(height: 30),
+        Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+                color: KindredColors.blush,
+                borderRadius: BorderRadius.circular(18)),
+            child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.lightbulb_outline, color: KindredColors.coral),
+                  SizedBox(width: 12),
+                  Expanded(
+                      child: Text(
+                          'A good question goes a long way. Ask about something that made you curious.',
+                          style: TextStyle(fontSize: 13, height: 1.6)))
+                ])),
+      ]);
+}
+
+class ChatScreen extends StatefulWidget {
+  const ChatScreen({super.key, required this.store, required this.chat});
+  final PreviewStore store;
+  final Conversation chat;
+  @override
+  State<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends State<ChatScreen> {
+  final controller = TextEditingController();
+  final scroll = ScrollController();
+  void send() {
+    if (controller.text.trim().isEmpty) return;
+    setState(() {
+      widget.store.send(widget.chat, controller.text);
+      controller.clear();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (scroll.hasClients) {
+        scroll.animateTo(scroll.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    scroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+            title: Row(children: [
+              Portrait(widget.chat.person, height: 38, width: 38, radius: 19),
+              const SizedBox(width: 12),
+              Text(widget.chat.person.name,
+                  style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 6),
+              const Icon(Icons.verified, size: 16, color: KindredColors.green)
+            ]),
+            actions: [
+              IconButton(
+                  tooltip: 'Conversation safety',
+                  onPressed: () => showSafety(
+                      context, widget.store, widget.chat.person,
+                      chat: widget.chat),
+                  icon: const Icon(Icons.shield_outlined))
+            ]),
+        body: SafeArea(
+            child: Center(
+                child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: Column(children: [
+                      Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          color: KindredColors.blush,
+                          child: const Text(
+                              'Demo conversation · Messages stay on this device',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 11, color: KindredColors.muted))),
+                      Expanded(
+                          child: ListView(
+                              controller: scroll,
+                              padding: const EdgeInsets.all(22),
+                              children: [
+                            const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 22),
+                                child: Center(
+                                    child: Eyebrow(
+                                        'Every good story starts somewhere'))),
+                            for (final message in widget.chat.messages)
+                              Align(
+                                  alignment: message.mine
+                                      ? Alignment.centerRight
+                                      : Alignment.centerLeft,
+                                  child: Container(
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 300),
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 18, vertical: 14),
+                                      decoration: BoxDecoration(
+                                          color: message.mine
+                                              ? KindredColors.plum
+                                              : Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(18)),
+                                      child: Text(message.text,
+                                          style: TextStyle(
+                                              color: message.mine
+                                                  ? Colors.white
+                                                  : KindredColors.plum,
+                                              height: 1.5)))),
+                          ])),
+                      Padding(
+                          padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+                          child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                    child: TextField(
+                                        controller: controller,
+                                        minLines: 1,
+                                        maxLines: 4,
+                                        maxLength: 2000,
+                                        decoration: const InputDecoration(
+                                            hintText: 'A little hello…',
+                                            counterText: ''),
+                                        onSubmitted: (_) => send())),
+                                const SizedBox(width: 10),
+                                RoundButton(
+                                    icon: Icons.arrow_upward_rounded,
+                                    label: 'Send message',
+                                    filled: true,
+                                    onTap: send)
+                              ])),
+                    ])))),
+      );
+}
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key, required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) =>
+      ListView(padding: const EdgeInsets.all(24), children: [
+        const Eyebrow('Unmistakably, wonderfully you'),
+        const SizedBox(height: 10),
+        Text('Your story\nstarts here.',
+            style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: 26),
+        Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: KindredColors.line)),
+            child: Row(children: [
+              Container(
+                  width: 70,
+                  height: 70,
+                  decoration: const BoxDecoration(
+                      shape: BoxShape.circle, color: KindredColors.blush),
+                  alignment: Alignment.center,
+                  child: Text(store.myName.isEmpty ? 'R' : store.myName[0],
+                      style: const TextStyle(
+                          fontFamily: 'Lora',
+                          fontSize: 32,
+                          color: KindredColors.coral))),
+              const SizedBox(width: 18),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text('${store.myName}, 29',
+                        style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 4),
+                    Text(store.myJob,
+                        style: const TextStyle(
+                            color: KindredColors.muted, fontSize: 12)),
+                    const SizedBox(height: 6),
+                    const Eyebrow('Preview profile', color: KindredColors.coral)
+                  ])),
+              IconButton(
+                  tooltip: 'Edit profile',
+                  onPressed: () => editProfile(context, store),
+                  icon: const Icon(Icons.edit_outlined, size: 21)),
+            ])),
+        const SizedBox(height: 20),
+        Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+                color: KindredColors.blush,
+                borderRadius: BorderRadius.circular(20)),
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Eyebrow('My ideal Sunday'),
+              const SizedBox(height: 12),
+              Text(store.myPrompt,
+                  style: Theme.of(context)
+                      .textTheme
+                      .headlineMedium
+                      ?.copyWith(fontSize: 24, height: 1.4))
+            ])),
+        const SizedBox(height: 24),
+        const Eyebrow('Make yourself at home'),
+        const SizedBox(height: 12),
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.tune),
+            title: const Text('Dating preferences'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showFilters(context, store)),
+        const Divider(height: 1),
+        SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.pause_circle_outline),
+            title: const Text('Take a pause'),
+            subtitle: const Text('Keep your chats. Take some time.',
+                style: TextStyle(fontSize: 12)),
+            value: store.paused,
+            onChanged: (value) {
+              store.paused = value;
+              store.update();
+            }),
+        const Divider(height: 1),
+        SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.notifications_none),
+            title: const Text('Notifications'),
+            subtitle: const Text('Preview preference only',
+                style: TextStyle(fontSize: 12)),
+            value: store.notifications,
+            onChanged: (value) {
+              store.notifications = value;
+              store.update();
+            }),
+        const Divider(height: 1),
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.shield_outlined),
+            title: const Text('A safer space'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showKindredSheet(
+                context,
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Your comfort comes first.',
+                      style: Theme.of(context).textTheme.headlineMedium),
+                  const SizedBox(height: 18),
+                  const Text(
+                      'Meet in a public place. Let someone you trust know your plans. Keep personal and financial information private.\n\nYou can report or block a profile from its menu, or find safety options at the top of a conversation.'),
+                  const SizedBox(height: 20)
+                ]))),
+        const SizedBox(height: 28),
+        const Center(
+            child:
+                Icon(Icons.spa_outlined, size: 27, color: KindredColors.coral)),
+        const SizedBox(height: 9),
+        const Center(
+            child: Text('Made for something real.',
+                style: TextStyle(
+                    fontFamily: 'Lora',
+                    fontSize: 17,
+                    color: KindredColors.muted))),
+        const SizedBox(height: 9),
+        const Center(
+            child: Text('Kindred · UI preview 0.1',
+                style: TextStyle(fontSize: 10, color: KindredColors.muted))),
+      ]);
+}
+
+Future<void> editProfile(BuildContext context, PreviewStore store) async {
+  final name = TextEditingController(text: store.myName);
+  final job = TextEditingController(text: store.myJob);
+  final prompt = TextEditingController(text: store.myPrompt);
+  final key = GlobalKey<FormState>();
+  await showKindredSheet(
+      context,
+      Form(
+          key: key,
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('A little about you.',
+                style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 24),
+            TextFormField(
+                controller: name,
+                maxLength: 40,
+                decoration: const InputDecoration(labelText: 'First name'),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Add your first name'
+                    : null),
+            const SizedBox(height: 12),
+            TextFormField(
+                controller: job,
+                maxLength: 80,
+                decoration:
+                    const InputDecoration(labelText: 'What do you do?')),
+            const SizedBox(height: 12),
+            TextFormField(
+                controller: prompt,
+                maxLength: 250,
+                maxLines: 3,
+                decoration: const InputDecoration(labelText: 'My ideal Sunday'),
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Tell us a little about your Sunday'
+                    : null),
+            const SizedBox(height: 18),
+            FilledButton(
+                onPressed: () {
+                  if (!key.currentState!.validate()) return;
+                  store.myName = name.text.trim();
+                  store.myJob = job.text.trim();
+                  store.myPrompt = prompt.text.trim();
+                  store.update();
+                  Navigator.pop(context);
+                },
+                child: const Text('Save preview profile')),
+          ])));
+  await Future<void>.delayed(const Duration(milliseconds: 300));
+  name.dispose();
+  job.dispose();
+  prompt.dispose();
+}
+
+Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
+    {Conversation? chat}) async {
+  final action = await showKindredSheet<String>(
+      context,
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Your space. Your choice.',
+            style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 12),
+        Text('Manage your connection with ${person.name}.',
+            style: const TextStyle(color: KindredColors.muted)),
+        const SizedBox(height: 20),
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.flag_outlined),
+            title: const Text('Report profile'),
+            onTap: () => Navigator.pop(context, 'report')),
+        ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.block_outlined),
+            title: const Text('Block profile'),
+            onTap: () => Navigator.pop(context, 'block')),
+        if (chat != null)
+          ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.person_remove_outlined),
+              title: const Text('Unmatch'),
+              onTap: () => Navigator.pop(context, 'unmatch')),
+      ]));
+  if (action == null || !context.mounted) return;
+  String? reason;
+  if (action == 'report') {
+    reason = await showKindredSheet<String>(
+        context,
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('What happened?',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 12),
+          const Text(
+              'This preview hides the profile locally. It does not submit a report to a moderation team.'),
+          for (final r in [
+            'Fake or misleading profile',
+            'Inappropriate content',
+            'Harassment or unsafe behaviour',
+            'Something else'
+          ])
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(r),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.pop(context, r))
+        ]));
+    if (reason == null || !context.mounted) return;
+  }
+  if (action != 'report') {
+    final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+                title: Text(action == 'unmatch'
+                    ? 'End this connection?'
+                    : 'Block ${person.name}?'),
+                content: const Text(
+                    'This will remove the profile and any conversation from this preview.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Keep connection')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Remove'))
+                ]));
+    if (confirmed != true || !context.mounted) return;
+  }
+  store.passed.add(person.id);
+  store.incoming.removeWhere((p) => p.id == person.id);
+  store.conversations.removeWhere((c) => c.person.id == person.id);
+  store.update();
+  if (chat != null) Navigator.pop(context);
+  showNotice(
+      context,
+      action == 'report'
+          ? 'Profile hidden in preview. No report was submitted.'
+          : 'Connection removed from this preview.');
+}
