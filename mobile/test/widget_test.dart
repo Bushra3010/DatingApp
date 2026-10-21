@@ -14,7 +14,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     expect(find.text('Ananya, 27'), findsOneWidget);
     await tester.tap(find.text('Likes you'));
@@ -23,15 +23,15 @@ void main() {
     expect(find.text('Like back & say hello'), findsNothing);
     await tester.tap(find.text('Explore incoming connections'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Choose Plus'), 200,
+    await tester.scrollUntilVisible(find.text('Choose Gold'), 200,
         scrollable: find
             .descendant(
                 of: find.byType(MembershipScreen),
                 matching: find.byType(Scrollable))
             .first);
-    await tester.ensureVisible(find.text('Choose Plus'));
+    await tester.ensureVisible(find.text('Choose Gold'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Choose Plus'));
+    await tester.tap(find.text('Choose Gold'));
     await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -60,9 +60,9 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Discovery preferences'));
+    await tester.tap(find.byTooltip('Filter profiles'));
     await tester.pumpAndSettle();
     expect(find.text('Show my people'), findsOneWidget);
     await tester.ensureVisible(find.text('Show my people'));
@@ -86,15 +86,21 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ananya, 27'));
     await tester.pumpAndSettle();
-    expect(find.text('About'), findsOneWidget);
     expect(find.text('Bengaluru · Nearby'), findsOneWidget);
     await tester.tap(find.byTooltip('Play voice prompt'));
     await tester.pump(const Duration(seconds: 1));
     expect(find.byTooltip('Pause voice prompt'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('About'), 200,
+        scrollable: find
+            .descendant(
+                of: find.byType(PersonDetailsScreen),
+                matching: find.byType(Scrollable))
+            .first);
+    expect(find.text('About'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Interests'), 200,
         scrollable: find
             .descendant(
@@ -117,19 +123,19 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     await tester.drag(find.text('Ananya, 27'), const Offset(300, 0));
     await tester.pumpAndSettle();
     expect(find.text('You liked Ananya'), findsOneWidget);
-    expect(find.text('7 likes left · Preview'), findsOneWidget);
+    expect(find.text('7 likes left today · Free'), findsOneWidget);
     await tester.drag(find.text('Meera, 28'), const Offset(-300, 0));
     await tester.pumpAndSettle();
     expect(find.text('Isha, 25'), findsOneWidget);
     await tester.drag(find.text('Isha, 25'), const Offset(40, 0));
     await tester.pumpAndSettle();
     expect(find.text('Isha, 25'), findsOneWidget);
-    expect(find.text('7 likes left · Preview'), findsOneWidget);
+    expect(find.text('7 likes left today · Free'), findsOneWidget);
   });
 
   testWidgets('Explore lists people by what they are looking for',
@@ -138,7 +144,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Explore').last);
     await tester.pumpAndSettle();
@@ -162,7 +168,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('Pass on Ananya'));
     await tester.tap(find.byTooltip('Pass on Ananya'));
@@ -187,7 +193,7 @@ void main() {
     expect(find.text('Current plan'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    expect(find.text('Unlimited likes · Plus'), findsOneWidget);
+    expect(find.text('25 likes left today · Plus'), findsOneWidget);
     await tester.tap(find.byTooltip('Undo last pass'));
     await tester.pumpAndSettle();
     expect(find.text('Ananya, 27'), findsOneWidget);
@@ -195,19 +201,19 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Hangouts are Premium-only, then let you join and host plans',
+  testWidgets('Hangouts are Platinum-only, then let you join and host plans',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Explore').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Hangouts'));
     await tester.pumpAndSettle();
-    expect(find.text('Hangouts are a Premium feature.'), findsOneWidget);
+    expect(find.text('Hangouts come with Platinum.'), findsOneWidget);
     await tester.tap(find.text('See membership'));
     await tester.pumpAndSettle();
     final plans = find
@@ -215,11 +221,11 @@ void main() {
             of: find.byType(MembershipScreen),
             matching: find.byType(Scrollable))
         .first;
-    await tester.scrollUntilVisible(find.text('Choose Premium'), 200,
+    await tester.scrollUntilVisible(find.text('Choose Platinum'), 200,
         scrollable: plans);
-    await tester.ensureVisible(find.text('Choose Premium'));
+    await tester.ensureVisible(find.text('Choose Platinum'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Choose Premium'));
+    await tester.tap(find.text('Choose Platinum'));
     await tester.pumpAndSettle();
     await tester.pageBack();
     await tester.pumpAndSettle();
@@ -276,7 +282,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     Color background() =>
         tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor ??
@@ -296,13 +302,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Photo prompts invite a reply; Invisible mode needs Plus',
+  testWidgets('Photo prompts invite a reply; Invisible mode is free',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     expect(find.text('Bengaluru · Nearby'), findsOneWidget);
     await tester.tap(find.text('Ask about this photo'));
@@ -320,11 +326,18 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('You'));
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Invisible mode · Plus'), 200,
+    await tester.scrollUntilVisible(find.text('Invisible mode'), 200,
         scrollable: find.byType(Scrollable).last);
-    await tester.tap(find.text('Invisible mode · Plus'));
+    await tester.ensureVisible(find.text('Invisible mode'));
     await tester.pumpAndSettle();
-    expect(find.text('Date on your own terms.'), findsOneWidget);
+    await tester.tap(find.text('Invisible mode'));
+    await tester.pumpAndSettle();
+    expect(
+        tester
+            .widget<SwitchListTile>(
+                find.widgetWithText(SwitchListTile, 'Invisible mode'))
+            .value,
+        isTrue);
     expect(tester.takeException(), isNull);
   });
 
@@ -336,7 +349,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     // Closing now takes longer than the old fixed 300 ms dispose delay.
     timeDilation = 3;
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ask about this photo'));
     await tester.pumpAndSettle();
@@ -372,7 +385,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Explore').last);
     await tester.pumpAndSettle();
@@ -437,6 +450,142 @@ void main() {
     await tester.tap(find.text('Start chat'));
     await tester.pumpAndSettle();
     expect(find.text(demoPeople[1].answer), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Onboarding leads to the quiz and Chemistry on profiles',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpAndSettle();
+    expect(
+        find.text('Less swiping. More meaningful connections.'.toUpperCase()),
+        findsOneWidget);
+    await tester.tap(find.text('Get started'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'Aarav');
+    await tester.tap(find.text('Date of birth'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('years old'), findsOneWidget);
+    final basics = find
+        .descendant(
+            of: find.byType(ListView), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(find.text('Man'), 100, scrollable: basics);
+    await tester.tap(find.text('Man'));
+    await tester.scrollUntilVisible(find.text('Women'), 100,
+        scrollable: basics);
+    await tester.tap(find.text('Women'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Continue'), 200,
+        scrollable: basics);
+    await tester.ensureVisible(find.text('Continue'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(
+        find.text('What are you hoping to find on Everlane?'), findsOneWidget);
+    expect(find.text('Skip'), findsNothing,
+        reason: 'the first question is required');
+    await tester.tap(find.text('A serious relationship'));
+    await tester.pumpAndSettle();
+    for (var i = 0; i < 9; i++) {
+      await tester.tap(find.text('Skip'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('You’re all set, Aarav.'), findsOneWidget);
+    await tester.ensureVisible(find.text('Take the compatibility quiz'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take the compatibility quiz'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Question 1 of 24'), findsOneWidget);
+    await tester.tap(find.text('A long-term committed relationship'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Slowly, building trust first'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('After a few dates'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Very important, with room for compromise'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('A few meaningful conversations'));
+    await tester.pumpAndSettle();
+    // Choose up to 2: a third pick is ignored.
+    await tester.tap(find.text('Words of appreciation'));
+    await tester.tap(find.text('Quality time and undivided attention'));
+    await tester.tap(find.text('Physical affection'));
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.check_box_rounded), findsNWidgets(2));
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Ananya, 27'));
+    await tester.pumpAndSettle();
+    final details = find
+        .descendant(
+            of: find.byType(PersonDetailsScreen),
+            matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(find.text('Chemistry'), 200,
+        scrollable: details);
+    expect(find.text('Preliminary'), findsOneWidget);
+    expect(find.text('Continue the quiz'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Onboarding can be skipped in the preview', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Skip to the app (preview)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Ananya, 27'), findsOneWidget);
+  });
+
+  testWidgets('Boosts come with Gold and show when they end', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const EverlaneApp(onboarded: true));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byTooltip('Boost your profile'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Boost your profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('Be seen by more people nearby.'), findsOneWidget);
+    await tester.tap(find.text('See membership'));
+    await tester.pumpAndSettle();
+    final plans = find
+        .descendant(
+            of: find.byType(MembershipScreen),
+            matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(find.text('Choose Gold'), 200,
+        scrollable: plans);
+    await tester.ensureVisible(find.text('Choose Gold'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Choose Gold'));
+    await tester.pumpAndSettle();
+    expect(
+        find.text('Renews monthly at ₹499 until you cancel. Cancel anytime.'),
+        findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Boost your profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 of 2 boosts left this month'), findsOneWidget);
+    await tester.tap(find.text('Start a 30-minute boost'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 of 2 boosts left this month'), findsOneWidget);
+    expect(find.text('Boost active'), findsOneWidget);
+    expect(find.textContaining('You’re boosted until'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

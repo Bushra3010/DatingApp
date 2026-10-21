@@ -7,6 +7,7 @@ import 'theme.dart';
 import 'widgets.dart';
 import 'hangouts.dart';
 import 'introductions.dart';
+import 'onboarding.dart';
 
 class DiscoverScreen extends StatelessWidget {
   const DiscoverScreen({super.key, required this.store});
@@ -22,10 +23,7 @@ class DiscoverScreen extends StatelessWidget {
   /// Right swipe: a plain like on the whole profile, without the composer.
   bool swipeLike(BuildContext context, Person person) {
     if (store.outOfLikes) {
-      showUpgrade(context, store,
-          title: 'You’ve used today’s 8 likes.',
-          detail:
-              'Get Plus for unlimited likes, or take a breather and come back tomorrow.');
+      showOutOfLikes(context, store);
       return false;
     }
     HapticFeedback.lightImpact();
@@ -41,7 +39,7 @@ class DiscoverScreen extends StatelessWidget {
       showUpgrade(context, store,
           title: 'Passed by mistake?',
           detail:
-              'Rewind brings back the last profile you passed on. It comes with Plus and Premium.');
+              'Rewind brings back the last profile you passed on. It comes with Plus, Gold and Platinum.');
       return;
     }
     final person = store.undoLastPass();
@@ -175,17 +173,20 @@ class DiscoverScreen extends StatelessWidget {
                       onTap: like),
                   PastelAction(
                       icon: Icons.bolt_rounded,
-                      label: 'Discovery preferences',
+                      label: 'Boost your profile',
                       color: EverlaneColors.boost,
                       size: 46,
-                      onTap: () => showFilters(context, store)),
+                      onTap: () => showBoost(context, store)),
                 ])),
         Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Text(
-                store.unlimitedLikes
-                    ? 'Unlimited likes · ${store.plan.title}'
-                    : '${store.remaining} likes left · Preview',
+                [
+                  '${store.remaining} likes left today',
+                  if (store.boosting)
+                    'Boosting until ${TimeOfDay.fromDateTime(store.boostEndsAt!).format(context)}',
+                  store.plan.title,
+                ].join(' · '),
                 style: TextStyle(fontSize: 11, color: EverlaneColors.muted))),
       ]);
     });
@@ -466,6 +467,11 @@ class PersonDetailsScreen extends StatelessWidget {
                         const SizedBox(height: 22),
                         VoicePrompt(person: person),
                       ],
+                      const SizedBox(height: 22),
+                      ListenableBuilder(
+                          listenable: store,
+                          builder: (context, _) =>
+                              ChemistryCard(store: store, person: person)),
                       const SizedBox(height: 30),
                       const DetailHeading(
                           icon: Icons.person_outline_rounded,
@@ -544,10 +550,7 @@ class DetailHeading extends StatelessWidget {
 Future<void> showLikeComposer(BuildContext context, PreviewStore store,
     Person person, String target) async {
   if (store.outOfLikes) {
-    showUpgrade(context, store,
-        title: 'You’ve used today’s 8 likes.',
-        detail:
-            'Get Plus for unlimited likes, or take a breather and come back tomorrow.');
+    showOutOfLikes(context, store);
     return;
   }
   final sent = await showEverlaneSheet<bool>(
@@ -628,6 +631,7 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
   var ages = store.ages;
   var distance = store.distance;
   var verified = store.verifiedOnly;
+  final intents = {...store.intentFilter};
   await showEverlaneSheet(
       context,
       StatefulBuilder(
@@ -674,12 +678,41 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                     subtitle: const Text('A little extra peace of mind'),
                     value: verified,
                     onChanged: (value) => setState(() => verified = value)),
+                const SizedBox(height: 14),
+                Row(children: [
+                  const Expanded(child: Text('Relationship intentions')),
+                  if (!store.canFilterIntentions)
+                    TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          showUpgrade(context, store,
+                              title: 'Meet people who want what you want.',
+                              detail:
+                                  'Filter by relationship intentions with Plus, Gold or Platinum.');
+                        },
+                        icon: const Icon(Icons.lock_outline_rounded, size: 16),
+                        label: const Text('Plus')),
+                ]),
+                const SizedBox(height: 8),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final c in LookingFor.values)
+                    FilterChip(
+                        label: Text(c.short),
+                        selected: intents.contains(c),
+                        onSelected: store.canFilterIntentions
+                            ? (on) => setState(
+                                () => on ? intents.add(c) : intents.remove(c))
+                            : null),
+                ]),
                 const SizedBox(height: 22),
                 FilledButton(
                     onPressed: () {
                       store.ages = ages;
                       store.distance = distance;
                       store.verifiedOnly = verified;
+                      store.intentFilter
+                        ..clear()
+                        ..addAll(intents);
                       store.update();
                       Navigator.pop(context);
                     },
@@ -690,6 +723,7 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                               ages = const RangeValues(24, 32);
                               distance = 25;
                               verified = false;
+                              intents.clear();
                             }),
                         child: const Text('Reset preferences'))),
               ])));
@@ -1180,7 +1214,7 @@ class ProfileScreen extends StatelessWidget {
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    Text('${store.myName}, 29',
+                    Text('${store.myName}, ${store.myAge}',
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 4),
                     Text(store.myJob,
@@ -1196,6 +1230,8 @@ class ProfileScreen extends StatelessWidget {
             ])),
         const SizedBox(height: 14),
         _MembershipBanner(store: store),
+        const SizedBox(height: 12),
+        QuizCard(store: store),
         const SizedBox(height: 20),
         Container(
             padding: const EdgeInsets.all(22),
@@ -1263,20 +1299,11 @@ class ProfileScreen extends StatelessWidget {
         SwitchListTile(
             contentPadding: EdgeInsets.zero,
             secondary: const Icon(Icons.visibility_off_outlined),
-            title: Text(store.plan == Plan.free
-                ? 'Invisible mode · Plus'
-                : 'Invisible mode'),
+            title: const Text('Invisible mode'),
             subtitle: const Text('Only people you like can see you',
                 style: TextStyle(fontSize: 12)),
             value: store.invisible,
             onChanged: (value) {
-              if (store.plan == Plan.free) {
-                showUpgrade(context, store,
-                    title: 'Date on your own terms.',
-                    detail:
-                        'Invisible mode keeps you out of Discover until you like someone first. It comes with Plus and Premium.');
-                return;
-              }
               store.invisible = value;
               store.update();
             }),
@@ -1537,7 +1564,7 @@ class _MembershipBanner extends StatelessWidget {
                           children: [
                         Text(
                             free
-                                ? 'Upgrade to Plus'
+                                ? 'Explore membership'
                                 : '${store.plan.title} member',
                             style: TextStyle(
                                 fontSize: 16,
@@ -1547,7 +1574,7 @@ class _MembershipBanner extends StatelessWidget {
                         const SizedBox(height: 3),
                         Text(
                             free
-                                ? 'Unlimited likes, Rewind and more'
+                                ? 'Plus, Gold and Platinum'
                                 : 'Manage your membership',
                             style: TextStyle(
                                 fontSize: 12,
@@ -1589,7 +1616,7 @@ class MembershipScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.headlineLarge),
                 const SizedBox(height: 10),
                 Text(
-                    'Every plan includes verification, report and block. Safety is never behind a paywall.',
+                    'Blocking, reporting, privacy controls and account deletion are free on every plan. Paid plans add convenience and discovery; none can promise a match.',
                     style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
                 const SizedBox(height: 24),
                 for (final plan in Plan.values)
@@ -1604,6 +1631,12 @@ class MembershipScreen extends StatelessWidget {
                             showNotice(context, 'Welcome to ${plan.title}');
                           })),
                 const Center(child: Eyebrow('Preview · no payment is taken')),
+                const SizedBox(height: 8),
+                Text(
+                    'Prices are test prices for launch. Before purchase you’ll see the renewal period, total charge and how to cancel.',
+                    textAlign: TextAlign.center,
+                    style:
+                        TextStyle(fontSize: 11, color: EverlaneColors.muted)),
               ])));
 }
 
@@ -1630,7 +1663,7 @@ class _PlanCard extends StatelessWidget {
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -.6))),
-          if (plan == Plan.plus)
+          if (plan == Plan.gold)
             Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -1644,11 +1677,20 @@ class _PlanCard extends StatelessWidget {
                         color: EverlaneColors.like))),
         ]),
         const SizedBox(height: 4),
-        Text(plan.price,
-            style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: EverlaneColors.star)),
+        Text.rich(TextSpan(children: [
+          TextSpan(
+              text: plan.price,
+              style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: EverlaneColors.star)),
+          TextSpan(
+              text: plan == Plan.free ? '  forever free' : '  per month',
+              style: TextStyle(fontSize: 13, color: EverlaneColors.muted)),
+        ])),
+        const SizedBox(height: 4),
+        Text(plan.tagline,
+            style: TextStyle(fontSize: 13, color: EverlaneColors.muted)),
         const SizedBox(height: 14),
         for (final perk in plan.perks)
           Padding(
@@ -1681,6 +1723,12 @@ class _PlanCard extends StatelessWidget {
                     : FilledButton.styleFrom(
                         backgroundColor: EverlaneColors.like),
                 child: Text('Choose ${plan.title}')),
+        if (plan != Plan.free) ...[
+          const SizedBox(height: 8),
+          Text(
+              'Renews monthly at ${plan.price} until you cancel. Cancel anytime.',
+              style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
+        ],
       ]));
 }
 
@@ -1749,4 +1797,73 @@ class _HiddenLikes extends StatelessWidget {
       const SizedBox(height: 24),
     ]);
   }
+}
+
+void showOutOfLikes(BuildContext context, PreviewStore store) {
+  final next =
+      store.plan == Plan.platinum ? null : Plan.values[store.plan.index + 1];
+  showUpgrade(context, store,
+      title: 'You’ve used today’s ${store.plan.dailyLikes} likes.',
+      detail: next == null
+          ? 'Your likes refresh tomorrow. Take a breather; the right people will still be here.'
+          : 'Your likes refresh tomorrow, or ${next.title} gives you ${next.dailyLikes} a day.');
+}
+
+/// A timed boost from the monthly allowance (Gold and Platinum), with the
+/// start, end and what it can't promise stated plainly.
+void showBoost(BuildContext context, PreviewStore store) {
+  if (store.plan.monthlyBoosts == 0) {
+    showUpgrade(context, store,
+        title: 'Be seen by more people nearby.',
+        detail:
+            'A boost shows your profile to more people for ${PreviewStore.boostLength.inMinutes} minutes. Gold includes 2 a month and Platinum 5.');
+    return;
+  }
+  showEverlaneSheet(
+      context,
+      ListenableBuilder(
+          listenable: store,
+          builder: (context, _) {
+            final ends = store.boostEndsAt;
+            return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                          color: EverlaneColors.boost,
+                          borderRadius: BorderRadius.circular(16)),
+                      child: const Icon(Icons.bolt_rounded,
+                          color: Colors.white, size: 28)),
+                  const SizedBox(height: 20),
+                  Text(
+                      store.boosting
+                          ? 'You’re boosted until ${TimeOfDay.fromDateTime(ends!).format(context)}.'
+                          : 'Boost your profile',
+                      style: Theme.of(context).textTheme.headlineMedium),
+                  const SizedBox(height: 10),
+                  Text(
+                      'More people nearby see you for ${PreviewStore.boostLength.inMinutes} minutes. More visibility doesn’t guarantee likes or matches.',
+                      style:
+                          TextStyle(color: EverlaneColors.muted, height: 1.6)),
+                  const SizedBox(height: 14),
+                  Text(
+                      '${store.boostsLeft} of ${store.plan.monthlyBoosts} boosts left this month',
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 22),
+                  FilledButton(
+                      onPressed: store.boosting || store.boostsLeft <= 0
+                          ? null
+                          : store.startBoost,
+                      style: FilledButton.styleFrom(
+                          backgroundColor: EverlaneColors.boost),
+                      child: Text(store.boosting
+                          ? 'Boost active'
+                          : store.boostsLeft <= 0
+                              ? 'No boosts left this month'
+                              : 'Start a ${PreviewStore.boostLength.inMinutes}-minute boost')),
+                  const SizedBox(height: 8),
+                ]);
+          }));
 }

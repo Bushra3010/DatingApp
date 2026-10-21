@@ -30,12 +30,13 @@ python3 tool/serve_preview.py  # http://127.0.0.1:8081; prevents stale UI cachin
 - Like a specific photo, prompt or soundtrack, adding an optional 150-character comment. Rewind (undo the last pass) needs Plus.
 - Profiles open with a shared-photo transition and parallax, show what the person is looking for, and can carry a voice prompt drawn as a waveform (animated only; no audio files).
 - Explore: browse people by what they're looking for (long-term, short-term fun, coffee date, date night, new friends, travel buddy), or answer five questions for an introduction.
-- Hangouts (Premium): set what you feel like doing, filter plans, request to join, message the host or host your own plan.
-- Membership: Free, Plus and Premium from PRD §7. Choosing a plan changes it locally; no payment is taken. Free members see incoming likes blurred.
-- Privacy: distances show as "Nearby" or rounded, never exact; Invisible mode setting (Plus).
+- Hangouts (Platinum): set what you feel like doing, filter plans, request to join, message the host or host your own plan.
+- Membership: the four launch tiers from the membership options doc (Free ₹0, Plus ₹249, Gold ₹499, Platinum ₹899 a month; test prices). Daily like limits per plan, Rewind and the intention filter with Plus, Likes You and monthly boosts with Gold, the detailed Chemistry report and Hangouts with Platinum. Safety and privacy controls stay free. Choosing a plan changes it locally; no payment is taken.
+- Onboarding (first launch) and the 24-question Everlane Compatibility Quiz, with a Chemistry card on each profile that follows the question bank's scoring rules: weighted areas, dealbreakers filtered first, intent mismatches never hidden, a preliminary view with too few answers.
+- Privacy: distances show as "Nearby" or rounded, never exact; free Invisible mode setting.
 - Light theme by default, with a Dark mode switch in Settings.
 - Filter by age, distance and verified profiles; handle empty discovery and paused profiles.
-- Accept or remove incoming likes (Plus or Premium); accepting opens a conversation.
+- Accept or remove incoming likes (Gold or Platinum); accepting opens a conversation.
 - Browse conversations and send local text messages; blank messages are ignored.
 - Edit your first name, work and prompt with validation.
 - Preview pause and notification preferences; report, block and unmatch flows hide local profiles/conversations. Reporting explicitly states that no moderation report is submitted.
@@ -55,6 +56,9 @@ The next integration work is OTP/onboarding, authenticated API repositories usin
 - `lib/screens.dart`: discovery, Explore, likes, messages, chat, profile, membership and supporting flows.
 - `lib/hangouts.dart`: Hangouts setup, plan list and hosting.
 - `lib/introductions.dart`: the five-question introduction quiz.
+- `lib/question_bank.dart`: onboarding and compatibility questions with stable IDs and answer values.
+- `lib/chemistry.dart`: Chemistry scoring and demo quiz answers.
+- `lib/onboarding.dart`: onboarding, the compatibility quiz and the Chemistry card.
 - `lib/main.dart`: application and navigation shell.
 - `test/`: filter/like/match invariants and phone-width interaction checks.
 

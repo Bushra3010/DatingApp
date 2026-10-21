@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'models.dart';
+import 'onboarding.dart';
 import 'hangouts.dart';
 import 'screens.dart';
 import 'theme.dart';
@@ -7,7 +8,10 @@ import 'theme.dart';
 void main() => runApp(const EverlaneApp());
 
 class EverlaneApp extends StatefulWidget {
-  const EverlaneApp({super.key});
+  const EverlaneApp({super.key, this.onboarded = false});
+
+  /// Skips first-launch onboarding (used by tests).
+  final bool onboarded;
   @override
   State<EverlaneApp> createState() => _EverlaneAppState();
 }
@@ -18,6 +22,7 @@ class _EverlaneAppState extends State<EverlaneApp> {
   @override
   void initState() {
     super.initState();
+    store.onboarded = widget.onboarded;
     store.addListener(syncTheme);
   }
 
@@ -47,7 +52,11 @@ class _EverlaneAppState extends State<EverlaneApp> {
       title: 'Everlane',
       debugShowCheckedModeBanner: false,
       theme: everlaneTheme(),
-      home: EverlaneShell(store: store));
+      home: ListenableBuilder(
+          listenable: store,
+          builder: (context, _) => store.onboarded
+              ? EverlaneShell(store: store)
+              : OnboardingFlow(store: store)));
 }
 
 class EverlaneShell extends StatefulWidget {
@@ -108,7 +117,8 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                         children: [
                                           _Avatar(name: store.myName, size: 48),
                                           const SizedBox(height: 24),
-                                          Text('${store.myName}, 29',
+                                          Text(
+                                              '${store.myName}, ${store.myAge}',
                                               style: const TextStyle(
                                                   fontSize: 22,
                                                   fontWeight: FontWeight.w700)),

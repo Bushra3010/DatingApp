@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'chemistry.dart';
+import 'question_bank.dart';
 import 'theme.dart';
 
 /// What someone is looking for. Shown on profiles and browsed in Explore.
@@ -126,33 +128,46 @@ const demoPeople = [
           'Cooking something new together. I’ll handle dessert if you handle the playlist.'),
 ];
 
-/// Membership tiers from PRD §7. The preview switches plans locally;
-/// no purchase is made and nothing reaches the billing API.
+/// The four launch tiers recommended in the Everlane membership options.
+/// Prices sit in the middle of each test range; they're hypotheses to test,
+/// not final. The preview switches plans locally and takes no payment.
+/// Safety and privacy controls are free on every plan.
 enum Plan {
-  free('Free', 'Complimentary', [
+  free('Free', '₹0', 'The essential dating experience', 8, 0, [
     '8 likes each day',
-    'Explore by what people are looking for',
-    'Chat and voice notes',
-    'Verification, report and block, always free',
+    'Like profiles and match when interest is mutual',
+    'Message your matches',
+    'A Chemistry summary with each person',
+    'Blocking, reporting, privacy controls and account deletion',
   ]),
-  plus('Plus', '₹499 per month', [
-    'Unlimited likes',
-    'Rewind: undo a pass you didn’t mean',
-    'Advanced filters',
-    'See everyone who likes you',
-    'Invisible mode: only people you like see you',
+  plus('Plus', '₹249', 'Simple, affordable upgrade', 25, 0, [
+    'Everything in Free',
+    '25 likes each day',
+    'Filter by relationship intentions',
+    'A fuller Chemistry explanation, including where you differ',
+    'Rewind your last accidental pass',
   ]),
-  premium('Premium', '₹999 per month', [
+  gold('Gold', '₹499', 'The mainstream premium tier', 50, 2, [
     'Everything in Plus',
-    'Your likes are shown first',
+    'See who has liked you',
+    '50 likes each day',
+    '2 profile boosts each month',
+  ]),
+  platinum('Platinum', '₹899', 'The full-featured premium experience', 100, 5, [
+    'Everything in Gold',
+    '100 likes each day',
+    '5 profile boosts each month',
+    'A detailed Chemistry report, area by area',
     'Hangouts: host or join plans nearby',
-    '3 star likes each week',
-    'Read receipts on demand',
   ]);
 
-  const Plan(this.title, this.price, this.perks);
-  final String title, price;
+  const Plan(this.title, this.price, this.tagline, this.dailyLikes,
+      this.monthlyBoosts, this.perks);
+  final String title, price, tagline;
+  final int dailyLikes, monthlyBoosts;
   final List<String> perks;
+
+  bool atLeast(Plan other) => index >= other.index;
 }
 
 enum HangoutKind {
@@ -267,23 +282,97 @@ class PreviewStore extends ChangeNotifier {
   bool paused = false;
   bool notifications = true;
 
+  /// First launch shows onboarding until it's finished or skipped.
+  bool onboarded = false;
+  DateTime? myBirthday;
+  String myGender = '';
+  String interestedIn = '';
+  String myCity = 'Bengaluru';
+  final Answers onboardingAnswers = {};
+
+  /// Age from the date of birth given at onboarding; the demo profile is 29.
+  int get myAge {
+    final b = myBirthday;
+    if (b == null) return 29;
+    final now = DateTime.now();
+    final birthdayPassed =
+        now.month > b.month || (now.month == b.month && now.day >= b.day);
+    return now.year - b.year - (birthdayPassed ? 0 : 1);
+  }
+
+  void finishOnboarding() {
+    onboarded = true;
+    notifyListeners();
+  }
+
+  /// Compatibility quiz answers, saved as each question is answered.
+  final Answers quizAnswers = {};
+  int quizAnsweredVersion = quizVersion;
+  int get quizAnswered => quizAnswers.values.where((v) => v.isNotEmpty).length;
+
+  void answerQuiz(String questionId, List<String> values) {
+    if (values.isEmpty) {
+      quizAnswers.remove(questionId);
+    } else {
+      quizAnswers[questionId] = values;
+    }
+    quizAnsweredVersion = quizVersion;
+    notifyListeners();
+  }
+
+  void deleteQuizAnswers() {
+    quizAnswers.clear();
+    notifyListeners();
+  }
+
+  /// Null until you've answered at least one quiz question.
+  Chemistry? chemistryWith(Person p) => quizAnswers.isEmpty
+      ? null
+      : Chemistry.between(quizAnswers, demoQuizAnswers[p.id] ?? const {});
+
   /// Light is the default; Settings can switch to dark.
   bool darkMode = false;
 
-  /// Plus and Premium: hidden from Discover except to people you've liked.
+  /// Hidden from Discover except to people you've liked. A privacy control,
+  /// so it's free.
   bool invisible = false;
-  bool get canSeeLikes => plan != Plan.free;
+  bool get canSeeLikes => plan.atLeast(Plan.gold);
+
+  /// Plus and up: only show people looking for one of these. Empty = everyone.
+  final Set<LookingFor> intentFilter = {};
+  bool get canFilterIntentions => plan.atLeast(Plan.plus);
+
+  /// Plus and up see where you differ; Platinum sees each area's score.
+  bool get fullerChemistry => plan.atLeast(Plan.plus);
+  bool get detailedChemistry => plan.atLeast(Plan.platinum);
+
+  /// Boosts: a monthly allowance, each lasting [boostLength].
+  static const boostLength = Duration(minutes: 30);
+  int boostsUsed = 0;
+  DateTime? boostEndsAt;
+  int get boostsLeft => plan.monthlyBoosts - boostsUsed;
+  bool get boosting =>
+      boostEndsAt != null && DateTime.now().isBefore(boostEndsAt!);
+
+  void startBoost() {
+    if (boostsLeft <= 0 || boosting) return;
+    boostsUsed++;
+    boostEndsAt = DateTime.now().add(boostLength);
+    notifyListeners();
+  }
+
   String myName = 'Rohit';
   String myJob = 'Software engineer';
   String myPrompt =
       'Good food, better company, and finding a new favourite place.';
   Plan plan = Plan.free;
-  bool get unlimitedLikes => plan != Plan.free;
 
-  /// Rewind (undo a pass) is a paid feature, as on other dating apps.
-  bool get canRewind => plan != Plan.free;
-  int get remaining => 8 - liked.length;
-  bool get outOfLikes => !unlimitedLikes && remaining <= 0;
+  /// Rewind (undo a pass) comes with Plus and up.
+  bool get canRewind => plan.atLeast(Plan.plus);
+
+  /// Every plan has a daily limit, so actions stay fair-use.
+  int get remaining => plan.dailyLikes - liked.length;
+  bool get outOfLikes => remaining <= 0;
   List<Person> get discover => paused
       ? []
       : demoPeople
@@ -294,7 +383,8 @@ class PreviewStore extends ChangeNotifier {
               p.age >= ages.start &&
               p.age <= ages.end &&
               p.distance <= distance &&
-              (!verifiedOnly || p.verified))
+              (!verifiedOnly || p.verified) &&
+              (intentFilter.isEmpty || p.lookingFor.any(intentFilter.contains)))
           .toList();
 
   /// Everyone looking for [category], minus profiles passed on or hidden.
@@ -352,8 +442,8 @@ class PreviewStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Hangouts are a Premium feature.
-  bool get canHangout => plan == Plan.premium;
+  /// Hangouts come with Platinum.
+  bool get canHangout => plan == Plan.platinum;
   final List<Hangout> hangouts = [...demoHangouts];
   final Set<String> hangoutRequests = {};
 
@@ -392,7 +482,7 @@ class PreviewStore extends ChangeNotifier {
 
   void choosePlan(Plan next) {
     plan = next;
-    if (next == Plan.free) invisible = false;
+    if (!next.atLeast(Plan.plus)) intentFilter.clear();
     notifyListeners();
   }
 

@@ -14,14 +14,14 @@ const hangoutMoods = [
   ('Watch a game', Icons.sports_cricket_outlined),
 ];
 
-/// Premium members go to Hangouts (via setup the first time); everyone else
+/// Platinum members go to Hangouts (via setup the first time); everyone else
 /// sees the upgrade sheet.
 void openHangouts(BuildContext context, PreviewStore store) {
   if (!store.canHangout) {
     showUpgrade(context, store,
-        title: 'Hangouts are a Premium feature.',
+        title: 'Hangouts come with Platinum.',
         detail:
-            'Host a plan or ask to join one nearby, from coffee to a late show. Get Premium to start hanging out.');
+            'Host a plan or ask to join one nearby, from coffee to a late show. Get Platinum to start hanging out.');
     return;
   }
   ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -76,7 +76,7 @@ class HangoutsBanner extends StatelessWidget {
                                   decoration: BoxDecoration(
                                       color: EverlaneColors.star,
                                       borderRadius: BorderRadius.circular(20)),
-                                  child: Text('Premium',
+                                  child: Text('Platinum',
                                       style: TextStyle(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w700,

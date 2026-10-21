@@ -63,4 +63,42 @@ void main() {
     expect(chat.messages.last.text, 'Hello there!');
     expect(chat.messages.last.mine, isTrue);
   });
+
+  test('Plans follow the four launch tiers', () {
+    final store = PreviewStore();
+    addTearDown(store.dispose);
+    expect(
+        Plan.values.map((p) => p.title), ['Free', 'Plus', 'Gold', 'Platinum']);
+    expect(store.remaining, 8);
+    expect(store.canRewind, isFalse);
+    expect(store.canSeeLikes, isFalse);
+    expect(store.plan.monthlyBoosts, 0);
+    store.choosePlan(Plan.plus);
+    expect(store.remaining, 25);
+    expect(store.canRewind, isTrue);
+    expect(store.canSeeLikes, isFalse, reason: 'Likes You is a Gold feature');
+    expect(store.fullerChemistry, isTrue);
+    expect(store.detailedChemistry, isFalse);
+    store.choosePlan(Plan.gold);
+    expect(store.canSeeLikes, isTrue);
+    expect(store.canHangout, isFalse);
+    store.startBoost();
+    expect(store.boosting, isTrue);
+    expect(store.boostsLeft, 1);
+    store.startBoost();
+    expect(store.boostsLeft, 1, reason: 'one boost at a time');
+    store.choosePlan(Plan.platinum);
+    expect(store.canHangout, isTrue);
+    expect(store.detailedChemistry, isTrue);
+  });
+
+  test('Intention filter needs Plus and clears on downgrade', () {
+    final store = PreviewStore();
+    addTearDown(store.dispose);
+    store.choosePlan(Plan.plus);
+    store.intentFilter.add(LookingFor.shortTerm);
+    expect(store.discover.map((p) => p.id), ['isha']);
+    store.choosePlan(Plan.free);
+    expect(store.intentFilter, isEmpty);
+  });
 }
