@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 
 abstract final class KindredColors {
-  static const paper = Color(0xFFFAF8F4);
-  static const plum = Color(0xFF382B3C);
-  static const coral = Color(0xFFC55D48);
-  static const blush = Color(0xFFF3E7E1);
-  static const muted = Color(0xFF79747B);
-  static const line = Color(0xFFE8E2DD);
+  static const paper = Color(0xFFFFFFFF);
+  static const plum = Color(0xFF222126);
+  static const coral = Color(0xFFB83E55);
+  static const blush = Color(0xFFFFEFF1);
+  static const muted = Color(0xFF6E6B72);
+  static const line = Color(0xFFF0EDF0);
+  static const blue = Color(0xFF91BFE2);
+  static const purple = Color(0xFFB77EA4);
+  static const lime = Color(0xFFB6D96F);
+  static const red = Color(0xFFFF666D);
   static const green = Color(0xFF527062);
 }
 
@@ -21,14 +25,14 @@ ThemeData kindredTheme() => ThemeData(
       ),
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
-            fontFamily: 'Lora',
-            fontSize: 38,
+            fontWeight: FontWeight.w700,
+            fontSize: 26,
             height: 1.15,
-            letterSpacing: -1.5,
+            letterSpacing: -.8,
             color: KindredColors.plum),
         headlineMedium: TextStyle(
-            fontFamily: 'Lora',
-            fontSize: 30,
+            fontWeight: FontWeight.w700,
+            fontSize: 26,
             height: 1.2,
             letterSpacing: -.8,
             color: KindredColors.plum),

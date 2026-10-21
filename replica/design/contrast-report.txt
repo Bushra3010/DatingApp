@@ -1,0 +1,8 @@
+  AAA   15.99:1  text                     on surface              
+  AA     5.24:1  text-muted               on surface              
+  AAA   14.36:1  text                     on blush                
+  AA     4.71:1  text-muted               on blush                
+  AA     5.44:1  accent                   on surface              
+  AA     5.44:1  on-accent                on accent               
+
+  6 pairs, 0 failing AA

@@ -6,226 +6,314 @@ import 'widgets.dart';
 class DiscoverScreen extends StatelessWidget {
   const DiscoverScreen({super.key, required this.store});
   final PreviewStore store;
+
+  void pass(BuildContext context, Person person) {
+    store.skip(person);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('Passed on ${person.name}'),
+      action: SnackBarAction(
+          label: 'Undo',
+          textColor: Colors.white,
+          onPressed: () => store.undo(person)),
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final people = store.discover;
-    return Column(children: [
-      Padding(
-          padding: const EdgeInsets.fromLTRB(24, 25, 24, 20),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                  const Eyebrow('A little curiosity. A real connection.'),
-                  const SizedBox(height: 9),
-                  Text('Meet your kind\nof person.',
-                      style: Theme.of(context).textTheme.headlineLarge)
+    if (people.isEmpty) {
+      return EmptyState(
+        icon: Icons.wb_sunny_outlined,
+        title: store.paused ? 'Take your time.' : 'You’re all caught up.',
+        detail: store.paused
+            ? 'Your profile is paused. Your conversations are still here.'
+            : 'Try widening your preferences to meet more people.',
+        action: FilledButton(
+            onPressed: () {
+              if (store.paused) {
+                store.paused = false;
+                store.update();
+              } else {
+                showFilters(context, store);
+              }
+            },
+            child: Text(
+                store.paused ? 'Resume discovering' : 'Adjust preferences')),
+      );
+    }
+    final person = people.first;
+    void like() => showLikeComposer(context, store, person, 'photo');
+    void details() => Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+            builder: (_) => PersonDetailsScreen(person: person, store: store)));
+    return LayoutBuilder(builder: (context, constraints) {
+      final photoHeight =
+          (constraints.maxHeight - 280).clamp(140.0, constraints.maxWidth - 72);
+      return Column(children: [
+        Expanded(
+            child: ListView(
+          key: ValueKey(person.id),
+          padding: const EdgeInsets.fromLTRB(22, 12, 22, 22),
+          children: [
+            Stack(clipBehavior: Clip.none, children: [
+              Positioned.fill(
+                  top: 18,
+                  bottom: -12,
+                  left: 13,
+                  right: 13,
+                  child: DecoratedBox(
+                      decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: const [
+                        BoxShadow(
+                            color: Color(0x0C29202B),
+                            blurRadius: 18,
+                            offset: Offset(0, 12))
+                      ]))),
+              _PersonCard(
+                  photoHeight: photoHeight,
+                  person: person,
+                  onOpen: details,
+                  onMore: () => showSafety(context, store, person)),
+            ]),
+            const SizedBox(height: 22),
+            Center(
+                child: TextButton.icon(
+                    onPressed: details,
+                    icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 18),
+                    label: const Text('Get to know them',
+                        style: TextStyle(
+                            fontSize: 12, color: KindredColors.muted)))),
+          ],
+        )),
+        Padding(
+            padding: const EdgeInsets.fromLTRB(30, 16, 30, 16),
+            child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  PastelAction(
+                      icon: Icons.star_rounded,
+                      label: 'Like ${person.name}’s prompt',
+                      color: KindredColors.red,
+                      size: 49,
+                      onTap: () => showLikeComposer(
+                          context, store, person, 'My ideal Sunday')),
+                  PastelAction(
+                      icon: Icons.close_rounded,
+                      label: 'Pass on ${person.name}',
+                      color: KindredColors.blue,
+                      size: 72,
+                      onTap: () => pass(context, person)),
+                  PastelAction(
+                      icon: Icons.favorite_rounded,
+                      label: 'Like ${person.name}’s photo',
+                      color: KindredColors.purple,
+                      size: 72,
+                      onTap: like),
+                  PastelAction(
+                      icon: Icons.bolt_rounded,
+                      label: 'Discovery preferences',
+                      color: KindredColors.lime,
+                      size: 49,
+                      onTap: () => showFilters(context, store)),
                 ])),
-            Padding(
-                padding: const EdgeInsets.only(top: 26),
-                child: RoundButton(
-                    icon: Icons.tune_rounded,
-                    label: 'Discovery preferences',
-                    onTap: () => showFilters(context, store))),
-          ])),
-      Expanded(
-          child: people.isEmpty
-              ? EmptyState(
-                  icon: Icons.wb_sunny_outlined,
-                  title: store.paused
-                      ? 'Take your time.'
-                      : 'A little pause,\nmore possibility.',
-                  detail: store.paused
-                      ? 'Your profile is paused. Your conversations are still here.'
-                      : 'You’ve met everyone in this preview who fits your preferences. Try widening your circle.',
-                  action: FilledButton(
-                      onPressed: () {
-                        if (store.paused) {
-                          store.paused = false;
-                          store.update();
-                        } else {
-                          showFilters(context, store);
-                        }
-                      },
-                      child: Text(store.paused
-                          ? 'Resume discovering'
-                          : 'Adjust preferences')))
-              : ListView(
-                  key: ValueKey(people.first.id),
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                  children: [
-                      _PersonCard(
-                          person: people.first,
-                          onLike: () => showLikeComposer(
-                              context, store, people.first, 'photo'),
-                          onMore: () =>
-                              showSafety(context, store, people.first)),
-                      const SizedBox(height: 18),
-                      Wrap(spacing: 7, runSpacing: 8, children: [
-                        Tag(Icons.work_outline_rounded, people.first.job),
-                        Tag(Icons.near_me_outlined,
-                            '${people.first.distance} km away'),
-                        const Tag(
-                            Icons.favorite_border, 'Long-term relationship')
-                      ]),
-                      const SizedBox(height: 20),
-                      Container(
-                          padding: const EdgeInsets.all(23),
-                          decoration: BoxDecoration(
-                              color: const Color(0xFFF0ECE5),
-                              borderRadius: BorderRadius.circular(20)),
-                          child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Eyebrow('My ideal Sunday'),
-                                const SizedBox(height: 14),
-                                Text(people.first.answer,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .headlineMedium
-                                        ?.copyWith(fontSize: 25, height: 1.4)),
-                                const SizedBox(height: 12),
-                                Align(
-                                    alignment: Alignment.centerRight,
-                                    child: RoundButton(
-                                        icon: Icons.favorite_border,
-                                        label: 'Like this prompt',
-                                        onTap: () => showLikeComposer(
-                                            context,
-                                            store,
-                                            people.first,
-                                            'My ideal Sunday'))),
-                              ])),
-                      const SizedBox(height: 22),
-                      Row(children: [
-                        RoundButton(
-                            icon: Icons.close_rounded,
-                            label: 'Pass on ${people.first.name}',
-                            onTap: () {
-                              final person = people.first;
-                              store.skip(person);
-                              ScaffoldMessenger.of(context)
-                                  .hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text('Passed on ${person.name}'),
-                                      action: SnackBarAction(
-                                          label: 'Undo',
-                                          textColor: Colors.white,
-                                          onPressed: () =>
-                                              store.undo(person))));
-                            }),
-                        const SizedBox(width: 13),
-                        const Expanded(
-                            child: Text(
-                                'Good things start with\nsomething in common.',
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    height: 1.5,
-                                    color: KindredColors.muted))),
-                        Text('${store.remaining} likes left',
-                            style: const TextStyle(
-                                fontSize: 11, color: KindredColors.muted))
-                      ]),
-                      const SizedBox(height: 22),
-                      const Center(
-                          child: Eyebrow('Demo profiles · UI preview')),
-                    ])),
-    ]);
+        Padding(
+            padding: const EdgeInsets.only(bottom: 16),
+            child: Text('${store.remaining} likes left · Preview',
+                style:
+                    const TextStyle(fontSize: 11, color: KindredColors.muted))),
+      ]);
+    });
   }
 }
 
 class _PersonCard extends StatelessWidget {
   const _PersonCard(
-      {required this.person, required this.onLike, required this.onMore});
+      {required this.person,
+      required this.photoHeight,
+      required this.onOpen,
+      required this.onMore});
   final Person person;
-  final VoidCallback onLike, onMore;
+  final VoidCallback onOpen, onMore;
+  final double photoHeight;
   @override
-  Widget build(BuildContext context) => ClipRRect(
-      borderRadius: BorderRadius.circular(23),
-      child: AspectRatio(
-          aspectRatio: .83,
-          child: Stack(fit: StackFit.expand, children: [
-            Portrait(person, radius: 0),
-            const DecoratedBox(
-                decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                  Colors.transparent,
-                  Colors.transparent,
-                  Color(0xB51B1820)
-                ],
-                        stops: [
-                  0,
-                  .45,
-                  1
-                ]))),
-            Positioned(
-                left: 17,
-                top: 17,
-                child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-                    decoration: BoxDecoration(
-                        color: KindredColors.paper.withValues(alpha: .94),
-                        borderRadius: BorderRadius.circular(30)),
-                    child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                      Icon(Icons.auto_awesome_outlined,
-                          size: 13, color: KindredColors.coral),
-                      SizedBox(width: 6),
-                      Text('A fresh connection',
-                          style: TextStyle(
-                              fontSize: 10, fontWeight: FontWeight.w600))
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+                color: Color(0x152D2231), blurRadius: 24, offset: Offset(0, 8))
+          ]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        GestureDetector(
+            onTap: onOpen,
+            child: Portrait(person,
+                height: photoHeight, width: double.infinity, radius: 18)),
+        const SizedBox(height: 16),
+        Row(children: [
+          Expanded(
+              child: GestureDetector(
+                  onTap: onOpen,
+                  child: Text('${person.name}, ${person.age}',
+                      style: const TextStyle(
+                          fontSize: 21,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -.6)))),
+          if (person.verified)
+            const Tooltip(
+                message: 'Selfie verified',
+                child: Icon(Icons.verified_rounded,
+                    size: 18, color: KindredColors.blue)),
+          SizedBox(
+              width: 34,
+              height: 32,
+              child: IconButton(
+                  padding: EdgeInsets.zero,
+                  tooltip: 'Profile options',
+                  onPressed: onMore,
+                  icon: const Icon(Icons.more_horiz,
+                      size: 22, color: KindredColors.muted))),
+        ]),
+        Text(person.job,
+            style: const TextStyle(color: KindredColors.muted, fontSize: 15)),
+        const SizedBox(height: 12),
+        Row(children: [
+          const Icon(Icons.location_on_outlined,
+              size: 14, color: KindredColors.muted),
+          const SizedBox(width: 4),
+          Expanded(
+              child: Text('Bengaluru · ${person.distance} km away',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12, color: KindredColors.muted))),
+          const SizedBox(width: 8),
+          const Icon(Icons.favorite_rounded,
+              size: 14, color: KindredColors.red),
+          const SizedBox(width: 4),
+          const Text('Relationship', style: TextStyle(fontSize: 11)),
+        ]),
+        const SizedBox(height: 10),
+      ]));
+}
+
+class PersonDetailsScreen extends StatelessWidget {
+  const PersonDetailsScreen(
+      {super.key, required this.person, required this.store});
+  final Person person;
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+            title: const Text('Discover', style: TextStyle(fontSize: 17)),
+            actions: [
+              IconButton(
+                  tooltip: 'Profile options',
+                  onPressed: () => showSafety(context, store, person),
+                  icon: const Icon(Icons.more_horiz)),
+              const SizedBox(width: 12)
+            ]),
+        body: Center(
+            child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
+                    children: [
+                      AspectRatio(
+                          aspectRatio: 1.05,
+                          child: Portrait(person, radius: 22)),
+                      const SizedBox(height: 22),
+                      Row(children: [
+                        Expanded(
+                            child: Text('${person.name}, ${person.age}',
+                                style: Theme.of(context).textTheme.titleLarge)),
+                        RoundButton(
+                            icon: Icons.favorite_border_rounded,
+                            label: 'Like ${person.name}’s photo',
+                            onTap: () => showLikeComposer(
+                                context, store, person, 'photo'))
+                      ]),
+                      Text('Bengaluru, India',
+                          style: const TextStyle(
+                              fontSize: 16, color: KindredColors.muted)),
+                      const SizedBox(height: 30),
+                      const DetailHeading(
+                          icon: Icons.person_outline_rounded,
+                          title: 'About',
+                          color: Color(0xFFEFB91E)),
+                      const SizedBox(height: 12),
+                      Text(
+                          '${person.job}. Looking for a lasting connection and someone to share the everyday adventures with.',
+                          style: const TextStyle(
+                              color: KindredColors.muted, height: 1.7)),
+                      const SizedBox(height: 28),
+                      const DetailHeading(
+                          icon: Icons.favorite_rounded,
+                          title: 'Interests',
+                          color: KindredColors.red),
+                      const SizedBox(height: 16),
+                      const Wrap(spacing: 10, runSpacing: 10, children: [
+                        Tag(Icons.music_note_outlined, 'Music'),
+                        Tag(Icons.coffee_outlined, 'Coffee'),
+                        Tag(Icons.menu_book_outlined, 'Books'),
+                        Tag(Icons.pets_outlined, 'Dogs'),
+                        Tag(Icons.explore_outlined, 'Exploring'),
+                        Tag(Icons.restaurant_outlined, 'Good food')
+                      ]),
+                      const SizedBox(height: 28),
+                      Container(
+                          padding: const EdgeInsets.all(22),
+                          decoration: BoxDecoration(
+                              color: KindredColors.blush,
+                              borderRadius: BorderRadius.circular(20)),
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('My ideal Sunday',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w700)),
+                                const SizedBox(height: 12),
+                                Text(person.answer,
+                                    style: const TextStyle(
+                                        fontSize: 20, height: 1.5)),
+                                Align(
+                                    alignment: Alignment.centerRight,
+                                    child: RoundButton(
+                                        icon: Icons.favorite_border,
+                                        label: 'Like this prompt',
+                                        onTap: () => showLikeComposer(context,
+                                            store, person, 'My ideal Sunday'))),
+                              ])),
                     ]))),
-            Positioned(
-                right: 8,
-                top: 8,
-                child: IconButton(
-                    onPressed: onMore,
-                    tooltip: 'Profile options',
-                    icon: const Icon(Icons.more_horiz, color: Colors.white))),
-            Positioned(
-                left: 22,
-                right: 18,
-                bottom: 22,
-                child:
-                    Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        Row(children: [
-                          Flexible(
-                              child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text('${person.name}, ${person.age}',
-                                      style: const TextStyle(
-                                          fontFamily: 'Lora',
-                                          fontSize: 33,
-                                          color: Colors.white,
-                                          letterSpacing: -.8)))),
-                          const SizedBox(width: 8),
-                          if (person.verified)
-                            const Tooltip(
-                                message: 'Selfie verified',
-                                child: Icon(Icons.verified,
-                                    color: Color(0xFFD9E5DE), size: 20))
-                        ]),
-                        const SizedBox(height: 5),
-                        const Text('A good story starts with hello.',
-                            style: TextStyle(fontSize: 12, color: Colors.white))
-                      ])),
-                  RoundButton(
-                      icon: Icons.favorite_border_rounded,
-                      label: 'Like ${person.name}’s photo',
-                      onTap: onLike,
-                      size: 52),
-                ])),
-          ])));
+      );
+}
+
+class DetailHeading extends StatelessWidget {
+  const DetailHeading(
+      {super.key,
+      required this.icon,
+      required this.title,
+      required this.color});
+  final IconData icon;
+  final String title;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+                color: color, borderRadius: BorderRadius.circular(9)),
+            child: Icon(icon, color: Colors.white, size: 17)),
+        const SizedBox(width: 9),
+        Text(title,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+      ]);
 }
 
 Future<void> showLikeComposer(BuildContext context, PreviewStore store,
@@ -364,8 +452,7 @@ class LikesScreen extends StatelessWidget {
       ListView(padding: const EdgeInsets.all(24), children: [
         const Eyebrow('The feeling could be mutual'),
         const SizedBox(height: 10),
-        Text('You caught\nsomeone’s eye.',
-            style: Theme.of(context).textTheme.headlineLarge),
+        Text('Likes you', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 10),
         const Text('A little interest. A lovely place to start.',
             style: TextStyle(color: KindredColors.muted)),
@@ -412,9 +499,7 @@ class LikesScreen extends StatelessWidget {
                                   const Text(
                                       '“I know just the place. Coffee and a bookstore sounds like a pretty perfect start.”',
                                       style: TextStyle(
-                                          fontFamily: 'Lora',
-                                          fontSize: 20,
-                                          height: 1.45)),
+                                          fontSize: 20, height: 1.45)),
                                   const SizedBox(height: 20),
                                   Row(children: [
                                     RoundButton(
@@ -451,8 +536,7 @@ class MessagesScreen extends StatelessWidget {
       ListView(padding: const EdgeInsets.all(24), children: [
         const Eyebrow('Less small talk. More possibility.'),
         const SizedBox(height: 10),
-        Text('Let’s see\nwhere this goes.',
-            style: Theme.of(context).textTheme.headlineLarge),
+        Text('Messages', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 28),
         Row(children: [
           const Text('YOUR CONNECTIONS',
@@ -645,8 +729,7 @@ class ProfileScreen extends StatelessWidget {
       ListView(padding: const EdgeInsets.all(24), children: [
         const Eyebrow('Unmistakably, wonderfully you'),
         const SizedBox(height: 10),
-        Text('Your story\nstarts here.',
-            style: Theme.of(context).textTheme.headlineLarge),
+        Text('My profile', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 26),
         Container(
             padding: const EdgeInsets.all(22),
@@ -663,9 +746,7 @@ class ProfileScreen extends StatelessWidget {
                   alignment: Alignment.center,
                   child: Text(store.myName.isEmpty ? 'R' : store.myName[0],
                       style: const TextStyle(
-                          fontFamily: 'Lora',
-                          fontSize: 32,
-                          color: KindredColors.coral))),
+                          fontSize: 32, color: KindredColors.coral))),
               const SizedBox(width: 18),
               Expanded(
                   child: Column(
@@ -757,10 +838,7 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 9),
         const Center(
             child: Text('Made for something real.',
-                style: TextStyle(
-                    fontFamily: 'Lora',
-                    fontSize: 17,
-                    color: KindredColors.muted))),
+                style: TextStyle(fontSize: 17, color: KindredColors.muted))),
         const SizedBox(height: 9),
         const Center(
             child: Text('Kindred · UI preview 0.1',

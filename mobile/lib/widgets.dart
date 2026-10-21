@@ -136,3 +136,34 @@ Future<T?> showKindredSheet<T>(BuildContext context, Widget child) =>
                   24, 0, 24, 24 + MediaQuery.viewInsetsOf(context).bottom),
               child: SingleChildScrollView(child: child))),
     );
+
+class PastelAction extends StatelessWidget {
+  const PastelAction(
+      {super.key,
+      required this.icon,
+      required this.label,
+      required this.color,
+      required this.size,
+      required this.onTap});
+  final IconData icon;
+  final String label;
+  final Color color;
+  final double size;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Container(
+        width: size,
+        height: size,
+        decoration:
+            BoxDecoration(shape: BoxShape.circle, color: color, boxShadow: [
+          BoxShadow(
+              color: color.withValues(alpha: .22),
+              blurRadius: 16,
+              offset: const Offset(0, 7))
+        ]),
+        child: IconButton(
+            tooltip: label,
+            onPressed: onTap,
+            icon: Icon(icon, color: Colors.white, size: size * .48)),
+      );
+}
