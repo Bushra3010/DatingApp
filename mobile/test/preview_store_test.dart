@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kindred/models.dart';
+import 'package:everlane/models.dart';
 
 void main() {
   test('Discovery respects filters, skip, undo, and pause', () {

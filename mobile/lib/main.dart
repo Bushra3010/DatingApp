@@ -3,15 +3,15 @@ import 'models.dart';
 import 'screens.dart';
 import 'theme.dart';
 
-void main() => runApp(const KindredApp());
+void main() => runApp(const EverlaneApp());
 
-class KindredApp extends StatefulWidget {
-  const KindredApp({super.key});
+class EverlaneApp extends StatefulWidget {
+  const EverlaneApp({super.key});
   @override
-  State<KindredApp> createState() => _KindredAppState();
+  State<EverlaneApp> createState() => _EverlaneAppState();
 }
 
-class _KindredAppState extends State<KindredApp> {
+class _EverlaneAppState extends State<EverlaneApp> {
   final store = PreviewStore();
   @override
   void dispose() {
@@ -21,20 +21,20 @@ class _KindredAppState extends State<KindredApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-      title: 'Kindred',
+      title: 'Everlane',
       debugShowCheckedModeBanner: false,
-      theme: kindredTheme(),
-      home: KindredShell(store: store));
+      theme: everlaneTheme(),
+      home: EverlaneShell(store: store));
 }
 
-class KindredShell extends StatefulWidget {
-  const KindredShell({super.key, required this.store});
+class EverlaneShell extends StatefulWidget {
+  const EverlaneShell({super.key, required this.store});
   final PreviewStore store;
   @override
-  State<KindredShell> createState() => _KindredShellState();
+  State<EverlaneShell> createState() => _EverlaneShellState();
 }
 
-class _KindredShellState extends State<KindredShell> {
+class _EverlaneShellState extends State<EverlaneShell> {
   int selected = 0;
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -90,33 +90,33 @@ class _KindredShellState extends State<KindredShell> {
                                           const SizedBox(height: 6),
                                           const Text('Bengaluru, India',
                                               style: TextStyle(
-                                                  color: KindredColors.muted)),
+                                                  color: EverlaneColors.muted)),
                                         ])),
                                 const SizedBox(height: 16),
                                 menuItem(
                                     Icons.favorite_rounded,
                                     'Likes you · ${store.incoming.length}',
-                                    KindredColors.red,
+                                    EverlaneColors.red,
                                     () => setState(() => selected = 1)),
                                 menuItem(
                                     Icons.chat_bubble_outline_rounded,
                                     'Matches',
-                                    KindredColors.blue,
+                                    EverlaneColors.blue,
                                     () => setState(() => selected = 2)),
                                 menuItem(
                                     Icons.search_rounded,
                                     'Looking for',
-                                    KindredColors.purple,
+                                    EverlaneColors.purple,
                                     () => showFilters(context, store)),
                                 menuItem(
                                     Icons.settings_outlined,
                                     'Settings',
-                                    KindredColors.lime,
+                                    EverlaneColors.lime,
                                     () => setState(() => selected = 3)),
                                 const Spacer(),
                                 const Padding(
                                     padding: EdgeInsets.all(26),
-                                    child: Text('kindred',
+                                    child: Text('everlane',
                                         style: TextStyle(
                                             fontSize: 25,
                                             fontWeight: FontWeight.w700,
@@ -135,7 +135,7 @@ class _KindredShellState extends State<KindredShell> {
                                     scaffoldKey.currentState!.openDrawer(),
                                 icon: _Avatar(name: store.myName)),
                             const Spacer(),
-                            const Text('kindred',
+                            const Text('everlane',
                                 style: TextStyle(
                                     fontSize: 23,
                                     fontWeight: FontWeight.w700,
@@ -145,7 +145,7 @@ class _KindredShellState extends State<KindredShell> {
                                 tooltip: 'Filter profiles',
                                 onPressed: () => showFilters(context, store),
                                 icon: const Icon(Icons.tune_rounded,
-                                    color: KindredColors.muted, size: 25)),
+                                    color: EverlaneColors.muted, size: 25)),
                           ])),
                       body: IndexedStack(index: selected, children: [
                         DiscoverScreen(store: store),
@@ -169,13 +169,13 @@ class _KindredShellState extends State<KindredShell> {
                                               ? FontWeight.w600
                                               : FontWeight.w400,
                                           color: states.contains(WidgetState.selected)
-                                              ? KindredColors.plum
-                                              : KindredColors.muted)),
+                                              ? EverlaneColors.plum
+                                              : EverlaneColors.muted)),
                                   iconTheme: WidgetStateProperty.resolveWith(
                                       (states) => IconThemeData(
                                           size: 26,
                                           color: states.contains(WidgetState.selected)
-                                              ? KindredColors.plum
+                                              ? EverlaneColors.plum
                                               : const Color(0xFFBDBDBF)))),
                               child: NavigationBar(selectedIndex: selected, onDestinationSelected: (value) => setState(() => selected = value), backgroundColor: Colors.white, indicatorColor: Colors.transparent, height: 76, destinations: [
                                 const NavigationDestination(
@@ -186,7 +186,7 @@ class _KindredShellState extends State<KindredShell> {
                                     icon: Badge(
                                         isLabelVisible:
                                             store.incoming.isNotEmpty,
-                                        backgroundColor: KindredColors.red,
+                                        backgroundColor: EverlaneColors.red,
                                         smallSize: 7,
                                         child: const Icon(
                                             Icons.favorite_border_rounded)),
@@ -219,13 +219,13 @@ class _Avatar extends StatelessWidget {
             width: size,
             height: size,
             decoration: BoxDecoration(
-                color: KindredColors.blush,
+                color: EverlaneColors.blush,
                 borderRadius: BorderRadius.circular(10)),
             alignment: Alignment.center,
             child: Text(name.isEmpty ? 'K' : name[0],
                 style: TextStyle(
                     fontSize: size * .48,
-                    color: KindredColors.coral,
+                    color: EverlaneColors.coral,
                     fontWeight: FontWeight.w600))),
         Positioned(
             right: -2,
@@ -234,7 +234,7 @@ class _Avatar extends StatelessWidget {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                    color: KindredColors.red,
+                    color: EverlaneColors.red,
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 1.5)))),
       ]);

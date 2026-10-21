@@ -1,4 +1,4 @@
-# Kindred
+# Everlane
 
 A relationship-first dating app for Android and iOS (working name). Product spec: [PRD-Hinge-Style-Dating-App.md](PRD-Hinge-Style-Dating-App.md).
 

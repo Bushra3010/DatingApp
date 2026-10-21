@@ -4,7 +4,7 @@ import { AddressInfo } from 'node:net';
 import { SmsProvider, ConsoleSmsProvider } from '../src/auth/sms.provider';
 import { api, liveUser, place, PNG, signUp, testApp } from './helpers';
 
-describe('Kindred MVP core flow', () => {
+describe('Everlane MVP core flow', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -173,7 +173,7 @@ describe('Kindred MVP core flow', () => {
       expect(blocked.status).toBe(429);
       expect(blocked.body.code).toBe('LIKE_LIMIT');
 
-      await a.post('/billing/verify', { store: 'dev', productId: 'kindred_plus_1m', purchaseToken: `t-${liker.id}` }).expect(200);
+      await a.post('/billing/verify', { store: 'dev', productId: 'everlane_plus_1m', purchaseToken: `t-${liker.id}` }).expect(200);
       await a.post('/likes', { toUserId: targets[8].id, targetType: 'photo', targetId: targets[8].photoIds[0] }).expect(201);
       expect((await a.get('/likes/remaining').expect(200)).body).toEqual({ remaining: null, unlimited: true });
     });
@@ -192,7 +192,7 @@ describe('Kindred MVP core flow', () => {
       expect(free.likes).toHaveLength(1);
       expect(free.likes[0].profile.userId).toBe(likers[0].id);
 
-      await a.post('/billing/verify', { store: 'dev', productId: 'kindred_plus_3m', purchaseToken: `t-${her.id}` }).expect(200);
+      await a.post('/billing/verify', { store: 'dev', productId: 'everlane_plus_3m', purchaseToken: `t-${her.id}` }).expect(200);
       const plus = (await a.get('/likes/received?sort=newest').expect(200)).body;
       expect(plus.likes.map((l: any) => l.profile.userId)).toEqual([likers[2].id, likers[1].id, likers[0].id]);
     });

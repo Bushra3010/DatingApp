@@ -86,7 +86,7 @@ class DiscoverScreen extends StatelessWidget {
                     icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 18),
                     label: const Text('Get to know them',
                         style: TextStyle(
-                            fontSize: 12, color: KindredColors.muted)))),
+                            fontSize: 12, color: EverlaneColors.muted)))),
           ],
         )),
         Padding(
@@ -97,26 +97,26 @@ class DiscoverScreen extends StatelessWidget {
                   PastelAction(
                       icon: Icons.star_rounded,
                       label: 'Like ${person.name}’s prompt',
-                      color: KindredColors.red,
+                      color: EverlaneColors.red,
                       size: 49,
                       onTap: () => showLikeComposer(
                           context, store, person, 'My ideal Sunday')),
                   PastelAction(
                       icon: Icons.close_rounded,
                       label: 'Pass on ${person.name}',
-                      color: KindredColors.blue,
+                      color: EverlaneColors.blue,
                       size: 72,
                       onTap: () => pass(context, person)),
                   PastelAction(
                       icon: Icons.favorite_rounded,
                       label: 'Like ${person.name}’s photo',
-                      color: KindredColors.purple,
+                      color: EverlaneColors.purple,
                       size: 72,
                       onTap: like),
                   PastelAction(
                       icon: Icons.bolt_rounded,
                       label: 'Discovery preferences',
-                      color: KindredColors.lime,
+                      color: EverlaneColors.lime,
                       size: 49,
                       onTap: () => showFilters(context, store)),
                 ])),
@@ -124,7 +124,7 @@ class DiscoverScreen extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 16),
             child: Text('${store.remaining} likes left · Preview',
                 style:
-                    const TextStyle(fontSize: 11, color: KindredColors.muted))),
+                    const TextStyle(fontSize: 11, color: EverlaneColors.muted))),
       ]);
     });
   }
@@ -168,7 +168,7 @@ class _PersonCard extends StatelessWidget {
             const Tooltip(
                 message: 'Selfie verified',
                 child: Icon(Icons.verified_rounded,
-                    size: 18, color: KindredColors.blue)),
+                    size: 18, color: EverlaneColors.blue)),
           SizedBox(
               width: 34,
               height: 32,
@@ -177,24 +177,24 @@ class _PersonCard extends StatelessWidget {
                   tooltip: 'Profile options',
                   onPressed: onMore,
                   icon: const Icon(Icons.more_horiz,
-                      size: 22, color: KindredColors.muted))),
+                      size: 22, color: EverlaneColors.muted))),
         ]),
         Text(person.job,
-            style: const TextStyle(color: KindredColors.muted, fontSize: 15)),
+            style: const TextStyle(color: EverlaneColors.muted, fontSize: 15)),
         const SizedBox(height: 12),
         Row(children: [
           const Icon(Icons.location_on_outlined,
-              size: 14, color: KindredColors.muted),
+              size: 14, color: EverlaneColors.muted),
           const SizedBox(width: 4),
           Expanded(
               child: Text('Bengaluru · ${person.distance} km away',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 12, color: KindredColors.muted))),
+                      fontSize: 12, color: EverlaneColors.muted))),
           const SizedBox(width: 8),
           const Icon(Icons.favorite_rounded,
-              size: 14, color: KindredColors.red),
+              size: 14, color: EverlaneColors.red),
           const SizedBox(width: 4),
           const Text('Relationship', style: TextStyle(fontSize: 11)),
         ]),
@@ -240,7 +240,7 @@ class PersonDetailsScreen extends StatelessWidget {
                       ]),
                       Text('Bengaluru, India',
                           style: const TextStyle(
-                              fontSize: 16, color: KindredColors.muted)),
+                              fontSize: 16, color: EverlaneColors.muted)),
                       const SizedBox(height: 30),
                       const DetailHeading(
                           icon: Icons.person_outline_rounded,
@@ -250,12 +250,12 @@ class PersonDetailsScreen extends StatelessWidget {
                       Text(
                           '${person.job}. Looking for a lasting connection and someone to share the everyday adventures with.',
                           style: const TextStyle(
-                              color: KindredColors.muted, height: 1.7)),
+                              color: EverlaneColors.muted, height: 1.7)),
                       const SizedBox(height: 28),
                       const DetailHeading(
                           icon: Icons.favorite_rounded,
                           title: 'Interests',
-                          color: KindredColors.red),
+                          color: EverlaneColors.red),
                       const SizedBox(height: 16),
                       const Wrap(spacing: 10, runSpacing: 10, children: [
                         Tag(Icons.music_note_outlined, 'Music'),
@@ -269,7 +269,7 @@ class PersonDetailsScreen extends StatelessWidget {
                       Container(
                           padding: const EdgeInsets.all(22),
                           decoration: BoxDecoration(
-                              color: KindredColors.blush,
+                              color: EverlaneColors.blush,
                               borderRadius: BorderRadius.circular(20)),
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,7 +324,7 @@ Future<void> showLikeComposer(BuildContext context, PreviewStore store,
     return;
   }
   final controller = TextEditingController();
-  final sent = await showKindredSheet<bool>(
+  final sent = await showEverlaneSheet<bool>(
       context,
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Eyebrow('Make the first move'),
@@ -363,7 +363,7 @@ Future<void> showLikeComposer(BuildContext context, PreviewStore store,
                 ])),
         const SizedBox(height: 12),
         const Text('Preview only. Your like won’t be sent to a real person.',
-            style: TextStyle(fontSize: 11, color: KindredColors.muted)),
+            style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
       ]));
   // Wait for the sheet's reverse transition before disposing its field controller.
   await Future<void>.delayed(const Duration(milliseconds: 300));
@@ -377,7 +377,7 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
   var ages = store.ages;
   var distance = store.distance;
   var verified = store.verifiedOnly;
-  await showKindredSheet(
+  await showEverlaneSheet(
       context,
       StatefulBuilder(
           builder: (context, setState) =>
@@ -455,7 +455,7 @@ class LikesScreen extends StatelessWidget {
         Text('Likes you', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 10),
         const Text('A little interest. A lovely place to start.',
-            style: TextStyle(color: KindredColors.muted)),
+            style: TextStyle(color: EverlaneColors.muted)),
         const SizedBox(height: 28),
         if (store.incoming.isEmpty)
           const EmptyState(
@@ -470,7 +470,7 @@ class LikesScreen extends StatelessWidget {
                   decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: KindredColors.line)),
+                      border: Border.all(color: EverlaneColors.line)),
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -487,14 +487,14 @@ class LikesScreen extends StatelessWidget {
                                             .titleLarge),
                                     const SizedBox(width: 7),
                                     const Icon(Icons.verified,
-                                        size: 17, color: KindredColors.green)
+                                        size: 17, color: EverlaneColors.green)
                                   ]),
                                   const SizedBox(height: 5),
                                   const Text(
                                       'Liked your answer to “My ideal Sunday”',
                                       style: TextStyle(
                                           fontSize: 12,
-                                          color: KindredColors.muted)),
+                                          color: EverlaneColors.muted)),
                                   const SizedBox(height: 16),
                                   const Text(
                                       '“I know just the place. Coffee and a bookstore sounds like a pretty perfect start.”',
@@ -541,10 +541,10 @@ class MessagesScreen extends StatelessWidget {
         Row(children: [
           const Text('YOUR CONNECTIONS',
               style: TextStyle(
-                  fontSize: 10, letterSpacing: 2, color: KindredColors.muted)),
+                  fontSize: 10, letterSpacing: 2, color: EverlaneColors.muted)),
           const SizedBox(width: 8),
           Text('${store.conversations.length}',
-              style: const TextStyle(fontSize: 12, color: KindredColors.coral))
+              style: const TextStyle(fontSize: 12, color: EverlaneColors.coral))
         ]),
         const SizedBox(height: 16),
         if (store.conversations.isEmpty)
@@ -569,9 +569,9 @@ class MessagesScreen extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        fontSize: 12, color: KindredColors.muted)),
+                        fontSize: 12, color: EverlaneColors.muted)),
                 trailing:
-                    const Icon(Icons.chevron_right, color: KindredColors.muted),
+                    const Icon(Icons.chevron_right, color: EverlaneColors.muted),
                 onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute<void>(
@@ -581,12 +581,12 @@ class MessagesScreen extends StatelessWidget {
         Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-                color: KindredColors.blush,
+                color: EverlaneColors.blush,
                 borderRadius: BorderRadius.circular(18)),
             child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.lightbulb_outline, color: KindredColors.coral),
+                  Icon(Icons.lightbulb_outline, color: EverlaneColors.coral),
                   SizedBox(width: 12),
                   Expanded(
                       child: Text(
@@ -637,7 +637,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Text(widget.chat.person.name,
                   style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 6),
-              const Icon(Icons.verified, size: 16, color: KindredColors.green)
+              const Icon(Icons.verified, size: 16, color: EverlaneColors.green)
             ]),
             actions: [
               IconButton(
@@ -655,12 +655,12 @@ class _ChatScreenState extends State<ChatScreen> {
                       Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
-                          color: KindredColors.blush,
+                          color: EverlaneColors.blush,
                           child: const Text(
                               'Demo conversation · Messages stay on this device',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                  fontSize: 11, color: KindredColors.muted))),
+                                  fontSize: 11, color: EverlaneColors.muted))),
                       Expanded(
                           child: ListView(
                               controller: scroll,
@@ -684,7 +684,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                           horizontal: 18, vertical: 14),
                                       decoration: BoxDecoration(
                                           color: message.mine
-                                              ? KindredColors.plum
+                                              ? EverlaneColors.plum
                                               : Colors.white,
                                           borderRadius:
                                               BorderRadius.circular(18)),
@@ -692,7 +692,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                           style: TextStyle(
                                               color: message.mine
                                                   ? Colors.white
-                                                  : KindredColors.plum,
+                                                  : EverlaneColors.plum,
                                               height: 1.5)))),
                           ])),
                       Padding(
@@ -736,17 +736,17 @@ class ProfileScreen extends StatelessWidget {
             decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: KindredColors.line)),
+                border: Border.all(color: EverlaneColors.line)),
             child: Row(children: [
               Container(
                   width: 70,
                   height: 70,
                   decoration: const BoxDecoration(
-                      shape: BoxShape.circle, color: KindredColors.blush),
+                      shape: BoxShape.circle, color: EverlaneColors.blush),
                   alignment: Alignment.center,
                   child: Text(store.myName.isEmpty ? 'R' : store.myName[0],
                       style: const TextStyle(
-                          fontSize: 32, color: KindredColors.coral))),
+                          fontSize: 32, color: EverlaneColors.coral))),
               const SizedBox(width: 18),
               Expanded(
                   child: Column(
@@ -757,9 +757,9 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(store.myJob,
                         style: const TextStyle(
-                            color: KindredColors.muted, fontSize: 12)),
+                            color: EverlaneColors.muted, fontSize: 12)),
                     const SizedBox(height: 6),
-                    const Eyebrow('Preview profile', color: KindredColors.coral)
+                    const Eyebrow('Preview profile', color: EverlaneColors.coral)
                   ])),
               IconButton(
                   tooltip: 'Edit profile',
@@ -770,7 +770,7 @@ class ProfileScreen extends StatelessWidget {
         Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-                color: KindredColors.blush,
+                color: EverlaneColors.blush,
                 borderRadius: BorderRadius.circular(20)),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -821,7 +821,7 @@ class ProfileScreen extends StatelessWidget {
             leading: const Icon(Icons.shield_outlined),
             title: const Text('A safer space'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => showKindredSheet(
+            onTap: () => showEverlaneSheet(
                 context,
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Your comfort comes first.',
@@ -834,15 +834,15 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 28),
         const Center(
             child:
-                Icon(Icons.spa_outlined, size: 27, color: KindredColors.coral)),
+                Icon(Icons.spa_outlined, size: 27, color: EverlaneColors.coral)),
         const SizedBox(height: 9),
         const Center(
             child: Text('Made for something real.',
-                style: TextStyle(fontSize: 17, color: KindredColors.muted))),
+                style: TextStyle(fontSize: 17, color: EverlaneColors.muted))),
         const SizedBox(height: 9),
         const Center(
-            child: Text('Kindred · UI preview 0.1',
-                style: TextStyle(fontSize: 10, color: KindredColors.muted))),
+            child: Text('Everlane · UI preview 0.1',
+                style: TextStyle(fontSize: 10, color: EverlaneColors.muted))),
       ]);
 }
 
@@ -851,7 +851,7 @@ Future<void> editProfile(BuildContext context, PreviewStore store) async {
   final job = TextEditingController(text: store.myJob);
   final prompt = TextEditingController(text: store.myPrompt);
   final key = GlobalKey<FormState>();
-  await showKindredSheet(
+  await showEverlaneSheet(
       context,
       Form(
           key: key,
@@ -902,14 +902,14 @@ Future<void> editProfile(BuildContext context, PreviewStore store) async {
 
 Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
     {Conversation? chat}) async {
-  final action = await showKindredSheet<String>(
+  final action = await showEverlaneSheet<String>(
       context,
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Your space. Your choice.',
             style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 12),
         Text('Manage your connection with ${person.name}.',
-            style: const TextStyle(color: KindredColors.muted)),
+            style: const TextStyle(color: EverlaneColors.muted)),
         const SizedBox(height: 20),
         ListTile(
             contentPadding: EdgeInsets.zero,
@@ -931,7 +931,7 @@ Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
   if (action == null || !context.mounted) return;
   String? reason;
   if (action == 'report') {
-    reason = await showKindredSheet<String>(
+    reason = await showEverlaneSheet<String>(
         context,
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('What happened?',

@@ -1,8 +1,8 @@
-# Kindred reference redesign
+# Everlane reference redesign
 
 Flutter implementation: `mobile/lib/theme.dart`, `widgets.dart`, `main.dart`, `screens.dart`.
 The attached reference is the visual source. Existing licensed demo portraits remain in use.
-Native Flutter uses KindredColors and ThemeData; CSS tokens are a portable reference, with no Tailwind dependency.
+Native Flutter uses EverlaneColors and ThemeData; CSS tokens are a portable reference, with no Tailwind dependency.
 
 ## Profile card
 White surface, 24 px corners, soft 24 px shadow, 14 px padding. Portrait ratio 1.02 with 18 px corners. Name and age below the portrait, then work and distance. Name and photo open the detail route. Menu exposes safety actions. Verification has a tooltip. Card stays scrollable on short phones.

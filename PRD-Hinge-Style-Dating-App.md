@@ -4,7 +4,7 @@ Oct 21, 2026 · Status: Draft v0.1
 
 ## 1. Overview
 
-**Working name:** Kindred (placeholder). A relationship-first dating app for Android and iOS where people match by reacting to specific parts of a profile, not by swiping on photos.
+**Working name:** Everlane (placeholder). A relationship-first dating app for Android and iOS where people match by reacting to specific parts of a profile, not by swiping on photos.
 
 **Problem.** Swipe apps reward volume over intent. Users report fatigue, low-effort openers, ghosting and matches that never turn into dates. Profiles built only on photos give little to start a conversation with.
 

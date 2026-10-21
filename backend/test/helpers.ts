@@ -16,7 +16,7 @@ export const PNG = Buffer.from(
 export async function testApp(overrides: Partial<AppConfig> = {}): Promise<INestApplication> {
   const config = loadConfig({
     databaseUrl: 'memory://',
-    mediaDir: mkdtempSync(join(tmpdir(), 'kindred-media-')),
+    mediaDir: mkdtempSync(join(tmpdir(), 'everlane-media-')),
     otpDevBypass: true,
     moderationProvider: 'auto',
     verificationProvider: 'auto',

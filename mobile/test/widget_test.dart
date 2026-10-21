@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:kindred/main.dart';
+import 'package:everlane/main.dart';
 
 void main() {
   testWidgets('Main screens work on a phone and accepting a like opens a chat',
@@ -9,7 +9,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const KindredApp());
+    await tester.pumpWidget(const EverlaneApp());
     await tester.pumpAndSettle();
     expect(find.text('Ananya, 27'), findsOneWidget);
     await tester.tap(find.text('Likes you'));
@@ -39,7 +39,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const KindredApp());
+    await tester.pumpWidget(const EverlaneApp());
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Discovery preferences'));
     await tester.pumpAndSettle();
@@ -65,7 +65,7 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const KindredApp());
+    await tester.pumpWidget(const EverlaneApp());
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ananya, 27'));
     await tester.pumpAndSettle();

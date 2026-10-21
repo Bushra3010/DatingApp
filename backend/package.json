@@ -1,8 +1,8 @@
 {
-  "name": "kindred-backend",
+  "name": "everlane-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Kindred API: auth, profiles, discovery, likes, matches, chat and safety",
+  "description": "Everlane API: auth, profiles, discovery, likes, matches, chat and safety",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/main.js",

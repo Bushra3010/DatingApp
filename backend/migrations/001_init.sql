@@ -1,4 +1,4 @@
--- Kindred initial schema: accounts, profiles, discovery, likes, matches, chat, safety.
+-- Everlane initial schema: accounts, profiles, discovery, likes, matches, chat, safety.
 -- Location uses plain lat/lng with a haversine query so it runs on embedded Postgres;
 -- switch to a PostGIS geography column once production Postgres is provisioned.
 

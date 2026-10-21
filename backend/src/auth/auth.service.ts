@@ -42,7 +42,7 @@ export class AuthService {
       `INSERT INTO otp_codes (phone, code_hash, expires_at) VALUES ($1, $2, now() + make_interval(mins => $3))`,
       [phone, this.hash(phone, code), OTP_TTL_MINUTES],
     );
-    await this.sms.send(phone, `${code} is your Kindred code. It expires in ${OTP_TTL_MINUTES} minutes.`);
+    await this.sms.send(phone, `${code} is your Everlane code. It expires in ${OTP_TTL_MINUTES} minutes.`);
     return { expiresInSeconds: OTP_TTL_MINUTES * 60 };
   }
 

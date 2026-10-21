@@ -1,6 +1,6 @@
-# Kindred mobile
+# Everlane mobile
 
-A Flutter UI for Kindred, with a reference-inspired white interface, rounded portrait cards, pastel actions, a profile drawer, and a separate bio and interests view. Likes on photos and prompts remain interactive. Android and iOS runners are included; the web runner is a convenient way to review the same mobile UI in a browser.
+A Flutter UI for Everlane, with a reference-inspired white interface, rounded portrait cards, pastel actions, a profile drawer, and a separate bio and interests view. Likes on photos and prompts remain interactive. Android and iOS runners are included; the web runner is a convenient way to review the same mobile UI in a browser.
 
 ## Run
 

@@ -32,7 +32,7 @@ const NAMES: [string, 'woman' | 'man' | 'nonbinary', ('woman' | 'man' | 'nonbina
       for (let p = 0; p < 6; p++) {
         const [m] = await q.query(
           `INSERT INTO media (owner_id, kind, url, mime_type, size_bytes) VALUES ($1, 'photo', $2, 'image/jpeg', 0) RETURNING id`,
-          [u.id, `https://picsum.photos/seed/kindred-${i}-${p}/600/800`],
+          [u.id, `https://picsum.photos/seed/everlane-${i}-${p}/600/800`],
         );
         await q.query(
           `INSERT INTO photos (user_id, media_id, position, moderation_status) VALUES ($1, $2, $3, 'approved')`,

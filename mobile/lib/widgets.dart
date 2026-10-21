@@ -19,19 +19,19 @@ class Portrait extends StatelessWidget {
           errorBuilder: (_, error, stack) => Container(
               height: height,
               width: width,
-              color: KindredColors.blush,
+              color: EverlaneColors.blush,
               alignment: Alignment.center,
               child: Text(person.name[0],
                   style: const TextStyle(
                       fontFamily: 'Lora',
                       fontSize: 64,
-                      color: KindredColors.coral))),
+                      color: EverlaneColors.coral))),
         ),
       );
 }
 
 class Eyebrow extends StatelessWidget {
-  const Eyebrow(this.text, {super.key, this.color = KindredColors.muted});
+  const Eyebrow(this.text, {super.key, this.color = EverlaneColors.muted});
   final String text;
   final Color color;
   @override
@@ -52,10 +52,10 @@ class Tag extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: .7),
-            border: Border.all(color: KindredColors.line),
+            border: Border.all(color: EverlaneColors.line),
             borderRadius: BorderRadius.circular(30)),
         child: Row(mainAxisSize: MainAxisSize.min, children: [
-          Icon(icon, size: 14, color: KindredColors.muted),
+          Icon(icon, size: 14, color: EverlaneColors.muted),
           const SizedBox(width: 6),
           Flexible(child: Text(text, style: const TextStyle(fontSize: 11)))
         ]),
@@ -84,9 +84,9 @@ class RoundButton extends StatelessWidget {
         onPressed: onTap,
         icon: Icon(icon, size: 23),
         style: IconButton.styleFrom(
-            backgroundColor: filled ? KindredColors.coral : Colors.white,
-            foregroundColor: filled ? Colors.white : KindredColors.plum,
-            side: filled ? null : const BorderSide(color: KindredColors.line)),
+            backgroundColor: filled ? EverlaneColors.coral : Colors.white,
+            foregroundColor: filled ? Colors.white : EverlaneColors.plum,
+            side: filled ? null : const BorderSide(color: EverlaneColors.line)),
       ));
 }
 
@@ -107,8 +107,8 @@ class EmptyState extends StatelessWidget {
         Container(
             padding: const EdgeInsets.all(24),
             decoration: const BoxDecoration(
-                color: KindredColors.blush, shape: BoxShape.circle),
-            child: Icon(icon, size: 38, color: KindredColors.coral)),
+                color: EverlaneColors.blush, shape: BoxShape.circle),
+            child: Icon(icon, size: 38, color: EverlaneColors.coral)),
         const SizedBox(height: 24),
         Text(title,
             textAlign: TextAlign.center,
@@ -116,7 +116,7 @@ class EmptyState extends StatelessWidget {
         const SizedBox(height: 12),
         Text(detail,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: KindredColors.muted, height: 1.6)),
+            style: const TextStyle(color: EverlaneColors.muted, height: 1.6)),
         if (action != null) ...[const SizedBox(height: 24), action!],
       ]));
 }
@@ -124,12 +124,12 @@ class EmptyState extends StatelessWidget {
 void showNotice(BuildContext context, String text) =>
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
 
-Future<T?> showKindredSheet<T>(BuildContext context, Widget child) =>
+Future<T?> showEverlaneSheet<T>(BuildContext context, Widget child) =>
     showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
-      backgroundColor: KindredColors.paper,
+      backgroundColor: EverlaneColors.paper,
       builder: (context) => SafeArea(
           child: Padding(
               padding: EdgeInsets.fromLTRB(

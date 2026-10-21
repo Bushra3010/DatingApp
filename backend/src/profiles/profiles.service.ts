@@ -116,7 +116,7 @@ export class ProfilesService {
     if (input.birthDate !== undefined) {
       // ON-2: date of birth is locked after setup and must be 18+.
       if (current.birth_date) throw new ForbiddenException('Date of birth cannot be changed');
-      if (ageFrom(input.birthDate) < 18) throw new ForbiddenException('You must be 18 or older to use Kindred');
+      if (ageFrom(input.birthDate) < 18) throw new ForbiddenException('You must be 18 or older to use Everlane');
     }
     if (input.firstName !== undefined && screenText(input.firstName).length) {
       throw new BadRequestException('Name contains contact or payment details');

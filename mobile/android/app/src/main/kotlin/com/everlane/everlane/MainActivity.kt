@@ -1,4 +1,4 @@
-package com.kindred.kindred
+package com.everlane.everlane
 
 import io.flutter.embedding.android.FlutterActivity
 

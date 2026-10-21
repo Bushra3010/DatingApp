@@ -3,8 +3,8 @@ import { Db } from '../db/db.service';
 
 /** Plus plans from PRD section 7. Prices are display hints; stores charge in the local currency. */
 export const PLANS = [
-  { productId: 'kindred_plus_1m', tier: 'plus', months: 1, priceInr: 499 },
-  { productId: 'kindred_plus_3m', tier: 'plus', months: 3, priceInr: 1199 },
+  { productId: 'everlane_plus_1m', tier: 'plus', months: 1, priceInr: 499 },
+  { productId: 'everlane_plus_3m', tier: 'plus', months: 3, priceInr: 1199 },
 ] as const;
 
 export type Store = 'play' | 'app_store' | 'dev';
