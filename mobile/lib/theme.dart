@@ -1,29 +1,52 @@
 import 'package:flutter/material.dart';
 
 abstract final class EverlaneColors {
-  static const paper = Color(0xFFFFFFFF);
-  static const plum = Color(0xFF222126);
-  static const coral = Color(0xFFB83E55);
-  static const blush = Color(0xFFFFEFF1);
-  static const muted = Color(0xFF6E6B72);
-  static const line = Color(0xFFF0EDF0);
-  static const blue = Color(0xFF91BFE2);
-  static const purple = Color(0xFFB77EA4);
-  static const lime = Color(0xFFB6D96F);
-  static const red = Color(0xFFFF666D);
-  static const green = Color(0xFF527062);
+  /// Set from the Dark mode switch in Settings. Neutrals are read at build
+  /// time; the accent colours are the same in both themes.
+  static bool dark = false;
+
+  static Color get paper =>
+      dark ? const Color(0xFF17120F) : const Color(0xFFFFF8EC);
+  static Color get card => dark ? const Color(0xFF241D19) : Colors.white;
+
+  /// Text and icons.
+  static Color get plum =>
+      dark ? const Color(0xFFF5ECE1) : const Color(0xFF2A1F1A);
+
+  /// Dark surfaces that carry white content (buttons, banners, own bubbles).
+  static Color get deep =>
+      dark ? const Color(0xFF3B2F28) : const Color(0xFF2A1F1A);
+  static Color get blush =>
+      dark ? const Color(0xFF3A2229) : const Color(0xFFFCE4EC);
+  static Color get muted =>
+      dark ? const Color(0xFFA99B8D) : const Color(0xFF7A6E64);
+  static Color get line =>
+      dark ? const Color(0xFF3A302A) : const Color(0xFFF1E7D8);
+  static const star = Color(0xFFF2A93B);
+  static const pass = Color(0xFF8A7B6D);
+  static const like = Color(0xFFD6336C);
+  static const boost = Color(0xFF2F9E75);
 }
 
 ThemeData everlaneTheme() => ThemeData(
       useMaterial3: true,
+      brightness: EverlaneColors.dark ? Brightness.dark : Brightness.light,
       scaffoldBackgroundColor: EverlaneColors.paper,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: EverlaneColors.plum,
+        seedColor: EverlaneColors.like,
+        brightness: EverlaneColors.dark ? Brightness.dark : Brightness.light,
         primary: EverlaneColors.plum,
-        secondary: EverlaneColors.coral,
+        onPrimary: EverlaneColors.paper,
+        secondary: EverlaneColors.like,
         surface: EverlaneColors.paper,
+        onSurface: EverlaneColors.plum,
       ),
-      textTheme: const TextTheme(
+      cardColor: EverlaneColors.card,
+      bottomSheetTheme:
+          BottomSheetThemeData(backgroundColor: EverlaneColors.paper),
+      dialogTheme: DialogThemeData(backgroundColor: EverlaneColors.card),
+      drawerTheme: DrawerThemeData(backgroundColor: EverlaneColors.paper),
+      textTheme: TextTheme(
         headlineLarge: TextStyle(
             fontWeight: FontWeight.w700,
             fontSize: 26,
@@ -44,36 +67,36 @@ ThemeData everlaneTheme() => ThemeData(
             TextStyle(fontSize: 16, height: 1.5, color: EverlaneColors.plum),
         bodyMedium:
             TextStyle(fontSize: 14, height: 1.5, color: EverlaneColors.plum),
-        labelLarge: TextStyle(
+        labelLarge: const TextStyle(
             fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: .2),
       ),
       dividerColor: EverlaneColors.line,
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
           backgroundColor: EverlaneColors.paper,
           foregroundColor: EverlaneColors.plum,
           elevation: 0,
           scrolledUnderElevation: 0),
       filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
-        backgroundColor: EverlaneColors.plum,
+        backgroundColor: EverlaneColors.deep,
         foregroundColor: Colors.white,
         minimumSize: const Size(double.infinity, 54),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       )),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: EverlaneColors.card,
         contentPadding: const EdgeInsets.all(18),
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: EverlaneColors.line)),
+            borderSide: BorderSide(color: EverlaneColors.line)),
         enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: EverlaneColors.line)),
+            borderSide: BorderSide(color: EverlaneColors.line)),
       ),
       snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: EverlaneColors.plum,
+          backgroundColor: EverlaneColors.deep,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
     );

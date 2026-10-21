@@ -11,8 +11,11 @@ void main() {
     expect(store.discover.map((p) => p.id), ['ananya', 'meera']);
     store.skip(demoPeople.first);
     expect(store.discover.map((p) => p.id), ['meera']);
-    store.undo(demoPeople.first);
+    expect(store.undoLastPass(), isNull, reason: 'Rewind needs Plus');
+    store.choosePlan(Plan.plus);
+    expect(store.undoLastPass()?.id, 'ananya');
     expect(store.discover.length, 2);
+    expect(store.undoLastPass(), isNull);
     store.paused = true;
     expect(store.discover, isEmpty);
     expect(store.conversations, isNotEmpty);
@@ -37,7 +40,8 @@ void main() {
           job: '',
           photo: '',
           distance: 1,
-          answer: ''));
+          answer: '',
+          lookingFor: const [LookingFor.longTerm]));
     }
     expect(store.remaining, 0);
     expect(store.sentLikes.length, 8);

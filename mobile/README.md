@@ -26,10 +26,16 @@ python3 tool/serve_preview.py  # http://127.0.0.1:8081; prevents stale UI cachin
 
 ## Implemented preview
 
-- Discover one person at a time, with photos, verification badges, vitals and a written prompt.
-- Like a specific photo or prompt, adding an optional 150-character comment; pass and undo a pass.
+- Discover one person at a time, with photos, rare verification badges, a written prompt and photo prompts ("Ask about this photo", their soundtrack). Swipe right to like, left to pass, with a slow page-turn motion and light haptics.
+- Like a specific photo, prompt or soundtrack, adding an optional 150-character comment. Rewind (undo the last pass) needs Plus.
+- Profiles open with a shared-photo transition and parallax, show what the person is looking for, and can carry a voice prompt drawn as a waveform (animated only; no audio files).
+- Explore: browse people by what they're looking for (long-term, short-term fun, coffee date, date night, new friends, travel buddy), or answer five questions for an introduction.
+- Hangouts (Premium): set what you feel like doing, filter plans, request to join, message the host or host your own plan.
+- Membership: Free, Plus and Premium from PRD §7. Choosing a plan changes it locally; no payment is taken. Free members see incoming likes blurred.
+- Privacy: distances show as "Nearby" or rounded, never exact; Invisible mode setting (Plus).
+- Light theme by default, with a Dark mode switch in Settings.
 - Filter by age, distance and verified profiles; handle empty discovery and paused profiles.
-- Accept or remove incoming likes; accepting opens a conversation.
+- Accept or remove incoming likes (Plus or Premium); accepting opens a conversation.
 - Browse conversations and send local text messages; blank messages are ignored.
 - Edit your first name, work and prompt with validation.
 - Preview pause and notification preferences; report, block and unmatch flows hide local profiles/conversations. Reporting explicitly states that no moderation report is submitted.
@@ -37,7 +43,7 @@ python3 tool/serve_preview.py  # http://127.0.0.1:8081; prevents stale UI cachin
 
 ## Boundaries
 
-This is a **demo-data UI**, not an authenticated client. All state is held in memory and resets when the app restarts. No like, comment, message, preference or report is sent to the NestJS backend. Notifications are not delivered. No accounts, purchases or real-world matches are created. The eight-like allowance is per preview session, not a production daily counter.
+This is a **demo-data UI**, not an authenticated client. All state is held in memory and resets when the app restarts. No like, comment, message, preference or report is sent to the NestJS backend. Notifications are not delivered. No accounts, purchases or real-world matches are created; plan changes, Hangout requests and dark mode reset on reload. The eight-like allowance is per preview session, not a production daily counter.
 
 The next integration work is OTP/onboarding, authenticated API repositories using the existing backend, media uploads, persistent sessions, realtime chat and server error/loading states. Platform app icons and signing still use Flutter development defaults. Native release builds have not been verified.
 
@@ -46,7 +52,9 @@ The next integration work is OTP/onboarding, authenticated API repositories usin
 - `lib/theme.dart`: palette, typography and component styles.
 - `lib/models.dart`: typed demo models and shared preview state.
 - `lib/widgets.dart`: portraits, tags, empty states, buttons and sheets.
-- `lib/screens.dart`: discovery, likes, messages, chat, profile and supporting flows.
+- `lib/screens.dart`: discovery, Explore, likes, messages, chat, profile, membership and supporting flows.
+- `lib/hangouts.dart`: Hangouts setup, plan list and hosting.
+- `lib/introductions.dart`: the five-question introduction quiz.
 - `lib/main.dart`: application and navigation shell.
 - `test/`: filter/like/match invariants and phone-width interaction checks.
 

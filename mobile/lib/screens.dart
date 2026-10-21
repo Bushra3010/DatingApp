@@ -1,36 +1,53 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'models.dart';
 import 'theme.dart';
 import 'widgets.dart';
+import 'hangouts.dart';
+import 'introductions.dart';
 
 class DiscoverScreen extends StatelessWidget {
   const DiscoverScreen({super.key, required this.store});
   final PreviewStore store;
 
+  /// No snackbar here: it would cover the Undo button in the action row.
   void pass(BuildContext context, Person person) {
-    store.skip(person);
+    HapticFeedback.selectionClick();
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('Passed on ${person.name}'),
-      action: SnackBarAction(
-          label: 'Undo',
-          textColor: Colors.white,
-          onPressed: () => store.undo(person)),
-    ));
+    store.skip(person);
   }
 
   /// Right swipe: a plain like on the whole profile, without the composer.
   bool swipeLike(BuildContext context, Person person) {
-    if (store.remaining <= 0) {
-      showNotice(
-          context, 'You’ve used your 8 preview likes. Take a little breather.');
+    if (store.outOfLikes) {
+      showUpgrade(context, store,
+          title: 'You’ve used today’s 8 likes.',
+          detail:
+              'Get Plus for unlimited likes, or take a breather and come back tomorrow.');
       return false;
     }
+    HapticFeedback.lightImpact();
     store.like(person, target: 'profile');
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text('You liked ${person.name}')));
     return true;
+  }
+
+  void undoPass(BuildContext context) {
+    if (!store.canRewind) {
+      showUpgrade(context, store,
+          title: 'Passed by mistake?',
+          detail:
+              'Rewind brings back the last profile you passed on. It comes with Plus and Premium.');
+      return;
+    }
+    final person = store.undoLastPass();
+    if (person == null) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    showNotice(context, '${person.name} is back');
   }
 
   @override
@@ -43,25 +60,38 @@ class DiscoverScreen extends StatelessWidget {
         detail: store.paused
             ? 'Your profile is paused. Your conversations are still here.'
             : 'Try widening your preferences to meet more people.',
-        action: FilledButton(
-            onPressed: () {
-              if (store.paused) {
-                store.paused = false;
-                store.update();
-              } else {
-                showFilters(context, store);
-              }
-            },
-            child: Text(
-                store.paused ? 'Resume discovering' : 'Adjust preferences')),
+        action: Column(children: [
+          FilledButton(
+              onPressed: () {
+                if (store.paused) {
+                  store.paused = false;
+                  store.update();
+                } else {
+                  showFilters(context, store);
+                }
+              },
+              child: Text(
+                  store.paused ? 'Resume discovering' : 'Adjust preferences')),
+          if (!store.paused && store.canUndo) ...[
+            const SizedBox(height: 8),
+            TextButton.icon(
+                onPressed: () => undoPass(context),
+                icon: const Icon(Icons.replay_rounded, size: 18),
+                label: const Text('Undo last pass')),
+          ],
+        ]),
       );
     }
     final person = people.first;
-    void like() => showLikeComposer(context, store, person, 'photo');
+    void like() {
+      HapticFeedback.lightImpact();
+      showLikeComposer(context, store, person, 'photo');
+    }
+
     void details() => Navigator.push(
         context,
-        MaterialPageRoute<void>(
-            builder: (_) => PersonDetailsScreen(person: person, store: store)));
+        editorialRoute<void>(
+            (_) => PersonDetailsScreen(person: person, store: store)));
     return LayoutBuilder(builder: (context, constraints) {
       final photoHeight =
           (constraints.maxHeight - 280).clamp(140.0, constraints.maxWidth - 72);
@@ -83,7 +113,7 @@ class DiscoverScreen extends StatelessWidget {
                       right: 13,
                       child: DecoratedBox(
                           decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: EverlaneColors.card,
                               borderRadius: BorderRadius.circular(25),
                               boxShadow: const [
                             BoxShadow(
@@ -95,54 +125,68 @@ class DiscoverScreen extends StatelessWidget {
                       photoHeight: photoHeight,
                       person: person,
                       onOpen: details,
-                      onMore: () => showSafety(context, store, person)),
+                      onMore: () => showSafety(context, store, person),
+                      onPrompt: (target) {
+                        HapticFeedback.selectionClick();
+                        showLikeComposer(context, store, person, target);
+                      }),
                 ])),
             const SizedBox(height: 22),
             Center(
                 child: TextButton.icon(
                     onPressed: details,
                     icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 18),
-                    label: const Text('Get to know them',
+                    label: Text('Get to know them',
                         style: TextStyle(
                             fontSize: 12, color: EverlaneColors.muted)))),
           ],
         )),
         Padding(
-            padding: const EdgeInsets.fromLTRB(30, 16, 30, 16),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
             child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
+                  PastelAction(
+                      icon: Icons.replay_rounded,
+                      label: 'Undo last pass',
+                      color: EverlaneColors.dark
+                          ? EverlaneColors.muted
+                          : EverlaneColors.deep,
+                      size: 40,
+                      onTap: store.canUndo ? () => undoPass(context) : null),
                   PastelAction(
                       icon: Icons.star_rounded,
                       label: 'Like ${person.name}’s prompt',
-                      color: EverlaneColors.red,
-                      size: 49,
+                      color: EverlaneColors.star,
+                      size: 46,
                       onTap: () => showLikeComposer(
                           context, store, person, 'My ideal Sunday')),
                   PastelAction(
                       icon: Icons.close_rounded,
                       label: 'Pass on ${person.name}',
-                      color: EverlaneColors.blue,
-                      size: 72,
+                      color: EverlaneColors.pass,
+                      size: 66,
                       onTap: () => pass(context, person)),
                   PastelAction(
                       icon: Icons.favorite_rounded,
                       label: 'Like ${person.name}’s photo',
-                      color: EverlaneColors.purple,
-                      size: 72,
+                      color: EverlaneColors.like,
+                      size: 66,
                       onTap: like),
                   PastelAction(
                       icon: Icons.bolt_rounded,
                       label: 'Discovery preferences',
-                      color: EverlaneColors.lime,
-                      size: 49,
+                      color: EverlaneColors.boost,
+                      size: 46,
                       onTap: () => showFilters(context, store)),
                 ])),
         Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: Text('${store.remaining} likes left · Preview',
-                style: const TextStyle(
-                    fontSize: 11, color: EverlaneColors.muted))),
+            child: Text(
+                store.unlimitedLikes
+                    ? 'Unlimited likes · ${store.plan.title}'
+                    : '${store.remaining} likes left · Preview',
+                style: TextStyle(fontSize: 11, color: EverlaneColors.muted))),
       ]);
     });
   }
@@ -167,7 +211,7 @@ class SwipeCard extends StatefulWidget {
 class _SwipeCardState extends State<SwipeCard>
     with SingleTickerProviderStateMixin {
   late final controller = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 220))
+      vsync: this, duration: const Duration(milliseconds: 420))
     ..addListener(() => setState(() => dx = animation.value));
   Animation<double> animation = const AlwaysStoppedAnimation(0);
   double dx = 0;
@@ -179,8 +223,8 @@ class _SwipeCardState extends State<SwipeCard>
   }
 
   Future<void> animateTo(double target) {
-    animation = Tween(begin: dx, end: target)
-        .animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
+    animation = Tween(begin: dx, end: target).animate(
+        CurvedAnimation(parent: controller, curve: Curves.easeOutCubic));
     return controller.forward(from: 0);
   }
 
@@ -207,20 +251,25 @@ class _SwipeCardState extends State<SwipeCard>
                 release(c.maxWidth, d.velocity.pixelsPerSecond.dx),
             child: Transform.translate(
                 offset: Offset(dx, 0),
-                child: Transform.rotate(
-                    angle: progress * .12,
+                // A slight 3D turn, like lifting a magazine page.
+                child: Transform(
+                    alignment: Alignment.center,
+                    transform: Matrix4.identity()
+                      ..setEntry(3, 2, .0012)
+                      ..rotateY(-progress * .28)
+                      ..rotateZ(progress * .04),
                     child: Stack(children: [
                       widget.child,
                       if (progress > 0)
                         _SwipeStamp(
                             label: 'LIKE',
-                            color: EverlaneColors.purple,
+                            color: EverlaneColors.like,
                             opacity: progress,
                             alignment: Alignment.topLeft),
                       if (progress < 0)
                         _SwipeStamp(
                             label: 'PASS',
-                            color: EverlaneColors.blue,
+                            color: EverlaneColors.pass,
                             opacity: -progress,
                             alignment: Alignment.topRight),
                     ]))));
@@ -252,7 +301,8 @@ class _SwipeStamp extends StatelessWidget {
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 14, vertical: 6),
                               decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: .85),
+                                  color: EverlaneColors.card
+                                      .withValues(alpha: .85),
                                   border: Border.all(color: color, width: 3),
                                   borderRadius: BorderRadius.circular(10)),
                               child: Text(label,
@@ -268,25 +318,54 @@ class _PersonCard extends StatelessWidget {
       {required this.person,
       required this.photoHeight,
       required this.onOpen,
-      required this.onMore});
+      required this.onMore,
+      required this.onPrompt});
   final Person person;
   final VoidCallback onOpen, onMore;
+
+  /// Opens the like composer aimed at a photo detail ('photo', 'soundtrack').
+  final ValueChanged<String> onPrompt;
   final double photoHeight;
   @override
   Widget build(BuildContext context) => Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-          color: Colors.white,
+          color: EverlaneColors.card,
           borderRadius: BorderRadius.circular(24),
           boxShadow: const [
             BoxShadow(
                 color: Color(0x152D2231), blurRadius: 24, offset: Offset(0, 8))
           ]),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        GestureDetector(
-            onTap: onOpen,
-            child: Portrait(person,
-                height: photoHeight, width: double.infinity, radius: 18)),
+        Stack(children: [
+          GestureDetector(
+              onTap: onOpen,
+              child: Hero(
+                  tag: 'portrait-${person.id}',
+                  child: Portrait(person,
+                      height: photoHeight,
+                      width: double.infinity,
+                      radius: 18))),
+          if (person.soundtrack.isNotEmpty)
+            Positioned(
+                top: 12,
+                left: 12,
+                right: 12,
+                child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: PhotoPrompt(
+                        icon: Icons.music_note_rounded,
+                        text:
+                            '${person.name}’s soundtrack · ${person.soundtrack}',
+                        onTap: () => onPrompt('soundtrack')))),
+          Positioned(
+              left: 12,
+              bottom: 12,
+              child: PhotoPrompt(
+                  icon: Icons.chat_bubble_outline_rounded,
+                  text: 'Ask about this photo',
+                  onTap: () => onPrompt('photo'))),
+        ]),
         const SizedBox(height: 16),
         Row(children: [
           Expanded(
@@ -301,7 +380,7 @@ class _PersonCard extends StatelessWidget {
             const Tooltip(
                 message: 'Selfie verified',
                 child: Icon(Icons.verified_rounded,
-                    size: 18, color: EverlaneColors.blue)),
+                    size: 18, color: EverlaneColors.pass)),
           SizedBox(
               width: 34,
               height: 32,
@@ -309,27 +388,27 @@ class _PersonCard extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   tooltip: 'Profile options',
                   onPressed: onMore,
-                  icon: const Icon(Icons.more_horiz,
+                  icon: Icon(Icons.more_horiz,
                       size: 22, color: EverlaneColors.muted))),
         ]),
         Text(person.job,
-            style: const TextStyle(color: EverlaneColors.muted, fontSize: 15)),
+            style: TextStyle(color: EverlaneColors.muted, fontSize: 15)),
         const SizedBox(height: 12),
         Row(children: [
-          const Icon(Icons.location_on_outlined,
+          Icon(Icons.location_on_outlined,
               size: 14, color: EverlaneColors.muted),
           const SizedBox(width: 4),
           Expanded(
-              child: Text('Bengaluru · ${person.distance} km away',
+              child: Text('Bengaluru · ${person.distanceLabel}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 12, color: EverlaneColors.muted))),
+                  style: TextStyle(fontSize: 12, color: EverlaneColors.muted))),
           const SizedBox(width: 8),
-          const Icon(Icons.favorite_rounded,
-              size: 14, color: EverlaneColors.red),
+          Icon(person.lookingFor.first.icon,
+              size: 14, color: EverlaneColors.star),
           const SizedBox(width: 4),
-          const Text('Relationship', style: TextStyle(fontSize: 11)),
+          Text(person.lookingFor.first.short,
+              style: const TextStyle(fontSize: 11)),
         ]),
         const SizedBox(height: 10),
       ]));
@@ -359,7 +438,12 @@ class PersonDetailsScreen extends StatelessWidget {
                     children: [
                       AspectRatio(
                           aspectRatio: 1.05,
-                          child: Portrait(person, radius: 22)),
+                          child: ClipRRect(
+                              borderRadius: BorderRadius.circular(22),
+                              child: Hero(
+                                  tag: 'portrait-${person.id}',
+                                  child: _Parallax(
+                                      child: Portrait(person, radius: 0))))),
                       const SizedBox(height: 22),
                       Row(children: [
                         Expanded(
@@ -371,24 +455,32 @@ class PersonDetailsScreen extends StatelessWidget {
                             onTap: () => showLikeComposer(
                                 context, store, person, 'photo'))
                       ]),
-                      Text('Bengaluru, India',
-                          style: const TextStyle(
+                      Text('Bengaluru · ${person.distanceLabel}',
+                          style: TextStyle(
                               fontSize: 16, color: EverlaneColors.muted)),
+                      const SizedBox(height: 16),
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        for (final c in person.lookingFor) Tag(c.icon, c.title)
+                      ]),
+                      if (person.voicePrompt.isNotEmpty) ...[
+                        const SizedBox(height: 22),
+                        VoicePrompt(person: person),
+                      ],
                       const SizedBox(height: 30),
                       const DetailHeading(
                           icon: Icons.person_outline_rounded,
                           title: 'About',
-                          color: Color(0xFFEFB91E)),
+                          color: EverlaneColors.star),
                       const SizedBox(height: 12),
                       Text(
                           '${person.job}. Looking for a lasting connection and someone to share the everyday adventures with.',
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: EverlaneColors.muted, height: 1.7)),
                       const SizedBox(height: 28),
                       const DetailHeading(
                           icon: Icons.favorite_rounded,
                           title: 'Interests',
-                          color: EverlaneColors.red),
+                          color: EverlaneColors.like),
                       const SizedBox(height: 16),
                       const Wrap(spacing: 10, runSpacing: 10, children: [
                         Tag(Icons.music_note_outlined, 'Music'),
@@ -451,58 +543,84 @@ class DetailHeading extends StatelessWidget {
 
 Future<void> showLikeComposer(BuildContext context, PreviewStore store,
     Person person, String target) async {
-  if (store.remaining <= 0) {
-    showNotice(
-        context, 'You’ve used your 8 preview likes. Take a little breather.');
+  if (store.outOfLikes) {
+    showUpgrade(context, store,
+        title: 'You’ve used today’s 8 likes.',
+        detail:
+            'Get Plus for unlimited likes, or take a breather and come back tomorrow.');
     return;
   }
-  final controller = TextEditingController();
   final sent = await showEverlaneSheet<bool>(
-      context,
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Eyebrow('Make the first move'),
-        const SizedBox(height: 12),
-        Text('A little more than a like.',
-            style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 18),
-        Row(children: [
-          Portrait(person, height: 62, width: 54, radius: 10),
-          const SizedBox(width: 14),
-          Expanded(
-              child: Text(
-                  'You’re liking ${person.name}’s ${target == 'photo' ? 'photo' : 'answer to “$target”'}.'))
-        ]),
-        const SizedBox(height: 20),
-        TextField(
-            controller: controller,
-            maxLength: 150,
-            maxLines: 3,
-            autofocus: true,
-            decoration: const InputDecoration(
-                hintText:
-                    'What caught your attention?\nAdd a comment (optional).')),
-        const SizedBox(height: 14),
-        FilledButton(
-            onPressed: () {
-              store.like(person, target: target, comment: controller.text);
-              Navigator.pop(context, true);
-            },
-            child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.favorite_border, size: 18),
-                  SizedBox(width: 8),
-                  Text('Send like')
-                ])),
-        const SizedBox(height: 12),
-        const Text('Preview only. Your like won’t be sent to a real person.',
-            style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
-      ]));
-  // Wait for the sheet's reverse transition before disposing its field controller.
-  await Future<void>.delayed(const Duration(milliseconds: 300));
-  controller.dispose();
+      context, _LikeComposer(store: store, person: person, target: target));
   if (sent == true && context.mounted) {
     showNotice(context, 'Like sent to ${person.name} in this preview.');
+  }
+}
+
+/// Owns its controller so it outlives the sheet's closing animation.
+class _LikeComposer extends StatefulWidget {
+  const _LikeComposer(
+      {required this.store, required this.person, required this.target});
+  final PreviewStore store;
+  final Person person;
+  final String target;
+  @override
+  State<_LikeComposer> createState() => _LikeComposerState();
+}
+
+class _LikeComposerState extends State<_LikeComposer> {
+  final controller = TextEditingController();
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = widget.store;
+    final person = widget.person;
+    final target = widget.target;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Eyebrow('Make the first move'),
+      const SizedBox(height: 12),
+      Text('A little more than a like.',
+          style: Theme.of(context).textTheme.headlineMedium),
+      const SizedBox(height: 18),
+      Row(children: [
+        Portrait(person, height: 62, width: 54, radius: 10),
+        const SizedBox(width: 14),
+        Expanded(
+            child: Text(
+                'You’re liking ${person.name}’s ${target == 'photo' || target == 'soundtrack' ? target : 'answer to “$target”'}.'))
+      ]),
+      const SizedBox(height: 20),
+      TextField(
+          controller: controller,
+          maxLength: 150,
+          maxLines: 3,
+          autofocus: true,
+          decoration: const InputDecoration(
+              hintText:
+                  'What caught your attention?\nAdd a comment (optional).')),
+      const SizedBox(height: 14),
+      FilledButton(
+          onPressed: () {
+            store.like(person, target: target, comment: controller.text);
+            Navigator.pop(context, true);
+          },
+          child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.favorite_border, size: 18),
+                SizedBox(width: 8),
+                Text('Send like')
+              ])),
+      const SizedBox(height: 12),
+      Text('Preview only. Your like won’t be sent to a real person.',
+          style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
+    ]);
   }
 }
 
@@ -577,6 +695,173 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
               ])));
 }
 
+class ExploreScreen extends StatelessWidget {
+  const ExploreScreen({super.key, required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) =>
+      ListView(padding: const EdgeInsets.all(24), children: [
+        const Eyebrow('Find your kind of plan'),
+        const SizedBox(height: 10),
+        Text('Explore', style: Theme.of(context).textTheme.headlineLarge),
+        const SizedBox(height: 10),
+        Text('Meet people who are looking for the same thing you are.',
+            style: TextStyle(color: EverlaneColors.muted)),
+        const SizedBox(height: 24),
+        HangoutsBanner(store: store),
+        const SizedBox(height: 12),
+        IntroductionBanner(store: store),
+        const SizedBox(height: 24),
+        GridView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 14,
+                crossAxisSpacing: 14,
+                mainAxisExtent: 196),
+            children: [
+              for (final c in LookingFor.values)
+                _CategoryTile(
+                    category: c,
+                    count: store.exploring(c).length,
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                            builder: (_) => ExploreCategoryScreen(
+                                store: store, category: c))))
+            ]),
+      ]);
+}
+
+class _CategoryTile extends StatelessWidget {
+  const _CategoryTile(
+      {required this.category, required this.count, required this.onTap});
+  final LookingFor category;
+  final int count;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+      color: EverlaneColors.card,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onTap,
+          child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: EverlaneColors.line)),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                            color: category.color,
+                            borderRadius: BorderRadius.circular(14)),
+                        child:
+                            Icon(category.icon, color: Colors.white, size: 23)),
+                    const Spacer(),
+                    Text(category.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 15,
+                            height: 1.25,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text(category.blurb,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 11, color: EverlaneColors.muted)),
+                    const SizedBox(height: 8),
+                    Text(count == 1 ? '1 person' : '$count people',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: category.color)),
+                  ]))));
+}
+
+class ExploreCategoryScreen extends StatelessWidget {
+  const ExploreCategoryScreen(
+      {super.key, required this.store, required this.category});
+  final PreviewStore store;
+  final LookingFor category;
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+      listenable: store,
+      builder: (context, _) {
+        final people = store.exploring(category);
+        return Scaffold(
+            appBar: AppBar(
+                title:
+                    Text(category.title, style: const TextStyle(fontSize: 17))),
+            body: people.isEmpty
+                ? EmptyState(
+                    icon: category.icon,
+                    title: 'No one here yet.',
+                    detail: 'Check back soon, or explore another kind of plan.')
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                    children: [
+                        Text(category.blurb,
+                            style: TextStyle(color: EverlaneColors.muted)),
+                        const SizedBox(height: 20),
+                        for (final p in people)
+                          Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _ExplorePerson(
+                                  person: p,
+                                  onTap: () => Navigator.push(
+                                      context,
+                                      editorialRoute<void>((_) =>
+                                          PersonDetailsScreen(
+                                              person: p, store: store))))),
+                      ]));
+      });
+}
+
+class _ExplorePerson extends StatelessWidget {
+  const _ExplorePerson({required this.person, required this.onTap});
+  final Person person;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+      color: EverlaneColors.card,
+      borderRadius: BorderRadius.circular(22),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+          onTap: onTap,
+          child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(children: [
+                Portrait(person, height: 96, width: 84, radius: 16),
+                const SizedBox(width: 14),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('${person.name}, ${person.age}',
+                          style: const TextStyle(
+                              fontSize: 17, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 2),
+                      Text('${person.job} · ${person.distanceLabel}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 12, color: EverlaneColors.muted)),
+                      const SizedBox(height: 10),
+                      Wrap(spacing: 6, runSpacing: 6, children: [
+                        for (final c in person.lookingFor) Tag(c.icon, c.short)
+                      ]),
+                    ])),
+              ]))));
+}
+
 class LikesScreen extends StatelessWidget {
   const LikesScreen({super.key, required this.store});
   final PreviewStore store;
@@ -587,76 +872,82 @@ class LikesScreen extends StatelessWidget {
         const SizedBox(height: 10),
         Text('Likes you', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 10),
-        const Text('A little interest. A lovely place to start.',
+        Text('A little interest. A lovely place to start.',
             style: TextStyle(color: EverlaneColors.muted)),
         const SizedBox(height: 28),
-        if (store.incoming.isEmpty)
+        if (store.incoming.isNotEmpty && !store.canSeeLikes)
+          _HiddenLikes(store: store)
+        else if (store.incoming.isEmpty)
           const EmptyState(
               icon: Icons.favorite_border,
               title: 'Room for something good.',
               detail:
                   'You’re all caught up. New likes will find their way here.'),
-        for (final p in store.incoming)
-          Padding(
-              padding: const EdgeInsets.only(bottom: 22),
-              child: Container(
-                  decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: EverlaneColors.line)),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Portrait(p, height: 240, width: double.infinity),
-                        Padding(
-                            padding: const EdgeInsets.all(20),
-                            child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(children: [
-                                    Text('${p.name}, ${p.age}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleLarge),
-                                    const SizedBox(width: 7),
-                                    const Icon(Icons.verified,
-                                        size: 17, color: EverlaneColors.green)
-                                  ]),
-                                  const SizedBox(height: 5),
-                                  const Text(
-                                      'Liked your answer to “My ideal Sunday”',
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: EverlaneColors.muted)),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                      '“I know just the place. Coffee and a bookstore sounds like a pretty perfect start.”',
-                                      style: TextStyle(
-                                          fontSize: 20, height: 1.45)),
-                                  const SizedBox(height: 20),
-                                  Row(children: [
-                                    RoundButton(
-                                        icon: Icons.close,
-                                        label: 'Remove ${p.name}’s like',
-                                        onTap: () => store.removeLike(p)),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                        child: FilledButton(
-                                            onPressed: () {
-                                              final chat = store.match(p);
-                                              Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute<void>(
-                                                      builder: (_) =>
-                                                          ChatScreen(
-                                                              store: store,
-                                                              chat: chat)));
-                                            },
-                                            child: const Text(
-                                                'Like back & say hello')))
-                                  ]),
-                                ])),
-                      ]))),
+        if (store.canSeeLikes)
+          for (final p in store.incoming)
+            Padding(
+                padding: const EdgeInsets.only(bottom: 22),
+                child: Container(
+                    decoration: BoxDecoration(
+                        color: EverlaneColors.card,
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: EverlaneColors.line)),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Portrait(p, height: 240, width: double.infinity),
+                          Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(children: [
+                                      Text('${p.name}, ${p.age}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleLarge),
+                                      if (p.verified) ...[
+                                        const SizedBox(width: 7),
+                                        const Icon(Icons.verified,
+                                            size: 17,
+                                            color: EverlaneColors.boost),
+                                      ],
+                                    ]),
+                                    const SizedBox(height: 5),
+                                    Text(
+                                        'Liked your answer to “My ideal Sunday”',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color: EverlaneColors.muted)),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                        '“I know just the place. Coffee and a bookstore sounds like a pretty perfect start.”',
+                                        style: TextStyle(
+                                            fontSize: 20, height: 1.45)),
+                                    const SizedBox(height: 20),
+                                    Row(children: [
+                                      RoundButton(
+                                          icon: Icons.close,
+                                          label: 'Remove ${p.name}’s like',
+                                          onTap: () => store.removeLike(p)),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                          child: FilledButton(
+                                              onPressed: () {
+                                                final chat = store.match(p);
+                                                Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute<void>(
+                                                        builder: (_) =>
+                                                            ChatScreen(
+                                                                store: store,
+                                                                chat: chat)));
+                                              },
+                                              child: const Text(
+                                                  'Like back & say hello')))
+                                    ]),
+                                  ])),
+                        ]))),
         const Center(child: Eyebrow('Demo likes · UI preview')),
       ]);
 }
@@ -672,12 +963,12 @@ class MessagesScreen extends StatelessWidget {
         Text('Messages', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 28),
         Row(children: [
-          const Text('YOUR CONNECTIONS',
+          Text('YOUR CONNECTIONS',
               style: TextStyle(
                   fontSize: 10, letterSpacing: 2, color: EverlaneColors.muted)),
           const SizedBox(width: 8),
           Text('${store.conversations.length}',
-              style: const TextStyle(fontSize: 12, color: EverlaneColors.coral))
+              style: const TextStyle(fontSize: 12, color: EverlaneColors.like))
         ]),
         const SizedBox(height: 16),
         if (store.conversations.isEmpty)
@@ -701,10 +992,10 @@ class MessagesScreen extends StatelessWidget {
                         : chat.messages.last.text,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 12, color: EverlaneColors.muted)),
-                trailing: const Icon(Icons.chevron_right,
-                    color: EverlaneColors.muted),
+                    style:
+                        TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                trailing:
+                    Icon(Icons.chevron_right, color: EverlaneColors.muted),
                 onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute<void>(
@@ -719,7 +1010,7 @@ class MessagesScreen extends StatelessWidget {
             child: const Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.lightbulb_outline, color: EverlaneColors.coral),
+                  Icon(Icons.lightbulb_outline, color: EverlaneColors.like),
                   SizedBox(width: 12),
                   Expanded(
                       child: Text(
@@ -730,15 +1021,19 @@ class MessagesScreen extends StatelessWidget {
 }
 
 class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key, required this.store, required this.chat});
+  const ChatScreen(
+      {super.key, required this.store, required this.chat, this.draft = ''});
   final PreviewStore store;
   final Conversation chat;
+
+  /// Prefilled, unsent text, e.g. when messaging a Hangout host.
+  final String draft;
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final controller = TextEditingController();
+  late final controller = TextEditingController(text: widget.draft);
   final scroll = ScrollController();
   void send() {
     if (controller.text.trim().isEmpty) return;
@@ -770,7 +1065,7 @@ class _ChatScreenState extends State<ChatScreen> {
               Text(widget.chat.person.name,
                   style: const TextStyle(fontSize: 18)),
               const SizedBox(width: 6),
-              const Icon(Icons.verified, size: 16, color: EverlaneColors.green)
+              const Icon(Icons.verified, size: 16, color: EverlaneColors.boost)
             ]),
             actions: [
               IconButton(
@@ -789,7 +1084,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           color: EverlaneColors.blush,
-                          child: const Text(
+                          child: Text(
                               'Demo conversation · Messages stay on this device',
                               textAlign: TextAlign.center,
                               style: TextStyle(
@@ -817,8 +1112,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                           horizontal: 18, vertical: 14),
                                       decoration: BoxDecoration(
                                           color: message.mine
-                                              ? EverlaneColors.plum
-                                              : Colors.white,
+                                              ? EverlaneColors.deep
+                                              : EverlaneColors.card,
                                           borderRadius:
                                               BorderRadius.circular(18)),
                                       child: Text(message.text,
@@ -867,19 +1162,19 @@ class ProfileScreen extends StatelessWidget {
         Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-                color: Colors.white,
+                color: EverlaneColors.card,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: EverlaneColors.line)),
             child: Row(children: [
               Container(
                   width: 70,
                   height: 70,
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                       shape: BoxShape.circle, color: EverlaneColors.blush),
                   alignment: Alignment.center,
                   child: Text(store.myName.isEmpty ? 'R' : store.myName[0],
                       style: const TextStyle(
-                          fontSize: 32, color: EverlaneColors.coral))),
+                          fontSize: 32, color: EverlaneColors.like))),
               const SizedBox(width: 18),
               Expanded(
                   child: Column(
@@ -889,17 +1184,18 @@ class ProfileScreen extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 4),
                     Text(store.myJob,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: EverlaneColors.muted, fontSize: 12)),
                     const SizedBox(height: 6),
-                    const Eyebrow('Preview profile',
-                        color: EverlaneColors.coral)
+                    const Eyebrow('Preview profile', color: EverlaneColors.like)
                   ])),
               IconButton(
                   tooltip: 'Edit profile',
                   onPressed: () => editProfile(context, store),
                   icon: const Icon(Icons.edit_outlined, size: 21)),
             ])),
+        const SizedBox(height: 14),
+        _MembershipBanner(store: store),
         const SizedBox(height: 20),
         Container(
             padding: const EdgeInsets.all(22),
@@ -950,6 +1246,41 @@ class ProfileScreen extends StatelessWidget {
               store.update();
             }),
         const Divider(height: 1),
+        SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: Icon(store.darkMode
+                ? Icons.dark_mode_outlined
+                : Icons.light_mode_outlined),
+            title: const Text('Dark mode'),
+            subtitle: const Text('Easier on the eyes at night',
+                style: TextStyle(fontSize: 12)),
+            value: store.darkMode,
+            onChanged: (value) {
+              store.darkMode = value;
+              store.update();
+            }),
+        const Divider(height: 1),
+        SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.visibility_off_outlined),
+            title: Text(store.plan == Plan.free
+                ? 'Invisible mode · Plus'
+                : 'Invisible mode'),
+            subtitle: const Text('Only people you like can see you',
+                style: TextStyle(fontSize: 12)),
+            value: store.invisible,
+            onChanged: (value) {
+              if (store.plan == Plan.free) {
+                showUpgrade(context, store,
+                    title: 'Date on your own terms.',
+                    detail:
+                        'Invisible mode keeps you out of Discover until you like someone first. It comes with Plus and Premium.');
+                return;
+              }
+              store.invisible = value;
+              store.update();
+            }),
+        const Divider(height: 1),
         ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.shield_outlined),
@@ -967,71 +1298,86 @@ class ProfileScreen extends StatelessWidget {
                 ]))),
         const SizedBox(height: 28),
         const Center(
-            child: Icon(Icons.spa_outlined,
-                size: 27, color: EverlaneColors.coral)),
+            child:
+                Icon(Icons.spa_outlined, size: 27, color: EverlaneColors.like)),
         const SizedBox(height: 9),
-        const Center(
+        Center(
             child: Text('Made for something real.',
                 style: TextStyle(fontSize: 17, color: EverlaneColors.muted))),
         const SizedBox(height: 9),
-        const Center(
+        Center(
             child: Text('Everlane · UI preview 0.1',
                 style: TextStyle(fontSize: 10, color: EverlaneColors.muted))),
       ]);
 }
 
-Future<void> editProfile(BuildContext context, PreviewStore store) async {
-  final name = TextEditingController(text: store.myName);
-  final job = TextEditingController(text: store.myJob);
-  final prompt = TextEditingController(text: store.myPrompt);
+Future<void> editProfile(BuildContext context, PreviewStore store) =>
+    showEverlaneSheet(context, _EditProfileForm(store: store));
+
+/// Owns its controllers so they outlive the sheet's closing animation.
+class _EditProfileForm extends StatefulWidget {
+  const _EditProfileForm({required this.store});
+  final PreviewStore store;
+  @override
+  State<_EditProfileForm> createState() => _EditProfileFormState();
+}
+
+class _EditProfileFormState extends State<_EditProfileForm> {
+  late final name = TextEditingController(text: widget.store.myName);
+  late final job = TextEditingController(text: widget.store.myJob);
+  late final prompt = TextEditingController(text: widget.store.myPrompt);
   final key = GlobalKey<FormState>();
-  await showEverlaneSheet(
-      context,
-      Form(
-          key: key,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('A little about you.',
-                style: Theme.of(context).textTheme.headlineMedium),
-            const SizedBox(height: 24),
-            TextFormField(
-                controller: name,
-                maxLength: 40,
-                decoration: const InputDecoration(labelText: 'First name'),
-                validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Add your first name'
-                    : null),
-            const SizedBox(height: 12),
-            TextFormField(
-                controller: job,
-                maxLength: 80,
-                decoration:
-                    const InputDecoration(labelText: 'What do you do?')),
-            const SizedBox(height: 12),
-            TextFormField(
-                controller: prompt,
-                maxLength: 250,
-                maxLines: 3,
-                decoration: const InputDecoration(labelText: 'My ideal Sunday'),
-                validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Tell us a little about your Sunday'
-                    : null),
-            const SizedBox(height: 18),
-            FilledButton(
-                onPressed: () {
-                  if (!key.currentState!.validate()) return;
-                  store.myName = name.text.trim();
-                  store.myJob = job.text.trim();
-                  store.myPrompt = prompt.text.trim();
-                  store.update();
-                  Navigator.pop(context);
-                },
-                child: const Text('Save preview profile')),
-          ])));
-  await Future<void>.delayed(const Duration(milliseconds: 300));
-  name.dispose();
-  job.dispose();
-  prompt.dispose();
+
+  @override
+  void dispose() {
+    name.dispose();
+    job.dispose();
+    prompt.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = widget.store;
+    return Form(
+        key: key,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('A little about you.',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 24),
+          TextFormField(
+              controller: name,
+              maxLength: 40,
+              decoration: const InputDecoration(labelText: 'First name'),
+              validator: (v) =>
+                  v == null || v.trim().isEmpty ? 'Add your first name' : null),
+          const SizedBox(height: 12),
+          TextFormField(
+              controller: job,
+              maxLength: 80,
+              decoration: const InputDecoration(labelText: 'What do you do?')),
+          const SizedBox(height: 12),
+          TextFormField(
+              controller: prompt,
+              maxLength: 250,
+              maxLines: 3,
+              decoration: const InputDecoration(labelText: 'My ideal Sunday'),
+              validator: (v) => v == null || v.trim().isEmpty
+                  ? 'Tell us a little about your Sunday'
+                  : null),
+          const SizedBox(height: 18),
+          FilledButton(
+              onPressed: () {
+                if (!key.currentState!.validate()) return;
+                store.myName = name.text.trim();
+                store.myJob = job.text.trim();
+                store.myPrompt = prompt.text.trim();
+                store.update();
+                Navigator.pop(context);
+              },
+              child: const Text('Save preview profile')),
+        ]));
+  }
 }
 
 Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
@@ -1043,7 +1389,7 @@ Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
             style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 12),
         Text('Manage your connection with ${person.name}.',
-            style: const TextStyle(color: EverlaneColors.muted)),
+            style: TextStyle(color: EverlaneColors.muted)),
         const SizedBox(height: 20),
         ListTile(
             contentPadding: EdgeInsets.zero,
@@ -1116,4 +1462,291 @@ Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
       action == 'report'
           ? 'Profile hidden in preview. No report was submitted.'
           : 'Connection removed from this preview.');
+}
+
+/// Clears the plan-change snackbar on the way out, so it can't cover the
+/// screen underneath (a chat's send button, say).
+Future<void> openMembership(BuildContext context, PreviewStore store) {
+  final messenger = ScaffoldMessenger.of(context);
+  return Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+              builder: (_) => MembershipScreen(store: store)))
+      .then((_) => messenger.hideCurrentSnackBar());
+}
+
+/// Shown when a free member taps a paid feature.
+Future<void> showUpgrade(BuildContext context, PreviewStore store,
+        {required String title, required String detail}) =>
+    showEverlaneSheet(
+        context,
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                  color: EverlaneColors.star,
+                  borderRadius: BorderRadius.circular(16)),
+              child: const Icon(Icons.workspace_premium_rounded,
+                  color: Colors.white, size: 28)),
+          const SizedBox(height: 20),
+          Text(title, style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 10),
+          Text(detail,
+              style: TextStyle(color: EverlaneColors.muted, height: 1.6)),
+          const SizedBox(height: 24),
+          FilledButton(
+              onPressed: () {
+                Navigator.pop(context);
+                openMembership(context, store);
+              },
+              child: const Text('See membership')),
+          const SizedBox(height: 8),
+          Center(
+              child: TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Not now'))),
+        ]));
+
+class _MembershipBanner extends StatelessWidget {
+  const _MembershipBanner({required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) {
+    final free = store.plan == Plan.free;
+    return Material(
+        color: free ? EverlaneColors.deep : EverlaneColors.card,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: () => openMembership(context, store),
+            child: Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border: free
+                        ? null
+                        : Border.all(color: EverlaneColors.star, width: 1.5)),
+                child: Row(children: [
+                  const Icon(Icons.workspace_premium_rounded,
+                      color: EverlaneColors.star, size: 28),
+                  const SizedBox(width: 14),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(
+                            free
+                                ? 'Upgrade to Plus'
+                                : '${store.plan.title} member',
+                            style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color:
+                                    free ? Colors.white : EverlaneColors.plum)),
+                        const SizedBox(height: 3),
+                        Text(
+                            free
+                                ? 'Unlimited likes, Rewind and more'
+                                : 'Manage your membership',
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: free
+                                    ? Colors.white.withValues(alpha: .75)
+                                    : EverlaneColors.muted)),
+                      ])),
+                  Icon(Icons.chevron_right_rounded,
+                      color: free ? Colors.white : EverlaneColors.muted),
+                ]))));
+  }
+}
+
+class MembershipScreen extends StatelessWidget {
+  const MembershipScreen({super.key, required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+      listenable: store,
+      builder: (context, _) => Scaffold(
+          appBar: AppBar(
+              title: const Text('Membership', style: TextStyle(fontSize: 17)),
+              actions: [
+                Container(
+                    margin: const EdgeInsets.only(right: 20),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(color: EverlaneColors.star)),
+                    child: Text('${store.plan.title} member',
+                        style: TextStyle(
+                            fontSize: 12, color: EverlaneColors.plum))),
+              ]),
+          body: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+              children: [
+                Text('Find your person, faster.',
+                    style: Theme.of(context).textTheme.headlineLarge),
+                const SizedBox(height: 10),
+                Text(
+                    'Every plan includes verification, report and block. Safety is never behind a paywall.',
+                    style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
+                const SizedBox(height: 24),
+                for (final plan in Plan.values)
+                  Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _PlanCard(
+                          plan: plan,
+                          current: store.plan == plan,
+                          onChoose: () {
+                            store.choosePlan(plan);
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            showNotice(context, 'Welcome to ${plan.title}');
+                          })),
+                const Center(child: Eyebrow('Preview · no payment is taken')),
+              ])));
+}
+
+class _PlanCard extends StatelessWidget {
+  const _PlanCard(
+      {required this.plan, required this.current, required this.onChoose});
+  final Plan plan;
+  final bool current;
+  final VoidCallback onChoose;
+  @override
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+          color: EverlaneColors.card,
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+              color: current ? EverlaneColors.star : EverlaneColors.line,
+              width: current ? 1.5 : 1)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+              child: Text(plan.title,
+                  style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -.6))),
+          if (plan == Plan.plus)
+            Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                    color: EverlaneColors.blush,
+                    borderRadius: BorderRadius.circular(20)),
+                child: const Text('Most popular',
+                    style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: EverlaneColors.like))),
+        ]),
+        const SizedBox(height: 4),
+        Text(plan.price,
+            style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: EverlaneColors.star)),
+        const SizedBox(height: 14),
+        for (final perk in plan.perks)
+          Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child:
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Padding(
+                    padding: EdgeInsets.only(top: 3),
+                    child: Icon(Icons.auto_awesome,
+                        size: 12, color: EverlaneColors.star)),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Text(perk,
+                        style: TextStyle(
+                            fontSize: 14, color: EverlaneColors.muted))),
+              ])),
+        const SizedBox(height: 10),
+        current
+            ? OutlinedButton(
+                onPressed: null,
+                style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16))),
+                child: const Text('Current plan'))
+            : FilledButton(
+                onPressed: onChoose,
+                style: plan == Plan.free
+                    ? null
+                    : FilledButton.styleFrom(
+                        backgroundColor: EverlaneColors.like),
+                child: Text('Choose ${plan.title}')),
+      ]));
+}
+
+/// Moves its child at a slower rate than the page scrolls.
+class _Parallax extends StatelessWidget {
+  const _Parallax({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final position = Scrollable.maybeOf(context)?.position;
+    if (position == null) return child;
+    return AnimatedBuilder(
+        animation: position,
+        builder: (context, child) => Transform.translate(
+            offset: Offset(0, position.pixels * .35),
+            child: Transform.scale(scale: 1.08, child: child)),
+        child: child);
+  }
+}
+
+/// Free members see that likes are waiting, softly blurred, with one calm
+/// invitation rather than a pop-up.
+class _HiddenLikes extends StatelessWidget {
+  const _HiddenLikes({required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) {
+    final shown = store.incoming.take(3).toList();
+    final count = store.incoming.length;
+    final mid = (shown.length - 1) / 2;
+    return Column(children: [
+      SizedBox(
+          height: 250,
+          child: Stack(alignment: Alignment.center, children: [
+            for (var i = shown.length - 1; i >= 0; i--)
+              Transform.translate(
+                  offset: Offset((i - mid) * 70, i * 6.0),
+                  child: Transform.rotate(
+                      angle: (i - mid) * .08,
+                      child: ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: ImageFiltered(
+                              imageFilter:
+                                  ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                              child: Portrait(shown[i],
+                                  height: 220, width: 160, radius: 20))))),
+          ])),
+      const SizedBox(height: 24),
+      Text(count == 1 ? 'Someone likes you.' : '$count people like you.',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineMedium),
+      const SizedBox(height: 10),
+      Text('See who they are and what caught their eye.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
+      const SizedBox(height: 22),
+      OutlinedButton(
+          onPressed: () => openMembership(context, store),
+          style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 52),
+              side: BorderSide(color: EverlaneColors.plum),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16))),
+          child: Text('Explore incoming connections',
+              style: TextStyle(color: EverlaneColors.plum))),
+      const SizedBox(height: 24),
+    ]);
+  }
 }

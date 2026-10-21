@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'models.dart';
+import 'hangouts.dart';
 import 'screens.dart';
 import 'theme.dart';
 
@@ -13,9 +14,31 @@ class EverlaneApp extends StatefulWidget {
 
 class _EverlaneAppState extends State<EverlaneApp> {
   final store = PreviewStore();
+
+  @override
+  void initState() {
+    super.initState();
+    store.addListener(syncTheme);
+  }
+
+  /// Colours are read at build time, so a theme change rebuilds every
+  /// element, including routes and sheets that are already open.
+  void syncTheme() {
+    if (store.darkMode == EverlaneColors.dark) return;
+    setState(() => EverlaneColors.dark = store.darkMode);
+    void rebuild(Element element) {
+      element.markNeedsBuild();
+      element.visitChildren(rebuild);
+    }
+
+    (context as Element).visitChildren(rebuild);
+  }
+
   @override
   void dispose() {
+    store.removeListener(syncTheme);
     store.dispose();
+    EverlaneColors.dark = false;
     super.dispose();
   }
 
@@ -61,14 +84,16 @@ class _EverlaneShellState extends State<EverlaneShell> {
       builder: (context, _) {
         final store = widget.store;
         return ColoredBox(
-            color: const Color(0xFFFCE9EC),
+            color: EverlaneColors.dark
+                ? const Color(0xFF0E0B09)
+                : const Color(0xFFF3E6D3),
             child: Center(
                 child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 440),
                     child: Scaffold(
                       key: scaffoldKey,
                       drawer: Drawer(
-                          backgroundColor: Colors.white,
+                          backgroundColor: EverlaneColors.paper,
                           width: 310,
                           child: SafeArea(
                               child: Column(
@@ -88,7 +113,7 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                                   fontSize: 22,
                                                   fontWeight: FontWeight.w700)),
                                           const SizedBox(height: 6),
-                                          const Text('Bengaluru, India',
+                                          Text('Bengaluru, India',
                                               style: TextStyle(
                                                   color: EverlaneColors.muted)),
                                         ])),
@@ -96,23 +121,33 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                 menuItem(
                                     Icons.favorite_rounded,
                                     'Likes you · ${store.incoming.length}',
-                                    EverlaneColors.red,
-                                    () => setState(() => selected = 1)),
+                                    EverlaneColors.like,
+                                    () => setState(() => selected = 2)),
                                 menuItem(
                                     Icons.chat_bubble_outline_rounded,
                                     'Matches',
-                                    EverlaneColors.blue,
-                                    () => setState(() => selected = 2)),
+                                    EverlaneColors.boost,
+                                    () => setState(() => selected = 3)),
                                 menuItem(
                                     Icons.search_rounded,
                                     'Looking for',
-                                    EverlaneColors.purple,
+                                    EverlaneColors.deep,
                                     () => showFilters(context, store)),
+                                menuItem(
+                                    Icons.groups_rounded,
+                                    'Hangouts',
+                                    EverlaneColors.boost,
+                                    () => openHangouts(context, store)),
+                                menuItem(
+                                    Icons.workspace_premium_rounded,
+                                    'Membership · ${store.plan.title}',
+                                    EverlaneColors.star,
+                                    () => openMembership(context, store)),
                                 menuItem(
                                     Icons.settings_outlined,
                                     'Settings',
-                                    EverlaneColors.lime,
-                                    () => setState(() => selected = 3)),
+                                    EverlaneColors.pass,
+                                    () => setState(() => selected = 4)),
                                 const Spacer(),
                                 const Padding(
                                     padding: EdgeInsets.all(26),
@@ -144,17 +179,18 @@ class _EverlaneShellState extends State<EverlaneShell> {
                             IconButton(
                                 tooltip: 'Filter profiles',
                                 onPressed: () => showFilters(context, store),
-                                icon: const Icon(Icons.tune_rounded,
+                                icon: Icon(Icons.tune_rounded,
                                     color: EverlaneColors.muted, size: 25)),
                           ])),
                       body: IndexedStack(index: selected, children: [
                         DiscoverScreen(store: store),
+                        ExploreScreen(store: store),
                         LikesScreen(store: store),
                         MessagesScreen(store: store),
                         ProfileScreen(store: store)
                       ]),
                       bottomNavigationBar: Container(
-                          decoration: const BoxDecoration(color: Colors.white, boxShadow: [
+                          decoration: BoxDecoration(color: EverlaneColors.paper, boxShadow: const [
                             BoxShadow(
                                 color: Color(0x08000000),
                                 blurRadius: 20,
@@ -162,31 +198,34 @@ class _EverlaneShellState extends State<EverlaneShell> {
                           ]),
                           child: NavigationBarTheme(
                               data: NavigationBarThemeData(
-                                  labelTextStyle: WidgetStateProperty.resolveWith(
-                                      (states) => TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: states.contains(WidgetState.selected)
-                                              ? FontWeight.w600
-                                              : FontWeight.w400,
-                                          color: states.contains(WidgetState.selected)
-                                              ? EverlaneColors.plum
-                                              : EverlaneColors.muted)),
+                                  labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: states.contains(WidgetState.selected)
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                      color: states.contains(WidgetState.selected)
+                                          ? EverlaneColors.plum
+                                          : EverlaneColors.muted)),
                                   iconTheme: WidgetStateProperty.resolveWith(
                                       (states) => IconThemeData(
                                           size: 26,
                                           color: states.contains(WidgetState.selected)
                                               ? EverlaneColors.plum
-                                              : const Color(0xFFBDBDBF)))),
-                              child: NavigationBar(selectedIndex: selected, onDestinationSelected: (value) => setState(() => selected = value), backgroundColor: Colors.white, indicatorColor: Colors.transparent, height: 76, destinations: [
+                                              : const Color(0xFFC7BCB0)))),
+                              child: NavigationBar(selectedIndex: selected, onDestinationSelected: (value) => setState(() => selected = value), backgroundColor: EverlaneColors.paper, indicatorColor: Colors.transparent, height: 76, destinations: [
                                 const NavigationDestination(
                                     icon: Icon(Icons.home_outlined),
                                     selectedIcon: Icon(Icons.home_rounded),
                                     label: 'Discover'),
+                                const NavigationDestination(
+                                    icon: Icon(Icons.explore_outlined),
+                                    selectedIcon: Icon(Icons.explore_rounded),
+                                    label: 'Explore'),
                                 NavigationDestination(
                                     icon: Badge(
                                         isLabelVisible:
                                             store.incoming.isNotEmpty,
-                                        backgroundColor: EverlaneColors.red,
+                                        backgroundColor: EverlaneColors.like,
                                         smallSize: 7,
                                         child: const Icon(
                                             Icons.favorite_border_rounded)),
@@ -225,7 +264,7 @@ class _Avatar extends StatelessWidget {
             child: Text(name.isEmpty ? 'E' : name[0],
                 style: TextStyle(
                     fontSize: size * .48,
-                    color: EverlaneColors.coral,
+                    color: EverlaneColors.like,
                     fontWeight: FontWeight.w600))),
         Positioned(
             right: -2,
@@ -234,8 +273,9 @@ class _Avatar extends StatelessWidget {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                    color: EverlaneColors.red,
+                    color: EverlaneColors.star,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 1.5)))),
+                    border:
+                        Border.all(color: EverlaneColors.paper, width: 1.5)))),
       ]);
 }

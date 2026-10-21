@@ -19,7 +19,7 @@ flutter run -d chrome  # review the mobile UI in a browser
 flutter run            # use an Android device or iOS simulator
 ```
 
-Flutter was downloaded to `/tmp/kindred-flutter-sdk` for this workspace. Use `/tmp/kindred-flutter-sdk/bin/flutter` if Flutter is not on your PATH. A persistent SDK installation is recommended for continued development.
+Flutter stable is installed at `~/development/flutter`. Use `~/development/flutter/bin/flutter` if Flutter is not on your PATH.
 
 ## Run the backend
 
