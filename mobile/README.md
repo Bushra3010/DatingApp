@@ -21,7 +21,7 @@ To serve a compiled browser preview:
 
 ```bash
 flutter build web --no-web-resources-cdn
-python3 -m http.server 8080 --bind 127.0.0.1 --directory build/web
+python3 tool/serve_preview.py  # http://127.0.0.1:8081; prevents stale UI caching
 ```
 
 ## Implemented preview

@@ -116,7 +116,7 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                 const Spacer(),
                                 const Padding(
                                     padding: EdgeInsets.all(26),
-                                    child: Text('everlane',
+                                    child: Text('Everlane',
                                         style: TextStyle(
                                             fontSize: 25,
                                             fontWeight: FontWeight.w700,
@@ -135,7 +135,7 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                     scaffoldKey.currentState!.openDrawer(),
                                 icon: _Avatar(name: store.myName)),
                             const Spacer(),
-                            const Text('everlane',
+                            const Text('Everlane',
                                 style: TextStyle(
                                     fontSize: 23,
                                     fontWeight: FontWeight.w700,
@@ -222,7 +222,7 @@ class _Avatar extends StatelessWidget {
                 color: EverlaneColors.blush,
                 borderRadius: BorderRadius.circular(10)),
             alignment: Alignment.center,
-            child: Text(name.isEmpty ? 'K' : name[0],
+            child: Text(name.isEmpty ? 'E' : name[0],
                 style: TextStyle(
                     fontSize: size * .48,
                     color: EverlaneColors.coral,
