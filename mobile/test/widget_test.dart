@@ -80,4 +80,25 @@ void main() {
     expect(find.text('Tara'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Swiping right likes and swiping left passes', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpAndSettle();
+    await tester.drag(find.text('Ananya, 27'), const Offset(300, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('You liked Ananya'), findsOneWidget);
+    expect(find.text('7 likes left · Preview'), findsOneWidget);
+    await tester.drag(find.text('Meera, 28'), const Offset(-300, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Passed on Meera'), findsOneWidget);
+    expect(find.text('Isha, 25'), findsOneWidget);
+    await tester.drag(find.text('Isha, 25'), const Offset(40, 0));
+    await tester.pumpAndSettle();
+    expect(find.text('Isha, 25'), findsOneWidget);
+    expect(find.text('7 likes left · Preview'), findsOneWidget);
+  });
 }

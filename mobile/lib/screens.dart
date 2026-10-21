@@ -19,6 +19,20 @@ class DiscoverScreen extends StatelessWidget {
     ));
   }
 
+  /// Right swipe: a plain like on the whole profile, without the composer.
+  bool swipeLike(BuildContext context, Person person) {
+    if (store.remaining <= 0) {
+      showNotice(
+          context, 'You’ve used your 8 preview likes. Take a little breather.');
+      return false;
+    }
+    store.like(person, target: 'profile');
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text('You liked ${person.name}')));
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     final people = store.discover;
@@ -57,28 +71,32 @@ class DiscoverScreen extends StatelessWidget {
           key: ValueKey(person.id),
           padding: const EdgeInsets.fromLTRB(22, 12, 22, 22),
           children: [
-            Stack(clipBehavior: Clip.none, children: [
-              Positioned.fill(
-                  top: 18,
-                  bottom: -12,
-                  left: 13,
-                  right: 13,
-                  child: DecoratedBox(
-                      decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(25),
-                          boxShadow: const [
-                        BoxShadow(
-                            color: Color(0x0C29202B),
-                            blurRadius: 18,
-                            offset: Offset(0, 12))
-                      ]))),
-              _PersonCard(
-                  photoHeight: photoHeight,
-                  person: person,
-                  onOpen: details,
-                  onMore: () => showSafety(context, store, person)),
-            ]),
+            SwipeCard(
+                key: ValueKey('swipe-${person.id}'),
+                onLike: () => swipeLike(context, person),
+                onPass: () => pass(context, person),
+                child: Stack(clipBehavior: Clip.none, children: [
+                  Positioned.fill(
+                      top: 18,
+                      bottom: -12,
+                      left: 13,
+                      right: 13,
+                      child: DecoratedBox(
+                          decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(25),
+                              boxShadow: const [
+                            BoxShadow(
+                                color: Color(0x0C29202B),
+                                blurRadius: 18,
+                                offset: Offset(0, 12))
+                          ]))),
+                  _PersonCard(
+                      photoHeight: photoHeight,
+                      person: person,
+                      onOpen: details,
+                      onMore: () => showSafety(context, store, person)),
+                ])),
             const SizedBox(height: 22),
             Center(
                 child: TextButton.icon(
@@ -123,11 +141,126 @@ class DiscoverScreen extends StatelessWidget {
         Padding(
             padding: const EdgeInsets.only(bottom: 16),
             child: Text('${store.remaining} likes left · Preview',
-                style:
-                    const TextStyle(fontSize: 11, color: EverlaneColors.muted))),
+                style: const TextStyle(
+                    fontSize: 11, color: EverlaneColors.muted))),
       ]);
     });
   }
+}
+
+/// Drag the card right to like or left to pass. Short drags spring back.
+class SwipeCard extends StatefulWidget {
+  const SwipeCard(
+      {super.key,
+      required this.child,
+      required this.onLike,
+      required this.onPass});
+  final Widget child;
+
+  /// Returns false when the like is refused, which springs the card back.
+  final bool Function() onLike;
+  final VoidCallback onPass;
+  @override
+  State<SwipeCard> createState() => _SwipeCardState();
+}
+
+class _SwipeCardState extends State<SwipeCard>
+    with SingleTickerProviderStateMixin {
+  late final controller = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 220))
+    ..addListener(() => setState(() => dx = animation.value));
+  Animation<double> animation = const AlwaysStoppedAnimation(0);
+  double dx = 0;
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> animateTo(double target) {
+    animation = Tween(begin: dx, end: target)
+        .animate(CurvedAnimation(parent: controller, curve: Curves.easeOut));
+    return controller.forward(from: 0);
+  }
+
+  Future<void> release(double width, double velocity) async {
+    final right = dx > width * .3 || velocity > 800;
+    final left = dx < -width * .3 || velocity < -800;
+    if (!right && !left) return animateTo(0);
+    await animateTo((right ? 1.5 : -1.5) * width);
+    if (!mounted) return;
+    if (right) {
+      if (!widget.onLike()) await animateTo(0);
+    } else {
+      widget.onPass();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+        final progress = (dx / (c.maxWidth * .3)).clamp(-1.0, 1.0);
+        return GestureDetector(
+            onHorizontalDragStart: (_) => controller.stop(),
+            onHorizontalDragUpdate: (d) => setState(() => dx += d.delta.dx),
+            onHorizontalDragEnd: (d) =>
+                release(c.maxWidth, d.velocity.pixelsPerSecond.dx),
+            child: Transform.translate(
+                offset: Offset(dx, 0),
+                child: Transform.rotate(
+                    angle: progress * .12,
+                    child: Stack(children: [
+                      widget.child,
+                      if (progress > 0)
+                        _SwipeStamp(
+                            label: 'LIKE',
+                            color: EverlaneColors.purple,
+                            opacity: progress,
+                            alignment: Alignment.topLeft),
+                      if (progress < 0)
+                        _SwipeStamp(
+                            label: 'PASS',
+                            color: EverlaneColors.blue,
+                            opacity: -progress,
+                            alignment: Alignment.topRight),
+                    ]))));
+      });
+}
+
+class _SwipeStamp extends StatelessWidget {
+  const _SwipeStamp(
+      {required this.label,
+      required this.color,
+      required this.opacity,
+      required this.alignment});
+  final String label;
+  final Color color;
+  final double opacity;
+  final Alignment alignment;
+  @override
+  Widget build(BuildContext context) => Positioned.fill(
+      child: IgnorePointer(
+          child: Padding(
+              padding: const EdgeInsets.all(30),
+              child: Align(
+                  alignment: alignment,
+                  child: Opacity(
+                      opacity: opacity,
+                      child: Transform.rotate(
+                          angle: alignment == Alignment.topLeft ? -.25 : .25,
+                          child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 6),
+                              decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: .85),
+                                  border: Border.all(color: color, width: 3),
+                                  borderRadius: BorderRadius.circular(10)),
+                              child: Text(label,
+                                  style: TextStyle(
+                                      color: color,
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 2)))))))));
 }
 
 class _PersonCard extends StatelessWidget {
@@ -570,8 +703,8 @@ class MessagesScreen extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 12, color: EverlaneColors.muted)),
-                trailing:
-                    const Icon(Icons.chevron_right, color: EverlaneColors.muted),
+                trailing: const Icon(Icons.chevron_right,
+                    color: EverlaneColors.muted),
                 onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute<void>(
@@ -759,7 +892,8 @@ class ProfileScreen extends StatelessWidget {
                         style: const TextStyle(
                             color: EverlaneColors.muted, fontSize: 12)),
                     const SizedBox(height: 6),
-                    const Eyebrow('Preview profile', color: EverlaneColors.coral)
+                    const Eyebrow('Preview profile',
+                        color: EverlaneColors.coral)
                   ])),
               IconButton(
                   tooltip: 'Edit profile',
@@ -833,8 +967,8 @@ class ProfileScreen extends StatelessWidget {
                 ]))),
         const SizedBox(height: 28),
         const Center(
-            child:
-                Icon(Icons.spa_outlined, size: 27, color: EverlaneColors.coral)),
+            child: Icon(Icons.spa_outlined,
+                size: 27, color: EverlaneColors.coral)),
         const SizedBox(height: 9),
         const Center(
             child: Text('Made for something real.',
