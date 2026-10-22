@@ -43,8 +43,16 @@ class Person {
       this.soundtrack = '',
       this.voicePrompt = '',
       this.voiceSeconds = 0,
-      this.verified = false});
+      this.verified = false,
+      this.activeNow = false,
+      this.bio = '',
+      this.interests = const []});
   final String id, name, job, photo, answer;
+
+  /// A short line shown over the photo on the Discover card.
+  final String bio;
+  final List<String> interests;
+  final bool activeNow;
   final List<LookingFor> lookingFor;
   final int age, distance;
 
@@ -69,6 +77,9 @@ class Person {
 const demoPeople = [
   Person(
       id: 'ananya',
+      activeNow: true,
+      bio: 'Designer by day, bookstore wanderer by weekend. Looking for someone to share filter coffee and long walks with.',
+      interests: ['Coffee', 'Books', 'Design'],
       verified: true,
       soundtrack: 'Prateek Kuhad – cold/mess',
       voicePrompt:
@@ -84,6 +95,8 @@ const demoPeople = [
           'A slow morning, a strong filter coffee, and getting wonderfully lost in a bookstore.'),
   Person(
       id: 'meera',
+      bio: 'Architect who sketches cafés instead of buildings on Sundays. Dog person, always.',
+      interests: ['Travel', 'Art', 'Dogs'],
       soundtrack: 'Norah Jones – Sunrise',
       lookingFor: [
         LookingFor.coffeeDate,
@@ -99,6 +112,9 @@ const demoPeople = [
           'Finding a little café with a big personality. Bonus points if there’s a dog.'),
   Person(
       id: 'isha',
+      activeNow: true,
+      bio: 'Road trips, loud playlists and late-night chai. Spontaneity is my love language.',
+      interests: ['Road trips', 'Live music', 'Chai'],
       soundtrack: 'The Local Train – Choo Lo',
       voicePrompt: 'Ask me about the time I drove to Gokarna on a whim.',
       voiceSeconds: 7,
@@ -116,6 +132,8 @@ const demoPeople = [
           'A spontaneous drive, a very specific playlist, and absolutely no rush to get home.'),
   Person(
       id: 'tara',
+      bio: 'Doctor who unwinds in the kitchen. I’ll bake the tiramisu, you pick the movie.',
+      interests: ['Cooking', 'Movies', 'Fitness'],
       verified: true,
       soundtrack: 'A. R. Rahman – Tere Bina',
       voicePrompt: 'I make a mean tiramisu. That’s it, that’s the pitch.',
@@ -377,8 +395,11 @@ class PreviewStore extends ChangeNotifier {
   /// the rest of this preview.
   final List<Uint8List> myPhotos = [];
   bool get hasPhoto => myPhotos.isNotEmpty;
+  static const maxPhotos = 6;
+  bool get canAddPhoto => myPhotos.length < maxPhotos;
 
   void addPhoto(Uint8List bytes) {
+    if (!canAddPhoto) return;
     myPhotos.add(bytes);
     notifyListeners();
   }
