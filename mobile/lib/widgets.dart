@@ -92,6 +92,57 @@ class RoundButton extends StatelessWidget {
       ));
 }
 
+/// A purple-to-pink gradient pill with a soft glow, for the hero calls to
+/// action (Get started, Post profile, Start chatting…).
+class GradientButton extends StatelessWidget {
+  const GradientButton(
+      {super.key, required this.label, required this.onTap, this.icon});
+  final String label;
+  final IconData? icon;
+
+  /// Null shows the button faded and disabled.
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+      decoration: BoxDecoration(
+          gradient: EverlaneColors.premiumGradient,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            if (onTap != null)
+              BoxShadow(
+                  color: EverlaneColors.deep.withValues(alpha: .5),
+                  blurRadius: 22,
+                  offset: const Offset(0, 10))
+          ]),
+      child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: onTap,
+              child: Opacity(
+                  opacity: onTap == null ? .45 : 1,
+                  child: Container(
+                      height: 54,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                      child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (icon != null) ...[
+                              Icon(icon, color: Colors.white, size: 20),
+                              const SizedBox(width: 8),
+                            ],
+                            Flexible(
+                                child: Text(label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w700))),
+                          ]))))));
+}
+
 class EmptyState extends StatelessWidget {
   const EmptyState(
       {super.key,
