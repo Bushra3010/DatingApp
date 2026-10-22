@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'match_celebration.dart';
 import 'models.dart';
 import 'photo_picker.dart';
@@ -92,107 +93,133 @@ class DiscoverScreen extends StatelessWidget {
         context,
         editorialRoute<void>(
             (_) => PersonDetailsScreen(person: person, store: store)));
-    return LayoutBuilder(builder: (context, constraints) {
-      final photoHeight =
-          (constraints.maxHeight - 280).clamp(140.0, constraints.maxWidth - 72);
-      return Column(children: [
-        Expanded(
-            child: ListView(
-          key: ValueKey(person.id),
-          padding: const EdgeInsets.fromLTRB(22, 12, 22, 22),
-          children: [
-            SwipeCard(
-                key: ValueKey('swipe-${person.id}'),
-                onLike: () => swipeLike(context, person),
-                onPass: () => pass(context, person),
-                child: Stack(clipBehavior: Clip.none, children: [
-                  Positioned.fill(
-                      top: 18,
-                      bottom: -12,
-                      left: 13,
-                      right: 13,
-                      child: DecoratedBox(
-                          decoration: BoxDecoration(
-                              color: EverlaneColors.card,
-                              borderRadius: BorderRadius.circular(25),
-                              boxShadow: const [
-                            BoxShadow(
-                                color: Color(0x0C29202B),
-                                blurRadius: 18,
-                                offset: Offset(0, 12))
-                          ]))),
-                  _PersonCard(
-                      photoHeight: photoHeight,
+    return Column(children: [
+      Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+          child: SizedBox(
+              width: double.infinity,
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+            Text('Discover',
+                style: EverlaneFonts.playfair(
+                    size: 30,
+                    weight: FontWeight.w700,
+                    color: EverlaneColors.plum)),
+            const SizedBox(height: 2),
+            Text(
+                '${people.length} ${people.length == 1 ? 'person matches' : 'people match'} your preferences',
+                style: TextStyle(fontSize: 13, color: EverlaneColors.muted)),
+          ]))),
+      Expanded(
+          child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              child: SwipeCard(
+                  key: ValueKey('swipe-${person.id}'),
+                  onLike: () => swipeLike(context, person),
+                  onPass: () => pass(context, person),
+                  child: _PersonCard(
                       person: person,
                       onOpen: details,
                       onMore: () => showSafety(context, store, person),
                       onPrompt: (target) {
                         HapticFeedback.selectionClick();
                         showLikeComposer(context, store, person, target);
-                      }),
-                ])),
-            const SizedBox(height: 22),
-            Center(
-                child: TextButton.icon(
-                    onPressed: details,
-                    icon: const Icon(Icons.keyboard_arrow_up_rounded, size: 18),
-                    label: Text('Get to know them',
-                        style: TextStyle(
-                            fontSize: 12, color: EverlaneColors.muted)))),
-          ],
-        )),
-        Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  PastelAction(
-                      icon: Icons.replay_rounded,
-                      label: 'Undo last pass',
-                      color: EverlaneColors.dark
-                          ? EverlaneColors.muted
-                          : EverlaneColors.deep,
-                      size: 40,
-                      onTap: store.canUndo ? () => undoPass(context) : null),
-                  PastelAction(
-                      icon: Icons.star_rounded,
-                      label: 'Like ${person.name}’s prompt',
-                      color: EverlaneColors.star,
-                      size: 46,
-                      onTap: () => showLikeComposer(
-                          context, store, person, 'My ideal Sunday')),
-                  PastelAction(
-                      icon: Icons.close_rounded,
-                      label: 'Pass on ${person.name}',
-                      color: EverlaneColors.pass,
-                      size: 66,
-                      onTap: () => pass(context, person)),
-                  PastelAction(
-                      icon: Icons.favorite_rounded,
-                      label: 'Like ${person.name}’s photo',
-                      color: EverlaneColors.like,
-                      size: 66,
-                      onTap: like),
-                  PastelAction(
-                      icon: Icons.bolt_rounded,
-                      label: 'Boost your profile',
-                      color: EverlaneColors.boost,
-                      size: 46,
-                      onTap: () => showBoost(context, store)),
-                ])),
-        Padding(
-            padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-                [
-                  '${store.remaining} likes left today',
-                  if (store.boosting)
-                    'Boosting until ${TimeOfDay.fromDateTime(store.boostEndsAt!).format(context)}',
-                  store.plan.title,
-                ].join(' · '),
-                style: TextStyle(fontSize: 11, color: EverlaneColors.muted))),
-      ]);
-    });
+                      })))),
+      Padding(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
+          child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _RoundAction(
+                    icon: Icons.replay_rounded,
+                    label: 'Undo last pass',
+                    color: EverlaneColors.star,
+                    size: 48,
+                    onTap: store.canUndo ? () => undoPass(context) : null),
+                _RoundAction(
+                    icon: Icons.close_rounded,
+                    label: 'Pass on ${person.name}',
+                    color: const Color(0xFFF87171),
+                    size: 60,
+                    onTap: () => pass(context, person)),
+                _RoundAction(
+                    icon: Icons.star_rounded,
+                    label: 'Like ${person.name}’s prompt',
+                    color: const Color(0xFF38BDF8),
+                    size: 48,
+                    onTap: () => showLikeComposer(
+                        context, store, person, 'My ideal Sunday')),
+                _RoundAction(
+                    icon: Icons.favorite_rounded,
+                    label: 'Like ${person.name}’s photo',
+                    color: Colors.white,
+                    size: 72,
+                    hero: true,
+                    onTap: like),
+                _RoundAction(
+                    icon: Icons.bolt_rounded,
+                    label: 'Boost your profile',
+                    color: EverlaneColors.lavender,
+                    size: 48,
+                    onTap: () => showBoost(context, store)),
+              ])),
+      Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+              [
+                '${store.remaining} likes left today',
+                if (store.boosting)
+                  'Boosting until ${TimeOfDay.fromDateTime(store.boostEndsAt!).format(context)}',
+                store.plan.title,
+              ].join(' · '),
+              style: TextStyle(fontSize: 11, color: EverlaneColors.muted))),
+    ]);
   }
+}
+
+/// A round action under the Discover card. The [hero] one (like) is the
+/// big purple-to-pink gradient button; the rest are dark glassy circles.
+class _RoundAction extends StatelessWidget {
+  const _RoundAction(
+      {required this.icon,
+      required this.label,
+      required this.color,
+      required this.size,
+      required this.onTap,
+      this.hero = false});
+  final IconData icon;
+  final String label;
+  final Color color;
+  final double size;
+  final bool hero;
+
+  /// Null shows the button faded and disabled.
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) => AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: onTap == null ? .4 : 1,
+      child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: hero ? EverlaneColors.premiumGradient : null,
+              color: hero ? null : EverlaneColors.card,
+              border: hero ? null : Border.all(color: EverlaneColors.line),
+              boxShadow: [
+                BoxShadow(
+                    color: hero
+                        ? EverlaneColors.deep.withValues(alpha: .55)
+                        : Colors.black.withValues(alpha: .28),
+                    blurRadius: hero ? 26 : 14,
+                    offset: const Offset(0, 8))
+              ]),
+          child: IconButton(
+              tooltip: label,
+              onPressed: onTap,
+              icon: Icon(icon, color: color, size: size * .45))));
 }
 
 /// Drag the card right to like or left to pass. Short drags spring back.
@@ -319,7 +346,6 @@ class _SwipeStamp extends StatelessWidget {
 class _PersonCard extends StatelessWidget {
   const _PersonCard(
       {required this.person,
-      required this.photoHeight,
       required this.onOpen,
       required this.onMore,
       required this.onPrompt});
@@ -328,93 +354,179 @@ class _PersonCard extends StatelessWidget {
 
   /// Opens the like composer aimed at a photo detail ('photo', 'soundtrack').
   final ValueChanged<String> onPrompt;
-  final double photoHeight;
+
+  Widget _meta(IconData icon, String text) =>
+      Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 15, color: Colors.white.withValues(alpha: .85)),
+        const SizedBox(width: 5),
+        Flexible(
+            child: Text(text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 13, color: Colors.white.withValues(alpha: .9)))),
+      ]);
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+        // Short screens drop the extras so the name never runs off the top.
+        final compact = c.maxHeight < 400;
+        return DecoratedBox(
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                      color: EverlaneColors.deep.withValues(alpha: .28),
+                      blurRadius: 30,
+                      offset: const Offset(0, 14))
+                ]),
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(32),
+                child: Stack(fit: StackFit.expand, children: [
+                  GestureDetector(
+                      onTap: onOpen,
+                      child: Hero(
+                          tag: 'portrait-${person.id}',
+                          child: Portrait(person, radius: 0))),
+                  const IgnorePointer(
+                      child: DecoratedBox(
+                          decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  stops: [0, .28, .5, 1],
+                                  colors: [
+                        Color(0x73000000),
+                        Color(0x00000000),
+                        Color(0x26000000),
+                        Color(0xF50B0812),
+                      ])))),
+                  Positioned(
+                      top: 14,
+                      left: 14,
+                      right: 10,
+                      child: Row(children: [
+                        if (person.activeNow)
+                          const _GlassPill(
+                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                            DecoratedBox(
+                                decoration: BoxDecoration(
+                                    color: Color(0xFF22C55E),
+                                    shape: BoxShape.circle),
+                                child: SizedBox(width: 8, height: 8)),
+                            SizedBox(width: 7),
+                            Text('Active now',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600)),
+                          ])),
+                        const Spacer(),
+                        Material(
+                            color: Colors.black.withValues(alpha: .35),
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                                tooltip: 'Profile options',
+                                onPressed: onMore,
+                                icon: const Icon(Icons.more_horiz,
+                                    color: Colors.white, size: 22))),
+                      ])),
+                  Positioned(
+                      left: 18,
+                      right: 18,
+                      bottom: 18,
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (person.soundtrack.isNotEmpty && !compact) ...[
+                              PhotoPrompt(
+                                  icon: Icons.music_note_rounded,
+                                  text:
+                                      '${person.name}’s soundtrack · ${person.soundtrack}',
+                                  onTap: () => onPrompt('soundtrack')),
+                              const SizedBox(height: 8),
+                            ],
+                            PhotoPrompt(
+                                icon: Icons.chat_bubble_outline_rounded,
+                                text: 'Ask about this photo',
+                                onTap: () => onPrompt('photo')),
+                            const SizedBox(height: 14),
+                            Row(children: [
+                              Flexible(
+                                  child: GestureDetector(
+                                      onTap: onOpen,
+                                      child: Text.rich(
+                                          EverlaneFonts.nameAge(
+                                              person.name, person.age),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis))),
+                              if (person.verified) ...[
+                                const SizedBox(width: 8),
+                                const Tooltip(
+                                    message: 'Selfie verified',
+                                    child: Icon(Icons.verified_rounded,
+                                        size: 24, color: Color(0xFF60A5FA))),
+                              ],
+                            ]),
+                            const SizedBox(height: 6),
+                            Wrap(spacing: 14, runSpacing: 4, children: [
+                              _meta(Icons.work_outline_rounded, person.job),
+                              _meta(Icons.location_on_outlined,
+                                  'Bengaluru · ${person.distanceLabel}'),
+                              _meta(person.lookingFor.first.icon,
+                                  person.lookingFor.first.short),
+                            ]),
+                            if (person.bio.isNotEmpty && !compact) ...[
+                              const SizedBox(height: 10),
+                              Text(person.bio,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      height: 1.45,
+                                      color:
+                                          Colors.white.withValues(alpha: .88))),
+                            ],
+                            if (person.interests.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Row(children: [
+                                const Icon(Icons.auto_awesome_rounded,
+                                    size: 18, color: EverlaneColors.star),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                    child: Wrap(
+                                        spacing: 6,
+                                        runSpacing: 6,
+                                        children: [
+                                      for (final tag in person.interests)
+                                        _GlassPill(
+                                            child: Text(tag,
+                                                style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 12.5,
+                                                    fontWeight:
+                                                        FontWeight.w500))),
+                                    ])),
+                              ]),
+                            ],
+                          ])),
+                ])));
+      });
+}
+
+/// A translucent dark pill laid over a photo.
+class _GlassPill extends StatelessWidget {
+  const _GlassPill({required this.child});
+  final Widget child;
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-          color: EverlaneColors.card,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: const [
-            BoxShadow(
-                color: Color(0x152D2231), blurRadius: 24, offset: Offset(0, 8))
-          ]),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Stack(children: [
-          GestureDetector(
-              onTap: onOpen,
-              child: Hero(
-                  tag: 'portrait-${person.id}',
-                  child: Portrait(person,
-                      height: photoHeight,
-                      width: double.infinity,
-                      radius: 18))),
-          if (person.soundtrack.isNotEmpty)
-            Positioned(
-                top: 12,
-                left: 12,
-                right: 12,
-                child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: PhotoPrompt(
-                        icon: Icons.music_note_rounded,
-                        text:
-                            '${person.name}’s soundtrack · ${person.soundtrack}',
-                        onTap: () => onPrompt('soundtrack')))),
-          Positioned(
-              left: 12,
-              bottom: 12,
-              child: PhotoPrompt(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  text: 'Ask about this photo',
-                  onTap: () => onPrompt('photo'))),
-        ]),
-        const SizedBox(height: 16),
-        Row(children: [
-          Expanded(
-              child: GestureDetector(
-                  onTap: onOpen,
-                  child: Text('${person.name}, ${person.age}',
-                      style: const TextStyle(
-                          fontSize: 21,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -.6)))),
-          if (person.verified)
-            const Tooltip(
-                message: 'Selfie verified',
-                child: Icon(Icons.verified_rounded,
-                    size: 18, color: EverlaneColors.pass)),
-          SizedBox(
-              width: 34,
-              height: 32,
-              child: IconButton(
-                  padding: EdgeInsets.zero,
-                  tooltip: 'Profile options',
-                  onPressed: onMore,
-                  icon: Icon(Icons.more_horiz,
-                      size: 22, color: EverlaneColors.muted))),
-        ]),
-        Text(person.job,
-            style: TextStyle(color: EverlaneColors.muted, fontSize: 15)),
-        const SizedBox(height: 12),
-        Row(children: [
-          Icon(Icons.location_on_outlined,
-              size: 14, color: EverlaneColors.muted),
-          const SizedBox(width: 4),
-          Expanded(
-              child: Text('Bengaluru · ${person.distanceLabel}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: EverlaneColors.muted))),
-          const SizedBox(width: 8),
-          Icon(person.lookingFor.first.icon,
-              size: 14, color: EverlaneColors.star),
-          const SizedBox(width: 4),
-          Text(person.lookingFor.first.short,
-              style: const TextStyle(fontSize: 11)),
-        ]),
-        const SizedBox(height: 10),
-      ]));
+          color: Colors.black.withValues(alpha: .38),
+          border: Border.all(color: Colors.white.withValues(alpha: .18)),
+          borderRadius: BorderRadius.circular(30)),
+      child: child);
 }
 
 class PersonDetailsScreen extends StatelessWidget {
@@ -481,7 +593,9 @@ class PersonDetailsScreen extends StatelessWidget {
                           color: EverlaneColors.star),
                       const SizedBox(height: 12),
                       Text(
-                          '${person.job}. Looking for a lasting connection and someone to share the everyday adventures with.',
+                          person.bio.isNotEmpty
+                              ? person.bio
+                              : '${person.job}. Looking for a lasting connection and someone to share the everyday adventures with.',
                           style: TextStyle(
                               color: EverlaneColors.muted, height: 1.7)),
                       const SizedBox(height: 28),
@@ -490,13 +604,9 @@ class PersonDetailsScreen extends StatelessWidget {
                           title: 'Interests',
                           color: EverlaneColors.like),
                       const SizedBox(height: 16),
-                      const Wrap(spacing: 10, runSpacing: 10, children: [
-                        Tag(Icons.music_note_outlined, 'Music'),
-                        Tag(Icons.coffee_outlined, 'Coffee'),
-                        Tag(Icons.menu_book_outlined, 'Books'),
-                        Tag(Icons.pets_outlined, 'Dogs'),
-                        Tag(Icons.explore_outlined, 'Exploring'),
-                        Tag(Icons.restaurant_outlined, 'Good food')
+                      Wrap(spacing: 10, runSpacing: 10, children: [
+                        for (final tag in person.interests)
+                          Tag(Icons.auto_awesome_outlined, tag),
                       ]),
                       const SizedBox(height: 28),
                       Container(
@@ -1227,256 +1337,581 @@ class _ChatScreenState extends State<ChatScreen> {
       );
 }
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.store});
   final PreviewStore store;
   @override
-  Widget build(BuildContext context) =>
-      ListView(padding: const EdgeInsets.all(24), children: [
-        const Eyebrow('Unmistakably, wonderfully you'),
-        const SizedBox(height: 10),
-        Text('My profile', style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 26),
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool picking = false;
+
+  Future<void> pick() async {
+    if (!widget.store.canAddPhoto || picking) return;
+    setState(() => picking = true);
+    try {
+      final bytes = await pickPhotoBytes();
+      if (bytes != null) widget.store.addPhoto(bytes);
+    } catch (_) {
+      if (mounted) showNotice(context, 'Couldn’t open your photos. Try again.');
+    } finally {
+      if (mounted) setState(() => picking = false);
+    }
+  }
+
+  Widget _pill(
+          {required IconData icon,
+          required String label,
+          required VoidCallback? onTap,
+          Color? color}) =>
+      OutlinedButton.icon(
+          onPressed: onTap,
+          style: OutlinedButton.styleFrom(
+              shape: const StadiumBorder(),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              side: BorderSide(color: EverlaneColors.line)),
+          icon: Icon(icon, size: 18, color: color ?? EverlaneColors.lavender),
+          label: Text(label));
+
+  @override
+  Widget build(BuildContext context) {
+    final store = widget.store;
+    final strength = store.profileCompleteness;
+    return ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
+      Align(
+          alignment: Alignment.centerRight,
+          child: IconButton(
+              tooltip: 'Edit profile',
+              onPressed: () => editProfile(context, store),
+              style: IconButton.styleFrom(
+                  backgroundColor: EverlaneColors.card,
+                  side: BorderSide(color: EverlaneColors.line)),
+              icon: Icon(Icons.edit_outlined,
+                  size: 20, color: EverlaneColors.lavender))),
+      // Header: big avatar with a gradient ring and a camera badge.
+      Center(
+          child: Stack(clipBehavior: Clip.none, children: [
         Container(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.all(3.5),
             decoration: BoxDecoration(
-                color: EverlaneColors.card,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: EverlaneColors.line)),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                MyAvatar(store: store, size: 70),
-                const SizedBox(width: 18),
-                Expanded(
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                      Text('${store.myName}, ${store.myAge}',
-                          style: Theme.of(context).textTheme.titleLarge),
-                      const SizedBox(height: 4),
-                      if (store.myJob.isNotEmpty)
-                        Text(store.myJob,
-                            style: TextStyle(
-                                color: EverlaneColors.muted, fontSize: 12)),
-                      if (store.myCity.isNotEmpty)
-                        Text(store.myCity,
-                            style: TextStyle(
-                                color: EverlaneColors.muted, fontSize: 12)),
-                      const SizedBox(height: 6),
-                      Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 9, vertical: 3),
-                          decoration: BoxDecoration(
-                              color: store.myProfilePosted
-                                  ? EverlaneColors.boost.withValues(alpha: .15)
-                                  : EverlaneColors.blush,
-                              borderRadius: BorderRadius.circular(30)),
-                          child: Text(
-                              store.myProfilePosted
-                                  ? 'Live in the preview'
-                                  : 'Draft, not posted',
-                              style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700,
-                                  color: store.myProfilePosted
-                                      ? EverlaneColors.boost
-                                      : EverlaneColors.like))),
-                    ])),
-                IconButton(
-                    tooltip: 'Edit profile',
-                    onPressed: () => editProfile(context, store),
-                    icon: const Icon(Icons.edit_outlined, size: 21)),
+                shape: BoxShape.circle,
+                gradient: EverlaneColors.premiumGradient,
+                boxShadow: [
+                  BoxShadow(
+                      color: EverlaneColors.deep.withValues(alpha: .45),
+                      blurRadius: 28,
+                      offset: const Offset(0, 10))
+                ]),
+            child: Container(
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle, color: EverlaneColors.paper),
+                child: MyAvatar(store: store, size: 122))),
+        Positioned(
+            right: 0,
+            bottom: 4,
+            child: DecoratedBox(
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: EverlaneColors.premiumGradient,
+                    border: Border.all(color: EverlaneColors.paper, width: 3)),
+                child: IconButton(
+                    tooltip: 'Add a photo',
+                    onPressed: store.canAddPhoto && !picking ? pick : null,
+                    icon: picking
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.photo_camera_outlined,
+                            color: Colors.white, size: 20)))),
+      ])),
+      const SizedBox(height: 18),
+      Center(
+          child: Text.rich(
+              EverlaneFonts.nameAge(store.myName, store.myAge,
+                  size: 32, color: EverlaneColors.plum),
+              textAlign: TextAlign.center)),
+      const SizedBox(height: 6),
+      Center(
+          child: Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 14,
+              runSpacing: 4,
+              children: [
+            if (store.myJob.isNotEmpty)
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.work_outline_rounded,
+                    size: 16, color: EverlaneColors.muted),
+                const SizedBox(width: 5),
+                Text(store.myJob,
+                    style: TextStyle(color: EverlaneColors.muted, fontSize: 14)),
               ]),
-              const SizedBox(height: 16),
-              Text(
-                  store.myBio.isEmpty
-                      ? 'Add a bio so members know who you are.'
-                      : store.myBio,
+            if (store.myCity.isNotEmpty)
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.location_on_outlined,
+                    size: 16, color: EverlaneColors.muted),
+                const SizedBox(width: 5),
+                Text(store.myCity,
+                    style: TextStyle(color: EverlaneColors.muted, fontSize: 14)),
+              ]),
+          ])),
+      const SizedBox(height: 10),
+      Center(
+          child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                  color: store.myProfilePosted
+                      ? EverlaneColors.boost.withValues(alpha: .15)
+                      : EverlaneColors.blush,
+                  borderRadius: BorderRadius.circular(30)),
+              child: Text(
+                  store.myProfilePosted
+                      ? 'Live in the preview'
+                      : 'Draft, not posted',
                   style: TextStyle(
-                      color: store.myBio.isEmpty
-                          ? EverlaneColors.muted
-                          : EverlaneColors.plum,
-                      fontStyle:
-                          store.myBio.isEmpty ? FontStyle.italic : FontStyle.normal,
-                      height: 1.4)),
-              const SizedBox(height: 14),
-              Row(children: [
-                Expanded(
-                    child: Text('Profile ${store.profileCompleteness}% complete',
-                        style: TextStyle(
-                            fontSize: 12, color: EverlaneColors.muted))),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: store.myProfilePosted
+                          ? EverlaneColors.boost
+                          : EverlaneColors.like)))),
+      const SizedBox(height: 18),
+      Center(
+          child: SizedBox(
+              width: 260,
+              child: Column(children: [
+                Row(children: [
+                  Text('Profile strength',
+                      style: TextStyle(fontSize: 13, color: EverlaneColors.muted)),
+                  const Spacer(),
+                  Text('$strength%',
+                      style: const TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700)),
+                ]),
+                const SizedBox(height: 8),
+                Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                        color: EverlaneColors.line,
+                        borderRadius: BorderRadius.circular(8)),
+                    alignment: Alignment.centerLeft,
+                    child: FractionallySizedBox(
+                        widthFactor: strength / 100,
+                        child: Container(
+                            decoration: BoxDecoration(
+                                gradient: EverlaneColors.premiumGradient,
+                                borderRadius: BorderRadius.circular(8))))),
+              ]))),
+      const SizedBox(height: 18),
+      Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
+        _pill(
+            icon: store.myVerified
+                ? Icons.verified_rounded
+                : Icons.verified_outlined,
+            label: store.myVerified ? 'Verified' : 'Get verified',
+            color: store.myVerified ? const Color(0xFF60A5FA) : null,
+            onTap: store.myVerified ? null : () => verifyMe(context, store)),
+        _pill(
+            icon: Icons.visibility_outlined,
+            label: 'Preview',
+            onTap: () => previewMyProfile(context, store)),
+      ]),
+      const SizedBox(height: 22),
+      Row(children: [
+        Expanded(
+            child: _StatTile(
+                value: '${store.conversations.length}', label: 'Matches')),
+        const SizedBox(width: 10),
+        Expanded(
+            child: _StatTile(
+                value: '${store.remaining < 0 ? 0 : store.remaining}',
+                label: 'Likes left')),
+        const SizedBox(width: 10),
+        Expanded(child: _StatTile(value: store.plan.title, label: 'Plan')),
+      ]),
+      const SizedBox(height: 18),
+      _ProfileSection(
+          title: 'Photos',
+          subtitle:
+              'Add up to ${PreviewStore.maxPhotos} photos. Your first photo is the one people see first.',
+          children: [
+            LayoutBuilder(builder: (context, c) {
+              const gap = 10.0;
+              final w = (c.maxWidth - gap * 2) / 3;
+              return Wrap(spacing: gap, runSpacing: gap, children: [
+                for (var i = 0; i < PreviewStore.maxPhotos; i++)
+                  SizedBox(
+                      width: w,
+                      height: w * 1.28,
+                      child: i < store.myPhotos.length
+                          ? _PhotoSlot(
+                              bytes: store.myPhotos[i],
+                              isMain: i == 0,
+                              onSetMain: i == 0
+                                  ? null
+                                  : () => store.setMainPhoto(i),
+                              onRemove: () => store.removePhoto(i))
+                          : _EmptyPhotoSlot(
+                              busy: picking && i == store.myPhotos.length,
+                              onTap: pick)),
+              ]);
+            }),
+          ]),
+      _ProfileSection(
+          title: 'About me',
+          trailing: IconButton(
+              tooltip: 'Edit about me',
+              onPressed: () => editProfile(context, store),
+              icon: Icon(Icons.edit_outlined,
+                  size: 21, color: EverlaneColors.lavender)),
+          children: [
+            Text('Bio',
+                style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+            const SizedBox(height: 6),
+            Text(
+                store.myBio.isEmpty
+                    ? 'Add a bio so members know who you are.'
+                    : store.myBio,
+                style: TextStyle(
+                    fontSize: 15,
+                    height: 1.5,
+                    color: store.myBio.isEmpty
+                        ? EverlaneColors.muted
+                        : EverlaneColors.body,
+                    fontStyle: store.myBio.isEmpty
+                        ? FontStyle.italic
+                        : FontStyle.normal)),
+            const SizedBox(height: 18),
+            Text(store.myPromptLabel,
+                style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+            const SizedBox(height: 6),
+            Text(
+                store.myPrompt.isEmpty
+                    ? 'Add an answer from Edit profile.'
+                    : '“${store.myPrompt}”',
+                style: GoogleFonts.cormorantGaramond(
+                    fontSize: 21,
+                    height: 1.35,
+                    fontStyle: FontStyle.italic,
+                    fontWeight: FontWeight.w500,
+                    color: EverlaneColors.plum)),
+            const SizedBox(height: 18),
+            Text('Interests',
+                style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+            const SizedBox(height: 8),
+            if (store.myInterests.isEmpty)
+              Text('Pick up to 6 from Edit profile.',
+                  style: TextStyle(
+                      fontSize: 14,
+                      color: EverlaneColors.muted,
+                      fontStyle: FontStyle.italic))
+            else
+              Wrap(spacing: 8, runSpacing: 8, children: [
+                for (final tag in store.myInterests)
+                  Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                          color: EverlaneColors.deep,
+                          borderRadius: BorderRadius.circular(30)),
+                      child: Text(tag,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500))),
               ]),
-              const SizedBox(height: 6),
-              ClipRRect(
-                  borderRadius: BorderRadius.circular(3),
-                  child: LinearProgressIndicator(
-                      value: store.profileCompleteness / 100,
-                      minHeight: 6,
-                      color: EverlaneColors.like,
-                      backgroundColor: EverlaneColors.line)),
-              const SizedBox(height: 18),
-              Row(children: [
-                Expanded(
-                    child: _StatTile(
-                        value: '${store.conversations.length}',
-                        label: 'Matches')),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: _StatTile(
-                        value: '${store.remaining < 0 ? 0 : store.remaining}',
-                        label: 'Likes left')),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: _StatTile(value: store.plan.title, label: 'Plan')),
-              ]),
-              const SizedBox(height: 16),
-              Row(children: [
-                Expanded(
-                    child: GradientButton(
-                        label: 'Edit profile',
-                        onTap: () => editProfile(context, store))),
-                const SizedBox(width: 10),
-                Expanded(
-                    child: OutlinedButton(
-                        onPressed: () => previewMyProfile(context, store),
-                        style: OutlinedButton.styleFrom(
-                            minimumSize: const Size(0, 48)),
-                        child: const Text('Preview'))),
-              ]),
-              const SizedBox(height: 10),
-              SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                      onPressed:
-                          store.myVerified ? null : () => verifyMe(context, store),
-                      style: FilledButton.styleFrom(
-                          backgroundColor: EverlaneColors.deep,
-                          minimumSize: const Size(0, 48)),
-                      icon: Icon(store.myVerified
-                          ? Icons.verified_rounded
-                          : Icons.shield_outlined),
-                      label: Text(store.myVerified
-                          ? 'Profile verified'
-                          : 'Verify my profile'))),
-            ])),
+            const SizedBox(height: 18),
+            Row(children: [
+              Icon(Icons.favorite_rounded, size: 16, color: EverlaneColors.like),
+              const SizedBox(width: 6),
+              Expanded(
+                  child: Text('Looking for: ${store.myLookingFor}',
+                      style: const TextStyle(fontSize: 13))),
+            ]),
+            const SizedBox(height: 18),
+            GradientButton(
+                label: 'Edit profile',
+                icon: Icons.edit_outlined,
+                onTap: () => editProfile(context, store)),
+          ]),
+      _MembershipBanner(store: store),
+      const SizedBox(height: 12),
+      QuizCard(store: store),
+      const SizedBox(height: 16),
+      _ProfileSection(
+          title: 'Privacy & safety',
+          icon: Icons.verified_user_outlined,
+          iconColor: EverlaneColors.boost,
+          subtitle: 'You’re in control of what others see.',
+          children: [
+            SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Invisible mode'),
+                subtitle: Text('Only people you like can see you',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                value: store.invisible,
+                onChanged: (value) {
+                  store.invisible = value;
+                  store.update();
+                }),
+            const Divider(height: 1),
+            SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Take a pause'),
+                subtitle: Text('Keep your chats. Take some time.',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                value: store.paused,
+                onChanged: (value) {
+                  store.paused = value;
+                  store.update();
+                }),
+            const Divider(height: 1),
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('A safer space'),
+                subtitle: Text('Tips for meeting safely',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showEverlaneSheet(
+                    context,
+                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text('Your comfort comes first.',
+                          style: Theme.of(context).textTheme.headlineMedium),
+                      const SizedBox(height: 18),
+                      const Text(
+                          'Meet in a public place. Let someone you trust know your plans. Keep personal and financial information private.\n\nYou can report or block a profile from its menu, or find safety options at the top of a conversation.'),
+                      const SizedBox(height: 20)
+                    ]))),
+          ]),
+      _ProfileSection(
+          title: 'Preferences',
+          icon: Icons.tune_rounded,
+          iconColor: EverlaneColors.lavender,
+          children: [
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Dating preferences'),
+                subtitle: Text('Age, distance and who you see',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showFilters(context, store)),
+            const Divider(height: 1),
+            SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Notifications'),
+                subtitle: Text('Preview preference only',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                value: store.notifications,
+                onChanged: (value) {
+                  store.notifications = value;
+                  store.update();
+                }),
+            const Divider(height: 1),
+            SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Dark mode'),
+                subtitle: Text('Easier on the eyes at night',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                value: store.darkMode,
+                onChanged: (value) {
+                  store.darkMode = value;
+                  store.update();
+                }),
+          ]),
+      const SizedBox(height: 12),
+      const Center(
+          child: Icon(Icons.favorite_rounded, size: 24, color: EverlaneColors.like)),
+      const SizedBox(height: 8),
+      Center(
+          child: Text('Made for something real.',
+              style: GoogleFonts.cormorantGaramond(
+                  fontSize: 20,
+                  fontStyle: FontStyle.italic,
+                  color: EverlaneColors.muted))),
+      const SizedBox(height: 6),
+      Center(
+          child: Text('Everlane · UI preview 0.1',
+              style: TextStyle(fontSize: 10, color: EverlaneColors.muted))),
+    ]);
+  }
+}
+
+/// A rounded card section on the profile page, titled in Playfair Display.
+class _ProfileSection extends StatelessWidget {
+  const _ProfileSection(
+      {required this.title,
+      required this.children,
+      this.subtitle,
+      this.icon,
+      this.iconColor,
+      this.trailing});
+  final String title;
+  final String? subtitle;
+  final IconData? icon;
+  final Color? iconColor;
+  final Widget? trailing;
+  final List<Widget> children;
+  @override
+  // A Material (not a decorated Container) so the ListTiles inside can paint
+  // their ink splashes.
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Material(
+          color: EverlaneColors.card,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(28),
+              side: BorderSide(color: EverlaneColors.line)),
+          child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+        Row(children: [
+          if (icon != null) ...[
+            Icon(icon, size: 22, color: iconColor ?? EverlaneColors.lavender),
+            const SizedBox(width: 10),
+          ],
+          Expanded(
+              child: Text(title,
+                  style: EverlaneFonts.playfair(
+                      size: 23,
+                      weight: FontWeight.w600,
+                      color: EverlaneColors.plum))),
+          if (trailing != null) trailing!,
+        ]),
+        if (subtitle != null) ...[
+          const SizedBox(height: 6),
+          Text(subtitle!,
+              style: TextStyle(
+                  fontSize: 13.5, height: 1.45, color: EverlaneColors.muted)),
+        ],
         const SizedBox(height: 14),
-        OutlinedButton(
-            onPressed: () => Navigator.push(context,
-                editorialRoute<void>((_) => CompatibilityQuizScreen(store: store))),
-            style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
-            child: const Text('Take compatibility quiz')),
-        const SizedBox(height: 12),
-        _MembershipBanner(store: store),
-        const SizedBox(height: 12),
-        QuizCard(store: store),
-        const SizedBox(height: 20),
-        Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
+        ...children,
+      ]))));
+}
+
+/// A filled slot in the profile photo grid.
+class _PhotoSlot extends StatelessWidget {
+  const _PhotoSlot(
+      {required this.bytes,
+      required this.isMain,
+      required this.onSetMain,
+      required this.onRemove});
+  final Uint8List bytes;
+  final bool isMain;
+  final VoidCallback? onSetMain, onRemove;
+  @override
+  Widget build(BuildContext context) => ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Stack(fit: StackFit.expand, children: [
+        Image.memory(bytes,
+            fit: BoxFit.cover,
+            errorBuilder: (_, error, stack) => Container(
                 color: EverlaneColors.blush,
-                borderRadius: BorderRadius.circular(20)),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Eyebrow(store.myPromptLabel.replaceAll(' is', '')),
-              const SizedBox(height: 12),
-              Text(
-                  store.myPrompt.isEmpty
-                      ? 'Add an answer from Edit profile.'
-                      : store.myPrompt,
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineMedium
-                      ?.copyWith(fontSize: 24, height: 1.4))
-            ])),
-        const SizedBox(height: 24),
-        const Eyebrow('Make yourself at home'),
-        const SizedBox(height: 12),
-        ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.tune),
-            title: const Text('Dating preferences'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => showFilters(context, store)),
-        const Divider(height: 1),
-        SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            secondary: const Icon(Icons.pause_circle_outline),
-            title: const Text('Take a pause'),
-            subtitle: const Text('Keep your chats. Take some time.',
-                style: TextStyle(fontSize: 12)),
-            value: store.paused,
-            onChanged: (value) {
-              store.paused = value;
-              store.update();
-            }),
-        const Divider(height: 1),
-        SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            secondary: const Icon(Icons.notifications_none),
-            title: const Text('Notifications'),
-            subtitle: const Text('Preview preference only',
-                style: TextStyle(fontSize: 12)),
-            value: store.notifications,
-            onChanged: (value) {
-              store.notifications = value;
-              store.update();
-            }),
-        const Divider(height: 1),
-        SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            secondary: Icon(store.darkMode
-                ? Icons.dark_mode_outlined
-                : Icons.light_mode_outlined),
-            title: const Text('Dark mode'),
-            subtitle: const Text('Easier on the eyes at night',
-                style: TextStyle(fontSize: 12)),
-            value: store.darkMode,
-            onChanged: (value) {
-              store.darkMode = value;
-              store.update();
-            }),
-        const Divider(height: 1),
-        SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            secondary: const Icon(Icons.visibility_off_outlined),
-            title: const Text('Invisible mode'),
-            subtitle: const Text('Only people you like can see you',
-                style: TextStyle(fontSize: 12)),
-            value: store.invisible,
-            onChanged: (value) {
-              store.invisible = value;
-              store.update();
-            }),
-        const Divider(height: 1),
-        ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.shield_outlined),
-            title: const Text('A safer space'),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => showEverlaneSheet(
-                context,
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Your comfort comes first.',
-                      style: Theme.of(context).textTheme.headlineMedium),
-                  const SizedBox(height: 18),
-                  const Text(
-                      'Meet in a public place. Let someone you trust know your plans. Keep personal and financial information private.\n\nYou can report or block a profile from its menu, or find safety options at the top of a conversation.'),
-                  const SizedBox(height: 20)
-                ]))),
-        const SizedBox(height: 28),
-        const Center(
-            child:
-                Icon(Icons.spa_outlined, size: 27, color: EverlaneColors.like)),
-        const SizedBox(height: 9),
-        Center(
-            child: Text('Made for something real.',
-                style: TextStyle(fontSize: 17, color: EverlaneColors.muted))),
-        const SizedBox(height: 9),
-        Center(
-            child: Text('Everlane · UI preview 0.1',
-                style: TextStyle(fontSize: 10, color: EverlaneColors.muted))),
-      ]);
+                alignment: Alignment.center,
+                child: const Icon(Icons.broken_image_outlined,
+                    color: EverlaneColors.like))),
+        if (isMain)
+          Positioned(
+              left: 7,
+              top: 7,
+              child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                      gradient: EverlaneColors.premiumGradient,
+                      borderRadius: BorderRadius.circular(20)),
+                  child: const Text('Main',
+                      style: TextStyle(
+                          fontSize: 10.5,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700))))
+        else if (onSetMain != null)
+          Positioned(
+              left: 6,
+              right: 6,
+              bottom: 6,
+              child: Material(
+                  color: Colors.black.withValues(alpha: .6),
+                  borderRadius: BorderRadius.circular(20),
+                  child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: onSetMain,
+                      child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 4),
+                          child: Text('Make main',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600)))))),
+        Positioned(
+            top: 5,
+            right: 5,
+            child: Material(
+                color: Colors.black.withValues(alpha: .55),
+                shape: const CircleBorder(),
+                child: IconButton(
+                    tooltip: 'Remove photo',
+                    iconSize: 15,
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(),
+                    onPressed: onRemove,
+                    icon:
+                        const Icon(Icons.close_rounded, color: Colors.white)))),
+      ]));
+}
+
+/// An empty, dashed-outline slot in the profile photo grid.
+class _EmptyPhotoSlot extends StatelessWidget {
+  const _EmptyPhotoSlot({required this.busy, required this.onTap});
+  final bool busy;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+      painter: _DashedRRectPainter(color: EverlaneColors.muted.withValues(alpha: .5)),
+      child: Material(
+          color: EverlaneColors.paper.withValues(alpha: .4),
+          borderRadius: BorderRadius.circular(18),
+          child: InkWell(
+              borderRadius: BorderRadius.circular(18),
+              onTap: busy ? null : onTap,
+              child: Center(
+                  child: busy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
+                      : Icon(Icons.add_rounded,
+                          size: 30, color: EverlaneColors.lavender)))));
+}
+
+class _DashedRRectPainter extends CustomPainter {
+  const _DashedRRectPainter({required this.color});
+  final Color color;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4;
+    final path = Path()
+      ..addRRect(RRect.fromRectAndRadius(
+          (Offset.zero & size).deflate(.7), const Radius.circular(18)));
+    for (final metric in path.computeMetrics()) {
+      var d = 0.0;
+      while (d < metric.length) {
+        canvas.drawPath(metric.extractPath(d, d + 6), paint);
+        d += 11;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedRRectPainter old) => old.color != color;
 }
 
 /// The user's own photo if they added one from sign-up or Edit profile,
@@ -1726,7 +2161,8 @@ class _EditProfileFormState extends State<_EditProfileForm> {
                       ? () => setState(() => store.setMainPhoto(i))
                       : null,
                   onRemove: () => setState(() => store.removePhoto(i))),
-            AddPhotoTile(busy: picking, onTap: pickPhoto),
+            if (store.canAddPhoto)
+              AddPhotoTile(busy: picking, onTap: pickPhoto),
           ]),
           const SizedBox(height: 18),
           TextFormField(

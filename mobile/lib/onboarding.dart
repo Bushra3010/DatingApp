@@ -276,7 +276,7 @@ class _Welcome extends StatelessWidget {
                     color: Colors.white))),
         const SizedBox(height: 12),
         const Eyebrow('Less swiping. More meaningful connections.',
-            color: EverlaneColors.like),
+            color: EverlaneColors.like, textAlign: TextAlign.center),
         const SizedBox(height: 18),
         Text(
             'A few thoughtful questions help us introduce you to people you’ll actually want to talk to. It takes about three minutes, and you can skip anything optional.',
@@ -500,7 +500,7 @@ class _PhotoStepState extends State<_PhotoStep> {
                       ? () => setState(() => store.setMainPhoto(i))
                       : null,
                   onRemove: () => setState(() => store.removePhoto(i))),
-            AddPhotoTile(busy: picking, onTap: pick),
+            if (store.canAddPhoto) AddPhotoTile(busy: picking, onTap: pick),
           ]),
           if (error != null) ...[
             const SizedBox(height: 12),

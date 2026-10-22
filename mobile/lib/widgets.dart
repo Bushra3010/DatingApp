@@ -33,13 +33,15 @@ class Portrait extends StatelessWidget {
 }
 
 class Eyebrow extends StatelessWidget {
-  const Eyebrow(this.text, {super.key, this.color});
+  const Eyebrow(this.text, {super.key, this.color, this.textAlign});
   final String text;
+  final TextAlign? textAlign;
 
   /// Defaults to muted.
   final Color? color;
   @override
   Widget build(BuildContext context) => Text(text.toUpperCase(),
+      textAlign: textAlign,
       style: TextStyle(
           fontSize: 10,
           letterSpacing: 2,

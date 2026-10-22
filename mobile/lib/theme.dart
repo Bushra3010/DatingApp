@@ -89,6 +89,24 @@ abstract final class EverlaneFonts {
           height: height,
           letterSpacing: letterSpacing);
 
+  /// "Ananya, 27": the name in Playfair Display SemiBold, the age in a
+  /// lighter Cormorant Garamond italic. Plain text stays "Name, age".
+  static TextSpan nameAge(String name, int age,
+          {double size = 34, Color color = Colors.white}) =>
+      TextSpan(children: [
+        TextSpan(
+            text: name,
+            style: GoogleFonts.playfairDisplay(
+                fontSize: size, fontWeight: FontWeight.w600, color: color)),
+        TextSpan(
+            text: ', $age',
+            style: GoogleFonts.cormorantGaramond(
+                fontSize: size * 1.02,
+                fontWeight: FontWeight.w400,
+                fontStyle: FontStyle.italic,
+                color: color.withValues(alpha: .9))),
+      ]);
+
   /// Use sparingly — romantic headlines and the match celebration only.
   static TextStyle playfair(
           {required double size,

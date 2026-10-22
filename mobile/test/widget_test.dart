@@ -314,6 +314,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Dark mode'), 200,
         scrollable: find.byType(Scrollable).last);
+    await tester.ensureVisible(find.text('Dark mode'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Dark mode'));
     await tester.pumpAndSettle();
     expect(background(), const Color(0xFFFAF7FF));
