@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Modern Premium: purple, pink and black. Token names stay the same as the
 /// old editorial theme so every screen re-themes automatically — only the
@@ -44,6 +45,61 @@ abstract final class EverlaneColors {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
       colors: [gradientStart, gradientEnd]);
+
+  /// A softer violet → pink pair for gradient *text* (headlines), separate
+  /// from the stronger button gradient above.
+  static const textGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFA78BFA), Color(0xFFF472B6)]);
+
+  /// Body copy sits a shade off pure white so long paragraphs are easier on
+  /// the eyes; headings stay pure white/near-black via [plum].
+  static Color get body =>
+      dark ? const Color(0xFFE4E4E7) : const Color(0xFF332B47);
+  static const disabledText = Color(0xFF71717A);
+}
+
+/// Modern Premium typography: Inter for the interface, Poppins for headings,
+/// Playfair Display used sparingly for romantic moments (the match screen).
+abstract final class EverlaneFonts {
+  static TextStyle inter(
+          {required double size,
+          FontWeight weight = FontWeight.w400,
+          Color? color,
+          double? height,
+          double? letterSpacing}) =>
+      GoogleFonts.inter(
+          fontSize: size,
+          fontWeight: weight,
+          color: color ?? EverlaneColors.plum,
+          height: height,
+          letterSpacing: letterSpacing);
+
+  static TextStyle poppins(
+          {required double size,
+          FontWeight weight = FontWeight.w600,
+          Color? color,
+          double? height,
+          double? letterSpacing}) =>
+      GoogleFonts.poppins(
+          fontSize: size,
+          fontWeight: weight,
+          color: color ?? EverlaneColors.plum,
+          height: height,
+          letterSpacing: letterSpacing);
+
+  /// Use sparingly — romantic headlines and the match celebration only.
+  static TextStyle playfair(
+          {required double size,
+          FontWeight weight = FontWeight.w600,
+          Color? color,
+          double? height}) =>
+      GoogleFonts.playfairDisplay(
+          fontSize: size,
+          fontWeight: weight,
+          color: color ?? Colors.white,
+          height: height);
 }
 
 ThemeData everlaneTheme() => ThemeData(
@@ -69,30 +125,22 @@ ThemeData everlaneTheme() => ThemeData(
           backgroundColor: EverlaneColors.card,
           surfaceTintColor: Colors.transparent),
       drawerTheme: DrawerThemeData(backgroundColor: EverlaneColors.paper),
-      textTheme: TextTheme(
-        headlineLarge: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 26,
-            height: 1.15,
-            letterSpacing: -.8,
-            color: EverlaneColors.plum),
-        headlineMedium: TextStyle(
-            fontWeight: FontWeight.w700,
-            fontSize: 26,
-            height: 1.2,
-            letterSpacing: -.8,
-            color: EverlaneColors.plum),
-        titleLarge: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w600,
-            color: EverlaneColors.plum),
-        bodyLarge:
-            TextStyle(fontSize: 16, height: 1.5, color: EverlaneColors.plum),
-        bodyMedium:
-            TextStyle(fontSize: 14, height: 1.5, color: EverlaneColors.plum),
-        labelLarge: const TextStyle(
-            fontSize: 14, fontWeight: FontWeight.w600, letterSpacing: .2),
-      ),
+      // Inter is the base for every slot (body, buttons, nav, forms); Poppins
+      // then takes over the heading slots. Any inline TextStyle elsewhere in
+      // the app that doesn't set its own fontFamily inherits Inter from here.
+      textTheme: GoogleFonts.interTextTheme(TextTheme(
+        headlineLarge: EverlaneFonts.poppins(
+            size: 28, weight: FontWeight.w600, height: 1.15, letterSpacing: -.6),
+        headlineMedium: EverlaneFonts.poppins(
+            size: 24, weight: FontWeight.w600, height: 1.2, letterSpacing: -.4),
+        titleLarge: EverlaneFonts.inter(size: 24, weight: FontWeight.w700),
+        bodyLarge: EverlaneFonts.inter(
+            size: 16, height: 1.5, color: EverlaneColors.body),
+        bodyMedium: EverlaneFonts.inter(
+            size: 14, height: 1.5, color: EverlaneColors.body),
+        labelLarge:
+            EverlaneFonts.inter(size: 15, weight: FontWeight.w600, letterSpacing: .2),
+      )),
       dividerColor: EverlaneColors.line,
       appBarTheme: AppBarTheme(
           backgroundColor: EverlaneColors.paper,
@@ -108,6 +156,16 @@ ThemeData everlaneTheme() => ThemeData(
         elevation: 0,
         shadowColor: EverlaneColors.deep.withValues(alpha: .55),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        // Every filled button gets the purple-to-pink gradient, not just the
+        // hero ones — this is what the premium look rides on.
+        backgroundBuilder: (context, states, child) => DecoratedBox(
+            decoration: BoxDecoration(
+                gradient: states.contains(WidgetState.disabled)
+                    ? null
+                    : EverlaneColors.premiumGradient,
+                color:
+                    states.contains(WidgetState.disabled) ? EverlaneColors.line : null),
+            child: child),
       )),
       outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
@@ -131,7 +189,10 @@ ThemeData everlaneTheme() => ThemeData(
       ),
       snackBarTheme: SnackBarThemeData(
           behavior: SnackBarBehavior.floating,
-          backgroundColor: EverlaneColors.deep,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+          backgroundColor: EverlaneColors.card,
+          contentTextStyle: TextStyle(color: EverlaneColors.plum),
+          actionTextColor: EverlaneColors.like,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: EverlaneColors.deep.withValues(alpha: .6)))),
     );

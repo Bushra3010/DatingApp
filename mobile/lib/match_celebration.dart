@@ -108,18 +108,17 @@ class _MatchCelebrationState extends State<MatchCelebration>
                                                       size: 24)),
                                             ])),
                                     const SizedBox(height: 30),
-                                    const Text('It’s a match!',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 34,
-                                            fontWeight: FontWeight.w800,
-                                            letterSpacing: -.5)),
+                                    Text('It’s a match!',
+                                        style: EverlaneFonts.playfair(
+                                            size: 38, weight: FontWeight.w700)),
                                     const SizedBox(height: 10),
                                     Text(
                                         'You and ${p.name} liked each other.',
                                         textAlign: TextAlign.center,
-                                        style: const TextStyle(
-                                            color: Colors.white, fontSize: 15, height: 1.5)),
+                                        style: EverlaneFonts.inter(
+                                            size: 15,
+                                            height: 1.5,
+                                            color: Colors.white)),
                                     const SizedBox(height: 40),
                                     SizedBox(
                                         width: double.infinity,

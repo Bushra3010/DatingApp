@@ -674,12 +674,28 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                     divisions: 99,
                     label: '${distance.round()} km',
                     onChanged: (value) => setState(() => distance = value)),
+                Row(children: [
+                  const Expanded(child: Text('Selfie-verified profiles')),
+                  if (!store.canFilterVerified)
+                    TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          showUpgrade(context, store,
+                              title: 'See only the real deal.',
+                              detail:
+                                  'Filter to selfie-verified profiles with Plus, Gold or Platinum.');
+                        },
+                        icon: const Icon(Icons.lock_outline_rounded, size: 16),
+                        label: const Text('Plus')),
+                ]),
                 SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Selfie-verified profiles'),
-                    subtitle: const Text('A little extra peace of mind'),
-                    value: verified,
-                    onChanged: (value) => setState(() => verified = value)),
+                    title: const Text('A little extra peace of mind',
+                        style: TextStyle(fontSize: 13)),
+                    value: store.canFilterVerified && verified,
+                    onChanged: store.canFilterVerified
+                        ? (value) => setState(() => verified = value)
+                        : null),
                 const SizedBox(height: 14),
                 Row(children: [
                   const Expanded(child: Text('Relationship intentions')),
@@ -711,7 +727,7 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                     onPressed: () {
                       store.ages = ages;
                       store.distance = distance;
-                      store.verifiedOnly = verified;
+                      store.verifiedOnly = store.canFilterVerified && verified;
                       store.intentFilter
                         ..clear()
                         ..addAll(intents);

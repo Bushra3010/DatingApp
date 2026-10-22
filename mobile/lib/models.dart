@@ -344,6 +344,9 @@ class PreviewStore extends ChangeNotifier {
   final Set<LookingFor> intentFilter = {};
   bool get canFilterIntentions => plan.atLeast(Plan.plus);
 
+  /// Plus and up: filter Discover down to selfie-verified profiles only.
+  bool get canFilterVerified => plan.atLeast(Plan.plus);
+
   /// Plus and up see where you differ; Platinum sees each area's score.
   bool get fullerChemistry => plan.atLeast(Plan.plus);
   bool get detailedChemistry => plan.atLeast(Plan.platinum);
