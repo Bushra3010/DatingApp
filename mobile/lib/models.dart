@@ -388,6 +388,14 @@ class PreviewStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Makes the photo at [index] the main one (first in the list — the one
+  /// everyone sees first, used as the avatar everywhere in this preview).
+  void setMainPhoto(int index) {
+    if (index <= 0 || index >= myPhotos.length) return;
+    myPhotos.insert(0, myPhotos.removeAt(index));
+    notifyListeners();
+  }
+
   String myBio = '';
   String myLookingFor = 'Relationship';
   static const lookingForOptions = [

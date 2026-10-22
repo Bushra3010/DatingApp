@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'models.dart';
 import 'theme.dart';
@@ -141,6 +143,126 @@ class GradientButton extends StatelessWidget {
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700))),
                           ]))))));
+}
+
+/// One photo in an editable gallery grid (sign-up and Edit profile share
+/// this): a thumbnail, a remove button, and — when there's more than one
+/// photo — a badge for the main photo or a tap target to make this one main.
+class PhotoTile extends StatelessWidget {
+  const PhotoTile(
+      {super.key,
+      required this.bytes,
+      required this.onRemove,
+      this.isMain = false,
+      this.onSetMain});
+  final Uint8List bytes;
+  final VoidCallback onRemove;
+  final bool isMain;
+
+  /// Null hides the "Make main" affordance (e.g. only one photo).
+  final VoidCallback? onSetMain;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+      width: 100,
+      height: 100,
+      child: Stack(children: [
+        ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.memory(bytes,
+                width: 100, height: 100, fit: BoxFit.cover,
+                errorBuilder: (_, error, stack) => Container(
+                    width: 100,
+                    height: 100,
+                    color: EverlaneColors.blush,
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.broken_image_outlined,
+                        color: EverlaneColors.like)))),
+        if (isMain)
+          Positioned(
+              left: 5,
+              bottom: 5,
+              child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: const BoxDecoration(
+                      gradient: EverlaneColors.premiumGradient,
+                      borderRadius: BorderRadius.all(Radius.circular(20))),
+                  child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.star_rounded, size: 11, color: Colors.white),
+                    SizedBox(width: 3),
+                    Text('Main',
+                        style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700)),
+                  ])))
+        else if (onSetMain != null)
+          Positioned(
+              left: 5,
+              bottom: 5,
+              child: Material(
+                  color: Colors.black.withValues(alpha: .6),
+                  borderRadius: BorderRadius.circular(20),
+                  child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: onSetMain,
+                      child: const Padding(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 3),
+                          child: Text('Make main',
+                              style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600)))))),
+        Positioned(
+            top: 4,
+            right: 4,
+            child: Material(
+                color: Colors.black.withValues(alpha: .55),
+                shape: const CircleBorder(),
+                child: IconButton(
+                    tooltip: 'Remove photo',
+                    iconSize: 16,
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(),
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.close_rounded, color: Colors.white)))),
+      ]));
+}
+
+/// The "add another photo" tile at the end of a [PhotoTile] grid.
+class AddPhotoTile extends StatelessWidget {
+  const AddPhotoTile({super.key, required this.busy, required this.onTap});
+  final bool busy;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+      color: EverlaneColors.card,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: busy ? null : onTap,
+          child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: EverlaneColors.line)),
+              alignment: Alignment.center,
+              child: busy
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Column(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.add_a_photo_outlined,
+                          color: EverlaneColors.like),
+                      const SizedBox(height: 6),
+                      Text('Add photo',
+                          style: TextStyle(
+                              fontSize: 11, color: EverlaneColors.muted)),
+                    ]))));
 }
 
 class EmptyState extends StatelessWidget {

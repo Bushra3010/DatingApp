@@ -1709,16 +1709,24 @@ class _EditProfileFormState extends State<_EditProfileForm> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Edit profile', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 20),
-          Row(children: [
-            MyAvatar(store: store, size: 56),
-            const SizedBox(width: 14),
-            OutlinedButton(
-                onPressed: picking ? null : pickPhoto,
-                child: Text(picking
-                    ? 'Opening…'
-                    : store.hasPhoto
-                        ? 'Change photo'
-                        : 'Upload photo')),
+          const Text('Photos', style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 4),
+          Text(
+              store.myPhotos.length > 1
+                  ? 'Tap “Make main” on a photo to lead with it.'
+                  : 'Add a few photos — the first one is what people see first.',
+              style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+          const SizedBox(height: 10),
+          Wrap(spacing: 10, runSpacing: 10, children: [
+            for (var i = 0; i < store.myPhotos.length; i++)
+              PhotoTile(
+                  bytes: store.myPhotos[i],
+                  isMain: i == 0,
+                  onSetMain: store.myPhotos.length > 1 && i != 0
+                      ? () => setState(() => store.setMainPhoto(i))
+                      : null,
+                  onRemove: () => setState(() => store.removePhoto(i))),
+            AddPhotoTile(busy: picking, onTap: pickPhoto),
           ]),
           const SizedBox(height: 18),
           TextFormField(
