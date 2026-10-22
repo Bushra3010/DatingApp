@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'chemistry.dart';
 import 'models.dart';
+import 'photo_picker.dart';
 import 'question_bank.dart';
 import 'screens.dart' show openMembership;
 import 'theme.dart';
@@ -176,9 +179,9 @@ class OnboardingFlow extends StatefulWidget {
 }
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
-  /// 0 welcome, 1 basics, 2..11 questions, 12 done.
+  /// 0 welcome, 1 basics, 2 photo, 3..12 questions, 13 done.
   int step = 0;
-  static const _firstQuestion = 2;
+  static const _firstQuestion = 3;
   int get _done => _firstQuestion + onboardingQuestions.length;
 
   void go(int next) => setState(() => step = next);
@@ -199,6 +202,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body = _Welcome(onStart: () => go(1), onSkip: store.finishOnboarding);
     } else if (step == 1) {
       body = _Basics(store: store, onBack: () => go(0), onDone: () => go(2));
+    } else if (step == 2) {
+      body = _PhotoStep(store: store, onBack: () => go(1), onDone: () => go(3));
     } else if (step < _done) {
       final i = step - _firstQuestion;
       final q = onboardingQuestions[i];
@@ -425,6 +430,151 @@ class _BasicsState extends State<_Basics> {
   }
 }
 
+/// At least one photo is required before moving on, same as a real dating
+/// app's sign-up. More can be added later from Edit profile.
+class _PhotoStep extends StatefulWidget {
+  const _PhotoStep(
+      {required this.store, required this.onBack, required this.onDone});
+  final PreviewStore store;
+  final VoidCallback onBack, onDone;
+  @override
+  State<_PhotoStep> createState() => _PhotoStepState();
+}
+
+class _PhotoStepState extends State<_PhotoStep> {
+  bool picking = false;
+  String? error;
+
+  Future<void> pick() async {
+    setState(() {
+      picking = true;
+      error = null;
+    });
+    try {
+      final bytes = await pickPhotoBytes();
+      if (bytes != null) widget.store.addPhoto(bytes);
+    } catch (_) {
+      error = 'Couldn’t open your photos. Try again.';
+    } finally {
+      if (mounted) setState(() => picking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final store = widget.store;
+    return ListView(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+        children: [
+          Align(
+              alignment: Alignment.centerLeft,
+              child: IconButton(
+                  tooltip: 'Previous question',
+                  onPressed: widget.onBack,
+                  icon: const Icon(Icons.arrow_back_rounded))),
+          Text('Add your photos',
+              style: Theme.of(context).textTheme.headlineLarge),
+          const SizedBox(height: 8),
+          Text(
+              'At least one real photo helps people recognise you. Add more anytime from your profile.',
+              style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
+          const SizedBox(height: 22),
+          Wrap(spacing: 12, runSpacing: 12, children: [
+            for (var i = 0; i < store.myPhotos.length; i++)
+              _PhotoTile(
+                  bytes: store.myPhotos[i],
+                  onRemove: () => setState(() => store.removePhoto(i))),
+            _AddPhotoTile(busy: picking, onTap: pick),
+          ]),
+          if (error != null) ...[
+            const SizedBox(height: 12),
+            Text(error!, style: TextStyle(color: EverlaneColors.like)),
+          ],
+          const SizedBox(height: 28),
+          FilledButton(
+              onPressed: store.hasPhoto ? widget.onDone : null,
+              style: FilledButton.styleFrom(backgroundColor: EverlaneColors.like),
+              child: const Text('Continue')),
+          const SizedBox(height: 8),
+          Center(
+              child: Text(
+                  store.hasPhoto
+                      ? '${store.myPhotos.length} photo${store.myPhotos.length == 1 ? '' : 's'} added'
+                      : 'Add at least one photo to continue',
+                  style: TextStyle(fontSize: 12, color: EverlaneColors.muted))),
+        ]);
+  }
+}
+
+class _PhotoTile extends StatelessWidget {
+  const _PhotoTile({required this.bytes, required this.onRemove});
+  final Uint8List bytes;
+  final VoidCallback onRemove;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+      width: 100,
+      height: 100,
+      child: Stack(children: [
+        ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Image.memory(bytes,
+                width: 100, height: 100, fit: BoxFit.cover,
+                errorBuilder: (_, error, stack) => Container(
+                    width: 100,
+                    height: 100,
+                    color: EverlaneColors.blush,
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.broken_image_outlined,
+                        color: EverlaneColors.like)))),
+        Positioned(
+            top: 4,
+            right: 4,
+            child: Material(
+                color: Colors.black.withValues(alpha: .55),
+                shape: const CircleBorder(),
+                child: IconButton(
+                    tooltip: 'Remove photo',
+                    iconSize: 16,
+                    padding: const EdgeInsets.all(4),
+                    constraints: const BoxConstraints(),
+                    onPressed: onRemove,
+                    icon: const Icon(Icons.close_rounded, color: Colors.white)))),
+      ]));
+}
+
+class _AddPhotoTile extends StatelessWidget {
+  const _AddPhotoTile({required this.busy, required this.onTap});
+  final bool busy;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+      color: EverlaneColors.card,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: busy ? null : onTap,
+          child: Container(
+              width: 100,
+              height: 100,
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: EverlaneColors.line)),
+              alignment: Alignment.center,
+              child: busy
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Column(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.add_a_photo_outlined,
+                          color: EverlaneColors.like),
+                      const SizedBox(height: 6),
+                      Text('Add photo',
+                          style: TextStyle(
+                              fontSize: 11, color: EverlaneColors.muted)),
+                    ]))));
+}
+
 class _AllSet extends StatelessWidget {
   const _AllSet(
       {required this.store, required this.onQuiz, required this.onLater});
@@ -456,9 +606,10 @@ class _AllSet extends StatelessWidget {
         item(true, 'First name and date of birth'),
         item(true, 'Gender and who you’re interested in'),
         item(store.myCity.isNotEmpty, 'Approximate area'),
+        item(store.hasPhoto, 'At least one photo'),
         item(store.onboardingAnswers.isNotEmpty,
             'Dating intentions and preferences'),
-        item(false, 'Photos and a short bio · add from your profile'),
+        item(false, 'A bio and your interests · add from your profile'),
         item(false, 'Voice introduction · optional'),
         const SizedBox(height: 24),
         Container(

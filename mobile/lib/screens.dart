@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'models.dart';
+import 'photo_picker.dart';
 import 'theme.dart';
 import 'widgets.dart';
 import 'hangouts.dart';
@@ -1199,36 +1200,133 @@ class ProfileScreen extends StatelessWidget {
                 color: EverlaneColors.card,
                 borderRadius: BorderRadius.circular(22),
                 border: Border.all(color: EverlaneColors.line)),
-            child: Row(children: [
-              Container(
-                  width: 70,
-                  height: 70,
-                  decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: EverlaneColors.blush),
-                  alignment: Alignment.center,
-                  child: Text(store.myName.isEmpty ? 'R' : store.myName[0],
-                      style: const TextStyle(
-                          fontSize: 32, color: EverlaneColors.like))),
-              const SizedBox(width: 18),
-              Expanded(
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                    Text('${store.myName}, ${store.myAge}',
-                        style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 4),
-                    Text(store.myJob,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                MyAvatar(store: store, size: 70),
+                const SizedBox(width: 18),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('${store.myName}, ${store.myAge}',
+                          style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 4),
+                      if (store.myJob.isNotEmpty)
+                        Text(store.myJob,
+                            style: TextStyle(
+                                color: EverlaneColors.muted, fontSize: 12)),
+                      if (store.myCity.isNotEmpty)
+                        Text(store.myCity,
+                            style: TextStyle(
+                                color: EverlaneColors.muted, fontSize: 12)),
+                      const SizedBox(height: 6),
+                      Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 9, vertical: 3),
+                          decoration: BoxDecoration(
+                              color: store.myProfilePosted
+                                  ? EverlaneColors.boost.withValues(alpha: .15)
+                                  : EverlaneColors.blush,
+                              borderRadius: BorderRadius.circular(30)),
+                          child: Text(
+                              store.myProfilePosted
+                                  ? 'Live in the preview'
+                                  : 'Draft, not posted',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: store.myProfilePosted
+                                      ? EverlaneColors.boost
+                                      : EverlaneColors.like))),
+                    ])),
+                IconButton(
+                    tooltip: 'Edit profile',
+                    onPressed: () => editProfile(context, store),
+                    icon: const Icon(Icons.edit_outlined, size: 21)),
+              ]),
+              const SizedBox(height: 16),
+              Text(
+                  store.myBio.isEmpty
+                      ? 'Add a bio so members know who you are.'
+                      : store.myBio,
+                  style: TextStyle(
+                      color: store.myBio.isEmpty
+                          ? EverlaneColors.muted
+                          : EverlaneColors.plum,
+                      fontStyle:
+                          store.myBio.isEmpty ? FontStyle.italic : FontStyle.normal,
+                      height: 1.4)),
+              const SizedBox(height: 14),
+              Row(children: [
+                Expanded(
+                    child: Text('Profile ${store.profileCompleteness}% complete',
                         style: TextStyle(
-                            color: EverlaneColors.muted, fontSize: 12)),
-                    const SizedBox(height: 6),
-                    const Eyebrow('Preview profile', color: EverlaneColors.like)
-                  ])),
-              IconButton(
-                  tooltip: 'Edit profile',
-                  onPressed: () => editProfile(context, store),
-                  icon: const Icon(Icons.edit_outlined, size: 21)),
+                            fontSize: 12, color: EverlaneColors.muted))),
+              ]),
+              const SizedBox(height: 6),
+              ClipRRect(
+                  borderRadius: BorderRadius.circular(3),
+                  child: LinearProgressIndicator(
+                      value: store.profileCompleteness / 100,
+                      minHeight: 6,
+                      color: EverlaneColors.like,
+                      backgroundColor: EverlaneColors.line)),
+              const SizedBox(height: 18),
+              Row(children: [
+                Expanded(
+                    child: _StatTile(
+                        value: '${store.conversations.length}',
+                        label: 'Matches')),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: _StatTile(
+                        value: '${store.remaining < 0 ? 0 : store.remaining}',
+                        label: 'Likes left')),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: _StatTile(value: store.plan.title, label: 'Plan')),
+              ]),
+              const SizedBox(height: 16),
+              Row(children: [
+                Expanded(
+                    child: FilledButton(
+                        onPressed: () => editProfile(context, store),
+                        style: FilledButton.styleFrom(
+                            backgroundColor: EverlaneColors.like,
+                            minimumSize: const Size(0, 48)),
+                        child: const Text('Edit profile'))),
+                const SizedBox(width: 10),
+                Expanded(
+                    child: OutlinedButton(
+                        onPressed: () => previewMyProfile(context, store),
+                        style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(0, 48)),
+                        child: const Text('Preview'))),
+              ]),
+              const SizedBox(height: 10),
+              SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                      onPressed:
+                          store.myVerified ? null : () => verifyMe(context, store),
+                      style: FilledButton.styleFrom(
+                          backgroundColor: EverlaneColors.deep,
+                          minimumSize: const Size(0, 48)),
+                      icon: Icon(store.myVerified
+                          ? Icons.verified_rounded
+                          : Icons.shield_outlined),
+                      label: Text(store.myVerified
+                          ? 'Profile verified'
+                          : 'Verify my profile'))),
             ])),
         const SizedBox(height: 14),
+        OutlinedButton(
+            onPressed: () => Navigator.push(context,
+                editorialRoute<void>((_) => CompatibilityQuizScreen(store: store))),
+            style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+            child: const Text('Take compatibility quiz')),
+        const SizedBox(height: 12),
         _MembershipBanner(store: store),
         const SizedBox(height: 12),
         QuizCard(store: store),
@@ -1240,9 +1338,12 @@ class ProfileScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20)),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Eyebrow('My ideal Sunday'),
+              Eyebrow(store.myPromptLabel.replaceAll(' is', '')),
               const SizedBox(height: 12),
-              Text(store.myPrompt,
+              Text(
+                  store.myPrompt.isEmpty
+                      ? 'Add an answer from Edit profile.'
+                      : store.myPrompt,
                   style: Theme.of(context)
                       .textTheme
                       .headlineMedium
@@ -1338,6 +1439,133 @@ class ProfileScreen extends StatelessWidget {
       ]);
 }
 
+/// The user's own photo if they added one from sign-up or Edit profile,
+/// otherwise their initial on a blush circle.
+class MyAvatar extends StatelessWidget {
+  const MyAvatar({super.key, required this.store, this.size = 70});
+  final PreviewStore store;
+  final double size;
+  @override
+  Widget build(BuildContext context) => ClipOval(
+      child: store.hasPhoto
+          ? Image.memory(store.myPhotos.first,
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, error, stack) => _initial(context))
+          : _initial(context));
+
+  Widget _initial(BuildContext context) => Container(
+      width: size,
+      height: size,
+      decoration:
+          BoxDecoration(shape: BoxShape.circle, color: EverlaneColors.blush),
+      alignment: Alignment.center,
+      child: Text(store.myName.isEmpty ? 'R' : store.myName[0],
+          style: TextStyle(fontSize: size * .46, color: EverlaneColors.like)));
+}
+
+class _StatTile extends StatelessWidget {
+  const _StatTile({required this.value, required this.label});
+  final String value, label;
+  @override
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+          color: EverlaneColors.blush.withValues(alpha: .5),
+          borderRadius: BorderRadius.circular(14)),
+      alignment: Alignment.center,
+      child: Column(children: [
+        Text(value,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 2),
+        Text(label, style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
+      ]));
+}
+
+/// "This is how members see you" — a read-only look at the profile as it
+/// would appear to someone browsing Discover.
+Future<void> previewMyProfile(BuildContext context, PreviewStore store) =>
+    showEverlaneSheet(
+        context,
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('This is how members see you.',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 18),
+          ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: AspectRatio(
+                  aspectRatio: 1,
+                  child: store.hasPhoto
+                      ? Image.memory(store.myPhotos.first, fit: BoxFit.cover)
+                      : Container(
+                          color: EverlaneColors.blush,
+                          alignment: Alignment.center,
+                          child: Text(
+                              store.myName.isEmpty ? 'R' : store.myName[0],
+                              style: const TextStyle(
+                                  fontSize: 64, color: EverlaneColors.like))))),
+          const SizedBox(height: 14),
+          Text('${store.myName}, ${store.myAge}',
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 2),
+          Text('Member', style: TextStyle(color: EverlaneColors.muted)),
+          const SizedBox(height: 8),
+          Row(children: [
+            if (store.myCity.isNotEmpty) ...[
+              Icon(Icons.place_outlined, size: 15, color: EverlaneColors.muted),
+              const SizedBox(width: 4),
+              Text('${store.myCity} · Nearby',
+                  style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+              const SizedBox(width: 14),
+            ],
+            const Icon(Icons.favorite_rounded, size: 14, color: EverlaneColors.like),
+            const SizedBox(width: 4),
+            Text(store.myLookingFor, style: const TextStyle(fontSize: 12)),
+          ]),
+          const SizedBox(height: 14),
+          Text(store.myBio.isEmpty ? 'No bio yet.' : store.myBio,
+              style: TextStyle(
+                  color: store.myBio.isEmpty
+                      ? EverlaneColors.muted
+                      : EverlaneColors.plum,
+                  height: 1.5)),
+          const SizedBox(height: 20),
+          OutlinedButton(
+              onPressed: () => Navigator.pop(context),
+              style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+              child: const Text('Close')),
+        ]));
+
+/// A demo-only verification: a real app would ask for a selfie and match it
+/// against your photos. Here, confirming is enough to flip the badge on.
+Future<void> verifyMe(BuildContext context, PreviewStore store) async {
+  final confirmed = await showEverlaneSheet<bool>(
+      context,
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Verify your profile', style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 14),
+        Text(
+            'In the real app, we’d ask you to match a quick selfie to your photos so people know you’re really you. This preview skips the camera step.',
+            style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
+        const SizedBox(height: 20),
+        FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: EverlaneColors.like),
+            child: const Text('Verify now (preview)')),
+        const SizedBox(height: 8),
+        Center(
+            child: TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Not now'))),
+      ]));
+  if (confirmed == true) {
+    store.myVerified = true;
+    store.update();
+    if (context.mounted) showNotice(context, 'Profile verified in this preview.');
+  }
+}
+
 Future<void> editProfile(BuildContext context, PreviewStore store) =>
     showEverlaneSheet(context, _EditProfileForm(store: store));
 
@@ -1351,16 +1579,86 @@ class _EditProfileForm extends StatefulWidget {
 
 class _EditProfileFormState extends State<_EditProfileForm> {
   late final name = TextEditingController(text: widget.store.myName);
+  late final age = TextEditingController(text: '${widget.store.myAge}');
   late final job = TextEditingController(text: widget.store.myJob);
-  late final prompt = TextEditingController(text: widget.store.myPrompt);
+  late final city = TextEditingController(text: widget.store.myCity);
+  late final bio = TextEditingController(text: widget.store.myBio);
+  late final promptAnswer = TextEditingController(text: widget.store.myPrompt);
+  late final customInterest = TextEditingController();
+  late String lookingFor = widget.store.myLookingFor;
+  late String promptLabel = widget.store.myPromptLabel;
+  late final interests = <String>{...widget.store.myInterests};
+  bool picking = false;
   final key = GlobalKey<FormState>();
+
+  static const promptOptions = [
+    'My ideal Sunday is',
+    'I’m happiest when',
+    'Ask me about',
+  ];
 
   @override
   void dispose() {
     name.dispose();
+    age.dispose();
     job.dispose();
-    prompt.dispose();
+    city.dispose();
+    bio.dispose();
+    promptAnswer.dispose();
+    customInterest.dispose();
     super.dispose();
+  }
+
+  Future<void> pickPhoto() async {
+    setState(() => picking = true);
+    try {
+      final bytes = await pickPhotoBytes();
+      if (bytes != null) widget.store.addPhoto(bytes);
+    } catch (_) {
+      if (mounted) showNotice(context, 'Couldn’t open your photos. Try again.');
+    } finally {
+      if (mounted) setState(() => picking = false);
+    }
+  }
+
+  void toggleInterest(String tag) => setState(() {
+        if (interests.contains(tag)) {
+          interests.remove(tag);
+        } else if (interests.length < 6) {
+          interests.add(tag);
+        }
+      });
+
+  void addCustomInterest(String value) {
+    final v = value.trim();
+    if (v.isEmpty) return;
+    if (interests.length < 6) setState(() => interests.add(v));
+    customInterest.clear();
+  }
+
+  void save({required bool post}) {
+    if (!key.currentState!.validate()) return;
+    final store = widget.store;
+    final parsedAge = int.tryParse(age.text.trim());
+    store.myName = name.text.trim();
+    store.myJob = job.text.trim();
+    store.myCity = city.text.trim();
+    store.myBio = bio.text.trim();
+    store.myLookingFor = lookingFor;
+    store.myPromptLabel = promptLabel;
+    store.myPrompt = promptAnswer.text.trim();
+    store.myInterests
+      ..clear()
+      ..addAll(interests);
+    if (parsedAge != null && parsedAge >= 18) {
+      final now = DateTime.now();
+      store.myBirthday = DateTime(now.year - parsedAge, now.month, now.day);
+    }
+    if (post) store.myProfilePosted = true;
+    store.update();
+    Navigator.pop(context);
+    showNotice(
+        context, post ? 'Profile posted in this preview.' : 'Draft saved.');
   }
 
   @override
@@ -1369,40 +1667,139 @@ class _EditProfileFormState extends State<_EditProfileForm> {
     return Form(
         key: key,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('A little about you.',
-              style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 24),
+          Text('Edit profile', style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 20),
+          Row(children: [
+            MyAvatar(store: store, size: 56),
+            const SizedBox(width: 14),
+            OutlinedButton(
+                onPressed: picking ? null : pickPhoto,
+                child: Text(picking
+                    ? 'Opening…'
+                    : store.hasPhoto
+                        ? 'Change photo'
+                        : 'Upload photo')),
+          ]),
+          const SizedBox(height: 18),
           TextFormField(
               controller: name,
               maxLength: 40,
-              decoration: const InputDecoration(labelText: 'First name'),
+              decoration: const InputDecoration(labelText: 'Name'),
               validator: (v) =>
                   v == null || v.trim().isEmpty ? 'Add your first name' : null),
           const SizedBox(height: 12),
           TextFormField(
-              controller: job,
-              maxLength: 80,
-              decoration: const InputDecoration(labelText: 'What do you do?')),
+              controller: age,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Age'),
+              validator: (v) {
+                final n = int.tryParse((v ?? '').trim());
+                return n == null || n < 18 ? 'Enter an age of 18 or over' : null;
+              }),
           const SizedBox(height: 12),
           TextFormField(
-              controller: prompt,
+              controller: job,
+              maxLength: 80,
+              decoration: const InputDecoration(
+                  labelText: 'Profession',
+                  hintText: 'For example, Product designer')),
+          const SizedBox(height: 12),
+          TextFormField(
+              controller: city,
+              decoration: const InputDecoration(labelText: 'Area or city')),
+          const SizedBox(height: 12),
+          TextFormField(
+              controller: bio,
+              maxLength: 200,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                  labelText: 'About you', hintText: 'Share what makes you, you')),
+          const SizedBox(height: 18),
+          const Text('Looking for', style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 10),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final option in PreviewStore.lookingForOptions)
+              ChoiceChip(
+                  label: Text(option),
+                  selected: lookingFor == option,
+                  showCheckmark: false,
+                  selectedColor: EverlaneColors.deep,
+                  backgroundColor: EverlaneColors.card,
+                  side: BorderSide(
+                      color: lookingFor == option
+                          ? EverlaneColors.deep
+                          : EverlaneColors.line),
+                  labelStyle: TextStyle(
+                      color: lookingFor == option
+                          ? Colors.white
+                          : EverlaneColors.plum),
+                  onSelected: (_) => setState(() => lookingFor = option)),
+          ]),
+          const SizedBox(height: 18),
+          const Text('Interests (choose up to 6)',
+              style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 10),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            for (final tag in {...PreviewStore.interestOptions, ...interests})
+              FilterChip(
+                  label: Text(tag),
+                  selected: interests.contains(tag),
+                  showCheckmark: false,
+                  selectedColor: EverlaneColors.deep,
+                  backgroundColor: EverlaneColors.card,
+                  side: BorderSide(
+                      color: interests.contains(tag)
+                          ? EverlaneColors.deep
+                          : EverlaneColors.line),
+                  labelStyle: TextStyle(
+                      color: interests.contains(tag)
+                          ? Colors.white
+                          : EverlaneColors.plum),
+                  onSelected: (_) => toggleInterest(tag)),
+          ]),
+          const SizedBox(height: 10),
+          TextField(
+              controller: customInterest,
+              decoration: const InputDecoration(
+                  labelText: 'Add your own, then press Enter'),
+              onSubmitted: addCustomInterest),
+          const SizedBox(height: 18),
+          const Text('Prompt', style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+              initialValue: promptLabel,
+              isExpanded: true,
+              decoration: const InputDecoration(),
+              items: [
+                for (final option in promptOptions)
+                  DropdownMenuItem(value: option, child: Text(option)),
+              ],
+              onChanged: (v) => setState(() => promptLabel = v ?? promptLabel)),
+          const SizedBox(height: 10),
+          TextFormField(
+              controller: promptAnswer,
               maxLength: 250,
               maxLines: 3,
-              decoration: const InputDecoration(labelText: 'My ideal Sunday'),
+              decoration: const InputDecoration(labelText: 'Your answer'),
               validator: (v) => v == null || v.trim().isEmpty
-                  ? 'Tell us a little about your Sunday'
+                  ? 'Tell us a little about this'
                   : null),
           const SizedBox(height: 18),
-          FilledButton(
-              onPressed: () {
-                if (!key.currentState!.validate()) return;
-                store.myName = name.text.trim();
-                store.myJob = job.text.trim();
-                store.myPrompt = prompt.text.trim();
-                store.update();
-                Navigator.pop(context);
-              },
-              child: const Text('Save preview profile')),
+          Row(children: [
+            Expanded(
+                child: OutlinedButton(
+                    onPressed: () => save(post: false),
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 52)),
+                    child: const Text('Save draft'))),
+            const SizedBox(width: 12),
+            Expanded(
+                child: FilledButton(
+                    onPressed: () => save(post: true),
+                    style: FilledButton.styleFrom(
+                        backgroundColor: EverlaneColors.like,
+                        minimumSize: const Size(0, 52)),
+                    child: const Text('Post profile'))),
+          ]),
         ]));
   }
 }
