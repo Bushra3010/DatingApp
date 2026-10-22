@@ -255,11 +255,25 @@ class _Welcome extends StatelessWidget {
       padding: const EdgeInsets.all(28),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Spacer(),
-        const Text('Everlane',
-            style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -1.5)),
+        Container(
+            width: 56,
+            height: 56,
+            decoration: const BoxDecoration(
+                gradient: EverlaneColors.premiumGradient,
+                shape: BoxShape.circle),
+            alignment: Alignment.center,
+            child: const Icon(Icons.favorite_rounded,
+                color: Colors.white, size: 28)),
+        const SizedBox(height: 20),
+        ShaderMask(
+            shaderCallback: (bounds) =>
+                EverlaneColors.premiumGradient.createShader(bounds),
+            child: const Text('Everlane',
+                style: TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -1.5,
+                    color: Colors.white))),
         const SizedBox(height: 12),
         const Eyebrow('Less swiping. More meaningful connections.',
             color: EverlaneColors.like),
@@ -268,10 +282,7 @@ class _Welcome extends StatelessWidget {
             'A few thoughtful questions help us introduce you to people you’ll actually want to talk to. It takes about three minutes, and you can skip anything optional.',
             style: TextStyle(color: EverlaneColors.muted, height: 1.6)),
         const Spacer(flex: 2),
-        FilledButton(
-            onPressed: onStart,
-            style: FilledButton.styleFrom(backgroundColor: EverlaneColors.like),
-            child: const Text('Get started')),
+        GradientButton(label: 'Get started', onTap: onStart),
         const SizedBox(height: 8),
         Center(
             child: TextButton(

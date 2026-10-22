@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 import 'models.dart';
 import 'onboarding.dart';
@@ -23,6 +25,7 @@ class _EverlaneAppState extends State<EverlaneApp> {
   void initState() {
     super.initState();
     store.onboarded = widget.onboarded;
+    EverlaneColors.dark = store.darkMode;
     store.addListener(syncTheme);
   }
 
@@ -43,7 +46,7 @@ class _EverlaneAppState extends State<EverlaneApp> {
   void dispose() {
     store.removeListener(syncTheme);
     store.dispose();
-    EverlaneColors.dark = false;
+    EverlaneColors.dark = true;
     super.dispose();
   }
 
@@ -94,8 +97,8 @@ class _EverlaneShellState extends State<EverlaneShell> {
         final store = widget.store;
         return ColoredBox(
             color: EverlaneColors.dark
-                ? const Color(0xFF0E0B09)
-                : const Color(0xFFF3E6D3),
+                ? const Color(0xFF07060B)
+                : const Color(0xFFEFE6FB),
             child: Center(
                 child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 440),
@@ -199,30 +202,41 @@ class _EverlaneShellState extends State<EverlaneShell> {
                         MessagesScreen(store: store),
                         ProfileScreen(store: store)
                       ]),
-                      bottomNavigationBar: Container(
-                          decoration: BoxDecoration(color: EverlaneColors.paper, boxShadow: const [
-                            BoxShadow(
-                                color: Color(0x08000000),
-                                blurRadius: 20,
-                                offset: Offset(0, -4))
-                          ]),
-                          child: NavigationBarTheme(
-                              data: NavigationBarThemeData(
-                                  labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: states.contains(WidgetState.selected)
-                                          ? FontWeight.w600
-                                          : FontWeight.w400,
-                                      color: states.contains(WidgetState.selected)
-                                          ? EverlaneColors.plum
-                                          : EverlaneColors.muted)),
-                                  iconTheme: WidgetStateProperty.resolveWith(
-                                      (states) => IconThemeData(
-                                          size: 26,
-                                          color: states.contains(WidgetState.selected)
-                                              ? EverlaneColors.plum
-                                              : const Color(0xFFC7BCB0)))),
-                              child: NavigationBar(selectedIndex: selected, onDestinationSelected: (value) => setState(() => selected = value), backgroundColor: EverlaneColors.paper, indicatorColor: Colors.transparent, height: 76, destinations: [
+                      bottomNavigationBar: ClipRRect(
+                          child: BackdropFilter(
+                              filter:
+                                  ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                              child: Container(
+                                  decoration: BoxDecoration(
+                                      color: EverlaneColors.card
+                                          .withValues(alpha: .78),
+                                      border: Border(
+                                          top: BorderSide(
+                                              color: EverlaneColors.line)),
+                                      boxShadow: [
+                                        BoxShadow(
+                                            color: EverlaneColors.deep
+                                                .withValues(alpha: .18),
+                                            blurRadius: 24,
+                                            offset: const Offset(0, -6))
+                                      ]),
+                                  child: NavigationBarTheme(
+                                      data: NavigationBarThemeData(
+                                          labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
+                                              fontSize: 10,
+                                              fontWeight: states.contains(WidgetState.selected)
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w400,
+                                              color: states.contains(WidgetState.selected)
+                                                  ? EverlaneColors.lavender
+                                                  : EverlaneColors.muted)),
+                                          iconTheme: WidgetStateProperty.resolveWith(
+                                              (states) => IconThemeData(
+                                                  size: 25,
+                                                  color: states.contains(WidgetState.selected)
+                                                      ? EverlaneColors.lavender
+                                                      : EverlaneColors.muted))),
+                                      child: NavigationBar(selectedIndex: selected, onDestinationSelected: (value) => setState(() => selected = value), backgroundColor: Colors.transparent, indicatorColor: EverlaneColors.deep.withValues(alpha: .3), height: 76, destinations: [
                                 const NavigationDestination(
                                     icon: Icon(Icons.home_outlined),
                                     selectedIcon: Icon(Icons.home_rounded),
@@ -252,7 +266,7 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                     icon: Icon(Icons.person_outline_rounded),
                                     selectedIcon: Icon(Icons.person_rounded),
                                     label: 'You'),
-                              ]))),
+                              ]))))),
                     ))));
       });
 }

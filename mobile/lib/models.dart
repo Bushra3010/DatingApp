@@ -332,8 +332,8 @@ class PreviewStore extends ChangeNotifier {
       ? null
       : Chemistry.between(quizAnswers, demoQuizAnswers[p.id] ?? const {});
 
-  /// Light is the default; Settings can switch to dark.
-  bool darkMode = false;
+  /// The premium dark look is the default; Settings can switch to light.
+  bool darkMode = true;
 
   /// Hidden from Discover except to people you've liked. A privacy control,
   /// so it's free.

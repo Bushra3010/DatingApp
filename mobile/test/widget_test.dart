@@ -49,6 +49,16 @@ void main() {
     await tester.ensureVisible(find.text('Like back & say hello').first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Like back & say hello').first);
+    // The match celebration animates hearts forever, so pumpAndSettle would
+    // hang here — pump a bounded number of frames instead.
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 60));
+    }
+    expect(find.text('It’s a match!'), findsOneWidget);
+    await tester.tap(find.text('Start chatting'));
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 60));
+    }
     await tester.pumpAndSettle();
     expect(find.text('Meera'), findsOneWidget);
     await tester.enterText(
@@ -287,7 +297,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Light by default, dark mode can be switched on in Settings',
+  testWidgets('Dark by default, light mode can be switched on in Settings',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -299,17 +309,17 @@ void main() {
         tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor ??
         Theme.of(tester.element(find.byType(Scaffold).first))
             .scaffoldBackgroundColor;
-    expect(background(), const Color(0xFFFFF8EC));
+    expect(background(), const Color(0xFF0D0B12));
     await tester.tap(find.text('You'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Dark mode'), 200,
         scrollable: find.byType(Scrollable).last);
     await tester.tap(find.text('Dark mode'));
     await tester.pumpAndSettle();
-    expect(background(), const Color(0xFF17120F));
+    expect(background(), const Color(0xFFFAF7FF));
     await tester.tap(find.text('Dark mode'));
     await tester.pumpAndSettle();
-    expect(background(), const Color(0xFFFFF8EC));
+    expect(background(), const Color(0xFF0D0B12));
     expect(tester.takeException(), isNull);
   });
 

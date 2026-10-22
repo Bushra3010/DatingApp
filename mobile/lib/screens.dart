@@ -2,6 +2,7 @@ import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'match_celebration.dart';
 import 'models.dart';
 import 'photo_picker.dart';
 import 'theme.dart';
@@ -968,15 +969,41 @@ class LikesScreen extends StatelessWidget {
                                       const SizedBox(width: 12),
                                       Expanded(
                                           child: FilledButton(
-                                              onPressed: () {
+                                              onPressed: () async {
                                                 final chat = store.match(p);
-                                                Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute<void>(
-                                                        builder: (_) =>
-                                                            ChatScreen(
-                                                                store: store,
-                                                                chat: chat)));
+                                                final openChat =
+                                                    await Navigator.push<bool>(
+                                                        context,
+                                                        PageRouteBuilder<bool>(
+                                                            transitionDuration:
+                                                                const Duration(
+                                                                    milliseconds:
+                                                                        420),
+                                                            pageBuilder: (_, __,
+                                                                    ___) =>
+                                                                MatchCelebration(
+                                                                    store: store,
+                                                                    person: p),
+                                                            transitionsBuilder:
+                                                                (context,
+                                                                        animation,
+                                                                        _,
+                                                                        child) =>
+                                                                    FadeTransition(
+                                                                        opacity:
+                                                                            animation,
+                                                                        child:
+                                                                            child)));
+                                                if (openChat == true &&
+                                                    context.mounted) {
+                                                  Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute<void>(
+                                                          builder: (_) =>
+                                                              ChatScreen(
+                                                                  store: store,
+                                                                  chat: chat)));
+                                                }
                                               },
                                               child: const Text(
                                                   'Like back & say hello')))
@@ -1290,12 +1317,9 @@ class ProfileScreen extends StatelessWidget {
               const SizedBox(height: 16),
               Row(children: [
                 Expanded(
-                    child: FilledButton(
-                        onPressed: () => editProfile(context, store),
-                        style: FilledButton.styleFrom(
-                            backgroundColor: EverlaneColors.like,
-                            minimumSize: const Size(0, 48)),
-                        child: const Text('Edit profile'))),
+                    child: GradientButton(
+                        label: 'Edit profile',
+                        onTap: () => editProfile(context, store))),
                 const SizedBox(width: 10),
                 Expanded(
                     child: OutlinedButton(
@@ -1793,12 +1817,8 @@ class _EditProfileFormState extends State<_EditProfileForm> {
                     child: const Text('Save draft'))),
             const SizedBox(width: 12),
             Expanded(
-                child: FilledButton(
-                    onPressed: () => save(post: true),
-                    style: FilledButton.styleFrom(
-                        backgroundColor: EverlaneColors.like,
-                        minimumSize: const Size(0, 52)),
-                    child: const Text('Post profile'))),
+                child: GradientButton(
+                    label: 'Post profile', onTap: () => save(post: true))),
           ]),
         ]));
   }
