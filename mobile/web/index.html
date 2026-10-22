@@ -20,6 +20,16 @@
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="Everlane — a thoughtful place to meet your person. Mobile UI preview.">
 
+  <!--
+    Without this, iOS Safari auto-zooms in when a text field is focused
+    (its hidden input element renders smaller than 16px) and then never
+    zooms back out, because Flutter's canvas isn't a normal scrollable
+    document the pinch-zoom gesture can reset. Pinning the scale here
+    stops the zoom from triggering at all.
+  -->
+  <meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
