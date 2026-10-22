@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart' show timeDilation;
 import 'package:flutter_test/flutter_test.dart';
@@ -5,9 +8,17 @@ import 'package:everlane/hangouts.dart';
 import 'package:everlane/introductions.dart';
 import 'package:everlane/main.dart';
 import 'package:everlane/models.dart';
+import 'package:everlane/photo_picker.dart';
 import 'package:everlane/screens.dart';
 
+/// A tiny valid 1x1 PNG, so Image.memory in tests decodes without error.
+final Uint8List _fakePhoto = base64Decode(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=');
+
 void main() {
+  setUp(() {
+    pickPhotoBytes = () async => _fakePhoto;
+  });
   testWidgets('Main screens work on a phone and accepting a like opens a chat',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -52,7 +63,7 @@ void main() {
     expect(find.text('What’s your favourite café?'), findsOneWidget);
     await tester.tap(find.text('You'));
     await tester.pumpAndSettle();
-    expect(find.text('Rohit, 29'), findsOneWidget);
+    expect(find.text('Rohan, 29'), findsOneWidget);
   });
 
   testWidgets('Filters and like composer fit a small screen', (tester) async {
@@ -367,9 +378,14 @@ void main() {
     await tester.tap(find.byTooltip('Edit profile'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Rohan');
-    await tester.ensureVisible(find.text('Save preview profile'));
+    final editSheet = find
+        .descendant(of: find.byType(BottomSheet), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(find.text('Post profile'), 200,
+        scrollable: editSheet);
+    await tester.ensureVisible(find.text('Post profile'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Save preview profile'));
+    await tester.tap(find.text('Post profile'));
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 60));
     }
@@ -486,6 +502,12 @@ void main() {
         scrollable: basics);
     await tester.ensureVisible(find.text('Continue'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add your photos'), findsOneWidget);
+    await tester.tap(find.text('Add photo'));
+    await tester.pumpAndSettle();
+    expect(find.text('1 photo added'), findsOneWidget);
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
     expect(

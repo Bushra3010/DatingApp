@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'chemistry.dart';
 import 'question_bank.dart';
@@ -287,7 +289,7 @@ class PreviewStore extends ChangeNotifier {
   DateTime? myBirthday;
   String myGender = '';
   String interestedIn = '';
-  String myCity = 'Bengaluru';
+  String myCity = 'Indiranagar';
   final Answers onboardingAnswers = {};
 
   /// Age from the date of birth given at onboarding; the demo profile is 29.
@@ -361,11 +363,69 @@ class PreviewStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  String myName = 'Rohit';
+  String myName = 'Rohan';
   String myJob = 'Software engineer';
+  String myPromptLabel = 'My ideal Sunday is';
   String myPrompt =
       'Good food, better company, and finding a new favourite place.';
   Plan plan = Plan.free;
+
+  /// Photos added during sign-up or from Edit profile. In-memory only, like
+  /// the rest of this preview.
+  final List<Uint8List> myPhotos = [];
+  bool get hasPhoto => myPhotos.isNotEmpty;
+
+  void addPhoto(Uint8List bytes) {
+    myPhotos.add(bytes);
+    notifyListeners();
+  }
+
+  void removePhoto(int index) {
+    myPhotos.removeAt(index);
+    notifyListeners();
+  }
+
+  String myBio = '';
+  String myLookingFor = 'Relationship';
+  static const lookingForOptions = [
+    'Relationship',
+    'Friendship first',
+    'Open to see',
+  ];
+
+  final Set<String> myInterests = {};
+  static const interestOptions = [
+    'Travel',
+    'Coffee',
+    'Music',
+    'Cooking',
+    'Fitness',
+    'Art',
+    'Books',
+    'Movies',
+    'Hiking',
+    'Dancing',
+    'Photography',
+    'Pets',
+  ];
+
+  bool myProfilePosted = false;
+  bool myVerified = false;
+
+  /// A rough sense of how filled-in the preview profile is, out of the
+  /// optional extras beyond the required sign-up basics.
+  int get profileCompleteness {
+    final checks = [
+      hasPhoto,
+      myJob.trim().isNotEmpty,
+      myBio.trim().isNotEmpty,
+      myInterests.isNotEmpty,
+      myPrompt.trim().isNotEmpty,
+      myLookingFor.isNotEmpty,
+      myVerified,
+    ];
+    return (checks.where((done) => done).length * 100 / checks.length).round();
+  }
 
   /// Rewind (undo a pass) comes with Plus and up.
   bool get canRewind => plan.atLeast(Plan.plus);
