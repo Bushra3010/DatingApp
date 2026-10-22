@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'chemistry.dart';
 import 'models.dart';
@@ -495,10 +493,14 @@ class _PhotoStepState extends State<_PhotoStep> {
           const SizedBox(height: 22),
           Wrap(spacing: 12, runSpacing: 12, children: [
             for (var i = 0; i < store.myPhotos.length; i++)
-              _PhotoTile(
+              PhotoTile(
                   bytes: store.myPhotos[i],
+                  isMain: i == 0,
+                  onSetMain: store.myPhotos.length > 1 && i != 0
+                      ? () => setState(() => store.setMainPhoto(i))
+                      : null,
                   onRemove: () => setState(() => store.removePhoto(i))),
-            _AddPhotoTile(busy: picking, onTap: pick),
+            AddPhotoTile(busy: picking, onTap: pick),
           ]),
           if (error != null) ...[
             const SizedBox(height: 12),
@@ -518,75 +520,6 @@ class _PhotoStepState extends State<_PhotoStep> {
                   style: TextStyle(fontSize: 12, color: EverlaneColors.muted))),
         ]);
   }
-}
-
-class _PhotoTile extends StatelessWidget {
-  const _PhotoTile({required this.bytes, required this.onRemove});
-  final Uint8List bytes;
-  final VoidCallback onRemove;
-  @override
-  Widget build(BuildContext context) => SizedBox(
-      width: 100,
-      height: 100,
-      child: Stack(children: [
-        ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.memory(bytes,
-                width: 100, height: 100, fit: BoxFit.cover,
-                errorBuilder: (_, error, stack) => Container(
-                    width: 100,
-                    height: 100,
-                    color: EverlaneColors.blush,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.broken_image_outlined,
-                        color: EverlaneColors.like)))),
-        Positioned(
-            top: 4,
-            right: 4,
-            child: Material(
-                color: Colors.black.withValues(alpha: .55),
-                shape: const CircleBorder(),
-                child: IconButton(
-                    tooltip: 'Remove photo',
-                    iconSize: 16,
-                    padding: const EdgeInsets.all(4),
-                    constraints: const BoxConstraints(),
-                    onPressed: onRemove,
-                    icon: const Icon(Icons.close_rounded, color: Colors.white)))),
-      ]));
-}
-
-class _AddPhotoTile extends StatelessWidget {
-  const _AddPhotoTile({required this.busy, required this.onTap});
-  final bool busy;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => Material(
-      color: EverlaneColors.card,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: busy ? null : onTap,
-          child: Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: EverlaneColors.line)),
-              alignment: Alignment.center,
-              child: busy
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : Column(mainAxisSize: MainAxisSize.min, children: [
-                      const Icon(Icons.add_a_photo_outlined,
-                          color: EverlaneColors.like),
-                      const SizedBox(height: 6),
-                      Text('Add photo',
-                          style: TextStyle(
-                              fontSize: 11, color: EverlaneColors.muted)),
-                    ]))));
 }
 
 class _AllSet extends StatelessWidget {
