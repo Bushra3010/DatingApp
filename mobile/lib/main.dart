@@ -1,25 +1,42 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'backend.dart';
 import 'models.dart';
 import 'onboarding.dart';
 import 'hangouts.dart';
 import 'screens.dart';
+import 'supabase_config.dart';
 import 'theme.dart';
 
-void main() => runApp(const EverlaneApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  ProfileBackend? backend;
+  try {
+    await Supabase.initialize(
+        url: supabaseUrl, publishableKey: supabasePublishableKey);
+    backend = ProfileBackend(Supabase.instance.client);
+  } catch (_) {
+    // Offline or misconfigured: the preview still runs, in memory only.
+  }
+  runApp(EverlaneApp(backend: backend));
+}
 
 class EverlaneApp extends StatefulWidget {
-  const EverlaneApp({super.key, this.onboarded = false});
+  const EverlaneApp({super.key, this.onboarded = false, this.backend});
 
   /// Skips first-launch onboarding (used by tests).
   final bool onboarded;
+
+  /// Supabase for the member's own account and profile; null in tests.
+  final ProfileBackend? backend;
   @override
   State<EverlaneApp> createState() => _EverlaneAppState();
 }
 
 class _EverlaneAppState extends State<EverlaneApp> {
-  final store = PreviewStore();
+  late final store = PreviewStore(backend: widget.backend);
 
   @override
   void initState() {
@@ -27,6 +44,14 @@ class _EverlaneAppState extends State<EverlaneApp> {
     store.onboarded = widget.onboarded;
     EverlaneColors.dark = store.darkMode;
     store.addListener(syncTheme);
+    // A returning member with a saved session goes straight to their profile.
+    if (store.signedIn) {
+      store.restoring = true;
+      store.loadProfile().catchError((Object _) => false).whenComplete(() {
+        store.restoring = false;
+        store.update();
+      });
+    }
   }
 
   /// Colours are read at build time, so a theme change rebuilds every
@@ -57,9 +82,27 @@ class _EverlaneAppState extends State<EverlaneApp> {
       theme: everlaneTheme(),
       home: ListenableBuilder(
           listenable: store,
-          builder: (context, _) => store.onboarded
-              ? EverlaneShell(store: store)
-              : OnboardingFlow(store: store)));
+          builder: (context, _) => store.restoring
+              ? const _Splash()
+              : store.onboarded
+                  ? EverlaneShell(store: store)
+                  : OnboardingFlow(store: store)));
+}
+
+class _Splash extends StatelessWidget {
+  const _Splash();
+  @override
+  Widget build(BuildContext context) => Scaffold(
+      body: Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text('Everlane', style: EverlaneFonts.logo(size: 44)),
+        const SizedBox(height: 20),
+        const SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+                strokeWidth: 2, color: EverlaneColors.like)),
+      ])));
 }
 
 class EverlaneShell extends StatefulWidget {

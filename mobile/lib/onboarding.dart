@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'auth.dart';
 import 'chemistry.dart';
 import 'models.dart';
 import 'photo_picker.dart';
@@ -184,6 +185,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 
   void go(int next) => setState(() => step = next);
 
+  /// Sign up starts a blank profile; logging in loads the saved one, and a
+  /// member who already finished onboarding goes straight into the app.
+  Future<void> account({required bool signUp}) async {
+    final store = widget.store;
+    final result = await showAuthSheet(context, store, signUp: signUp);
+    if (result == null || !mounted) return;
+    if (result == AuthResult.signedUp) {
+      store.startFreshAccount();
+      store.saveProfile();
+    }
+    if (!store.onboarded && mounted) go(1);
+  }
+
   void takeQuiz() {
     Navigator.push(
         context,
@@ -197,7 +211,16 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     final store = widget.store;
     final Widget body;
     if (step == 0) {
-      body = _Welcome(onStart: () => go(1), onSkip: store.finishOnboarding);
+      body = _Welcome(
+          // Already signed in (a saved session that never finished
+          // onboarding): carry on instead of asking for an account again.
+          onStart: store.backend == null || store.signedIn
+              ? () => go(1)
+              : () => account(signUp: true),
+          onLogIn: store.backend == null || store.signedIn
+              ? null
+              : () => account(signUp: false),
+          onSkip: store.finishOnboarding);
     } else if (step == 1) {
       body = _Basics(store: store, onBack: () => go(0), onDone: () => go(2));
     } else if (step == 2) {
@@ -246,8 +269,12 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
 }
 
 class _Welcome extends StatelessWidget {
-  const _Welcome({required this.onStart, required this.onSkip});
+  const _Welcome(
+      {required this.onStart, required this.onSkip, required this.onLogIn});
   final VoidCallback onStart, onSkip;
+
+  /// Null when there's no account backend (tests, offline).
+  final VoidCallback? onLogIn;
   @override
   Widget build(BuildContext context) => Padding(
       padding: const EdgeInsets.all(28),
@@ -284,6 +311,18 @@ class _Welcome extends StatelessWidget {
             style: TextStyle(color: EverlaneColors.muted, height: 1.6)),
         const Spacer(flex: 2),
         GradientButton(label: 'Get started', onTap: onStart),
+        if (onLogIn != null) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                  onPressed: onLogIn,
+                  style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(0, 54),
+                      side: BorderSide(
+                          color: EverlaneColors.deep.withValues(alpha: .7))),
+                  child: const Text('Log in'))),
+        ],
         const SizedBox(height: 8),
         Center(
             child: TextButton(
@@ -349,6 +388,7 @@ class _BasicsState extends State<_Basics> {
       ..myGender = gender
       ..interestedIn = interested;
     store.update();
+    store.saveProfile();
     widget.onDone();
   }
 
