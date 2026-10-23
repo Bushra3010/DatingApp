@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
 import 'backend.dart';
 import 'chemistry.dart';
 import 'question_bank.dart';
@@ -47,8 +49,48 @@ class Person {
       this.verified = false,
       this.activeNow = false,
       this.bio = '',
-      this.interests = const []});
+      this.interests = const [],
+      this.city = 'Bengaluru',
+      this.photoUrls = const [],
+      this.remote = false});
+
+  /// A real member, from a Supabase card (see `discover_members`).
+  factory Person.fromCard(
+      Map<String, dynamic> r, String Function(String path) photoUrl) {
+    final looking = switch (r['looking_for'] as String? ?? '') {
+      'Friendship first' => LookingFor.newFriends,
+      'Open to see' => LookingFor.coffeeDate,
+      _ => LookingFor.longTerm,
+    };
+    return Person(
+        id: r['id'] as String,
+        name: r['name'] as String? ?? '',
+        age: (r['age'] as num?)?.toInt() ?? 0,
+        job: r['job'] as String? ?? '',
+        photo: '',
+        distance: 0,
+        answer: r['prompt_answer'] as String? ?? '',
+        lookingFor: [looking],
+        verified: r['verified'] as bool? ?? false,
+        bio: r['bio'] as String? ?? '',
+        interests: List<String>.from(r['interests'] as List? ?? const []),
+        city: r['city'] as String? ?? '',
+        photoUrls: [
+          for (final path in List<String>.from(r['photos'] as List? ?? const []))
+            photoUrl(path)
+        ],
+        remote: true);
+  }
+
   final String id, name, job, photo, answer;
+  final String city;
+
+  /// Real members' photos (public Storage URLs); demo people use assets.
+  final List<String> photoUrls;
+
+  /// True for real members from Supabase; likes, passes and chat with them
+  /// are saved. Demo people stay local.
+  final bool remote;
 
   /// A short line shown over the photo on the Discover card.
   final String bio;
@@ -280,9 +322,14 @@ class SentLike {
 }
 
 class Conversation {
-  Conversation(this.person, this.messages);
+  Conversation(this.person, this.messages, {this.matchId});
   final Person person;
   final List<ChatMessage> messages;
+
+  /// The Supabase match, for real members. Null for demo chats, and briefly
+  /// while a like back is still turning into a match.
+  String? matchId;
+  Future<String?>? pendingMatch;
 }
 
 /// App state. The signed-in member's own profile and photos sync to Supabase
@@ -305,13 +352,32 @@ class PreviewStore extends ChangeNotifier {
   final Set<String> passed = {};
   final Set<String> liked = {};
   final List<SentLike> sentLikes = [];
-  final List<Person> incoming = [demoPeople[1], demoPeople[2]];
-  final List<Conversation> conversations = [
-    Conversation(demoPeople[3], [
-      ChatMessage('You liked their answer to “My ideal Sunday”', mine: true),
-      ChatMessage('Okay, important question: what’s your go-to dessert?')
-    ]),
-  ];
+  final List<Person> incoming = [..._demoIncoming];
+  final List<Conversation> conversations = [..._demoConversations()];
+
+  static final _demoIncoming = [demoPeople[1], demoPeople[2]];
+  static List<Conversation> _demoConversations() => [
+        Conversation(demoPeople[3], [
+          ChatMessage('You liked their answer to “My ideal Sunday”',
+              mine: true),
+          ChatMessage('Okay, important question: what’s your go-to dessert?')
+        ]),
+      ];
+
+  /// Signed-in members see real people from Supabase instead of the demo
+  /// cast; the account-less preview (and tests) keep the demo data.
+  bool get live => signedIn;
+  final List<Person> members = [];
+
+  /// What a real member wrote when they liked you, keyed by their id.
+  final Map<String, SentLike> likeNotes = {};
+
+  /// Set when a new match arrives (your like back, or theirs); the app shell
+  /// shows the celebration and clears it.
+  final ValueNotifier<Conversation?> newMatch = ValueNotifier(null);
+  RealtimeChannel? _channel;
+
+  List<Person> get _pool => live ? members : demoPeople;
   RangeValues ages = const RangeValues(24, 32);
   double distance = 25;
   bool verifiedOnly = false;
@@ -339,7 +405,9 @@ class PreviewStore extends ChangeNotifier {
   void finishOnboarding() {
     onboarded = true;
     notifyListeners();
-    saveProfile();
+    // Discovery matches on your saved gender and preferences, so load it
+    // once the finished profile is saved.
+    saveProfile().then((_) => refreshMembers());
   }
 
   /// Compatibility quiz answers, saved as each question is answered.
@@ -503,20 +571,20 @@ class PreviewStore extends ChangeNotifier {
   bool get outOfLikes => remaining <= 0;
   List<Person> get discover => paused
       ? []
-      : demoPeople
+      : _pool
           .where((p) =>
               !passed.contains(p.id) &&
               !liked.contains(p.id) &&
               !conversations.any((chat) => chat.person.id == p.id) &&
-              p.age >= ages.start &&
-              p.age <= ages.end &&
+              // A real member without a birthday has age 0; don't hide them.
+              (p.age == 0 || (p.age >= ages.start && p.age <= ages.end)) &&
               p.distance <= distance &&
               (!verifiedOnly || p.verified) &&
               (intentFilter.isEmpty || p.lookingFor.any(intentFilter.contains)))
           .toList();
 
   /// Everyone looking for [category], minus profiles passed on or hidden.
-  List<Person> exploring(LookingFor category) => demoPeople
+  List<Person> exploring(LookingFor category) => _pool
       .where((p) => p.lookingFor.contains(category) && !passed.contains(p.id))
       .toList();
 
@@ -529,6 +597,7 @@ class PreviewStore extends ChangeNotifier {
     passed.add(p.id);
     passHistory.add(p.id);
     notifyListeners();
+    if (p.remote) _remote((b) => b.pass(p.id));
   }
 
   /// Brings back the last profile passed on and returns it, or null.
@@ -538,7 +607,9 @@ class PreviewStore extends ChangeNotifier {
     final id = passHistory.removeLast();
     passed.remove(id);
     notifyListeners();
-    return demoPeople.firstWhere((p) => p.id == id);
+    final p = _pool.firstWhere((p) => p.id == id);
+    if (p.remote) _remote((b) => b.unpass(id));
+    return p;
   }
 
   void like(Person p, {String target = 'photo', String comment = ''}) {
@@ -546,21 +617,41 @@ class PreviewStore extends ChangeNotifier {
     liked.add(p.id);
     sentLikes.add(SentLike(p.id, target, comment.trim()));
     notifyListeners();
+    if (!p.remote) return;
+    _remote((b) async {
+      // If they'd already liked you, this like makes a match.
+      final matchId =
+          await b.like(p.id, target: target, comment: comment.trim());
+      if (matchId != null) _addMatch(p, matchId, celebrate: true);
+    });
   }
 
   void removeLike(Person p) {
     incoming.remove(p);
     notifyListeners();
+    if (p.remote) _remote((b) => b.pass(p.id));
   }
 
+  /// Likes back someone who liked you. The chat opens right away; for a
+  /// real member the match id follows once the like is saved.
   Conversation match(Person p) {
     incoming.remove(p);
     final chat = Conversation(p, [
-      ChatMessage(
-          'I love your idea of a perfect Sunday. What’s your favourite spot?')
+      if (!p.remote)
+        ChatMessage(
+            'I love your idea of a perfect Sunday. What’s your favourite spot?')
     ]);
     conversations.insert(0, chat);
     notifyListeners();
+    if (p.remote && backend != null && signedIn) {
+      chat.pendingMatch = backend!.like(p.id).then((id) {
+        chat.matchId = id;
+        return id;
+      }, onError: (Object e) {
+        _failed('Couldn’t save your like. Check your connection.');
+        return null;
+      });
+    }
     return chat;
   }
 
@@ -568,6 +659,164 @@ class PreviewStore extends ChangeNotifier {
     if (text.trim().isEmpty) return;
     chat.messages.add(ChatMessage(text.trim(), mine: true));
     notifyListeners();
+    if (!chat.person.remote) return;
+    _remote((b) async {
+      final id = chat.matchId ?? await chat.pendingMatch;
+      if (id == null) throw StateError('no match yet');
+      await b.sendMessage(id, text.trim());
+    }, failure: 'Couldn’t send that message. Check your connection.');
+  }
+
+  /// Ends a match with a real member (block, report or unmatch).
+  void forgetRemotely(Person p) {
+    if (!p.remote) return;
+    final matchIds = [
+      for (final c in conversations)
+        if (c.person.id == p.id && c.matchId != null) c.matchId!
+    ];
+    _remote((b) async {
+      await b.pass(p.id);
+      for (final id in matchIds) {
+        await b.unmatch(id);
+      }
+    });
+  }
+
+  void _remote(Future<void> Function(ProfileBackend b) action,
+      {String failure = 'Couldn’t reach the server. Check your connection.'}) {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    action(b).catchError((Object e) => _failed(failure));
+  }
+
+  Conversation _addMatch(Person p, String matchId, {required bool celebrate}) {
+    for (final c in conversations) {
+      if (c.matchId == matchId || c.person.id == p.id) {
+        c.matchId ??= matchId;
+        return c;
+      }
+    }
+    incoming.removeWhere((x) => x.id == p.id);
+    members.removeWhere((x) => x.id == p.id);
+    final chat = Conversation(p, [], matchId: matchId);
+    conversations.insert(0, chat);
+    notifyListeners();
+    if (celebrate) newMatch.value = chat;
+    return chat;
+  }
+
+  Future<void> _loadCommunitySafely() async {
+    try {
+      await loadCommunity();
+    } catch (_) {
+      _failed('Couldn’t load people right now. Check your connection.');
+    }
+  }
+
+  /// Re-fetches people to discover (e.g. after onboarding or on return to
+  /// the Discover tab).
+  Future<void> refreshMembers() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    try {
+      final rows = await b.discover();
+      members
+        ..clear()
+        ..addAll(rows
+            .map((r) => Person.fromCard(r, b.photoUrl))
+            .where((p) => !passed.contains(p.id) && !liked.contains(p.id)));
+      notifyListeners();
+    } catch (_) {
+      _failed('Couldn’t load people right now. Check your connection.');
+    }
+  }
+
+  /// Loads real members, likes and matches for a signed-in member and
+  /// starts listening for new ones. Replaces the demo cast.
+  Future<void> loadCommunity() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    final me = b.user!.id;
+    final results = await Future.wait(
+        [b.discover(), b.likesReceived(), b.myMatches()]);
+    Person card(Map<String, dynamic> r) => Person.fromCard(r, b.photoUrl);
+    _clearCommunity();
+    members.addAll(results[0].map(card));
+    for (final r in results[1]) {
+      final p = card(r);
+      incoming.add(p);
+      likeNotes[p.id] = SentLike(
+          p.id, r['target'] as String? ?? 'photo', r['comment'] as String? ?? '');
+    }
+    for (final r in results[2]) {
+      final matchId = r['match_id'] as String;
+      final msgs = await b.messages(matchId);
+      conversations.add(Conversation(
+          card(r),
+          [
+            for (final m in msgs)
+              ChatMessage(m['body'] as String, mine: m['sender'] == me)
+          ],
+          matchId: matchId));
+    }
+    _listen(b, me);
+    notifyListeners();
+  }
+
+  void _listen(ProfileBackend b, String me) {
+    if (_channel != null) return;
+    _channel = b.listen(onMessage: (m) {
+      if (m['sender'] == me) return; // already shown when sent
+      for (final c in conversations) {
+        if (c.matchId == m['match_id']) {
+          c.messages.add(ChatMessage(m['body'] as String));
+          notifyListeners();
+          return;
+        }
+      }
+    }, onMatch: (m) async {
+      if (me != m['user_a'] && me != m['user_b']) return;
+      final matchId = m['id'] as String;
+      if (conversations.any((c) => c.matchId == matchId)) return;
+      final rows = await b.myMatches();
+      final row = rows.where((r) => r['match_id'] == matchId).firstOrNull;
+      if (row == null) return;
+      final p = Person.fromCard(row, b.photoUrl);
+      // You liked them back from Likes: that screen already celebrated.
+      final mine = conversations.any((c) => c.person.id == p.id);
+      _addMatch(p, matchId, celebrate: !mine);
+    }, onLike: (_) async {
+      final rows = await b.likesReceived();
+      for (final r in rows) {
+        final p = Person.fromCard(r, b.photoUrl);
+        if (incoming.any((x) => x.id == p.id)) continue;
+        incoming.insert(0, p);
+        likeNotes[p.id] = SentLike(p.id, r['target'] as String? ?? 'photo',
+            r['comment'] as String? ?? '');
+      }
+      notifyListeners();
+    });
+  }
+
+  void _clearCommunity() {
+    members.clear();
+    incoming.clear();
+    conversations.clear();
+    likeNotes.clear();
+    passed.clear();
+    passHistory.clear();
+    liked.clear();
+    sentLikes.clear();
+  }
+
+  /// Back to the demo cast after logging out.
+  void _restoreDemo() {
+    final channel = _channel;
+    _channel = null;
+    if (channel != null) backend?.stopListening(channel).ignore();
+    _clearCommunity();
+    incoming.addAll(_demoIncoming);
+    conversations.addAll(_demoConversations());
   }
 
   /// Hangouts come with Platinum.
@@ -646,10 +895,10 @@ class PreviewStore extends ChangeNotifier {
 
   /// Saves the member's profile in the background. A no-op when not signed
   /// in (tests, or the account-less preview).
-  void saveProfile() {
+  Future<void> saveProfile() {
     final b = backend;
-    if (b == null || !b.signedIn) return;
-    b.saveProfile(profileRow).then((_) {
+    if (b == null || !b.signedIn) return Future.value();
+    return b.saveProfile(profileRow).then((_) {
       if (syncError != null) {
         syncError = null;
         notifyListeners();
@@ -686,6 +935,7 @@ class PreviewStore extends ChangeNotifier {
     if (b == null || !b.signedIn) return false;
     final row = await b.loadProfile();
     startFreshAccount();
+    await _loadCommunitySafely();
     if (row == null) return false;
     myName = row['name'] as String? ?? '';
     myBirthday = DateTime.tryParse(row['birthday'] as String? ?? '');
@@ -717,6 +967,7 @@ class PreviewStore extends ChangeNotifier {
   }
 
   Future<void> logOut() async {
+    _restoreDemo();
     await backend?.logOut();
     startFreshAccount();
   }

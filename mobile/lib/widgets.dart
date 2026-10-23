@@ -10,25 +10,30 @@ class Portrait extends StatelessWidget {
   final Person person;
   final double? height, width;
   final double radius;
+  Widget _fallback() => Container(
+      height: height,
+      width: width,
+      color: EverlaneColors.blush,
+      alignment: Alignment.center,
+      child: Text(person.name.isEmpty ? '?' : person.name[0],
+          style: const TextStyle(
+              fontFamily: 'Lora', fontSize: 64, color: EverlaneColors.like)));
+
   @override
   Widget build(BuildContext context) => ClipRRect(
         borderRadius: BorderRadius.circular(radius),
-        child: Image.asset(
-          'assets/images/${person.id}.jpg',
-          height: height,
-          width: width,
-          fit: BoxFit.cover,
-          errorBuilder: (_, error, stack) => Container(
-              height: height,
-              width: width,
-              color: EverlaneColors.blush,
-              alignment: Alignment.center,
-              child: Text(person.name[0],
-                  style: const TextStyle(
-                      fontFamily: 'Lora',
-                      fontSize: 64,
-                      color: EverlaneColors.like))),
-        ),
+        // Real members' main photo comes from Storage; demo people are assets.
+        child: person.photoUrls.isNotEmpty
+            ? Image.network(person.photoUrls.first,
+                height: height,
+                width: width,
+                fit: BoxFit.cover,
+                errorBuilder: (_, error, stack) => _fallback())
+            : Image.asset('assets/images/${person.id}.jpg',
+                height: height,
+                width: width,
+                fit: BoxFit.cover,
+                errorBuilder: (_, error, stack) => _fallback()),
       );
 }
 

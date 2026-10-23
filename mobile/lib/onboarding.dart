@@ -194,6 +194,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     if (result == AuthResult.signedUp) {
       store.startFreshAccount();
       store.saveProfile();
+      // Swap the demo likes and chats for the (empty) real ones.
+      store.loadCommunity().ignore();
     }
     if (!store.onboarded && mounted) go(1);
   }

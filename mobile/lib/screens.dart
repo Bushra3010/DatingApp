@@ -473,7 +473,7 @@ class _PersonCard extends StatelessWidget {
                             Wrap(spacing: 14, runSpacing: 4, children: [
                               _meta(Icons.work_outline_rounded, person.job),
                               _meta(Icons.location_on_outlined,
-                                  'Bengaluru · ${person.distanceLabel}'),
+                                  '${person.city} · ${person.distanceLabel}'),
                               _meta(person.lookingFor.first.icon,
                                   person.lookingFor.first.short),
                             ]),
@@ -570,7 +570,7 @@ class PersonDetailsScreen extends StatelessWidget {
                             onTap: () => showLikeComposer(
                                 context, store, person, 'photo'))
                       ]),
-                      Text('Bengaluru · ${person.distanceLabel}',
+                      Text('${person.city} · ${person.distanceLabel}',
                           style: TextStyle(
                               fontSize: 16, color: EverlaneColors.muted)),
                       const SizedBox(height: 16),
@@ -668,7 +668,11 @@ Future<void> showLikeComposer(BuildContext context, PreviewStore store,
   final sent = await showEverlaneSheet<bool>(
       context, _LikeComposer(store: store, person: person, target: target));
   if (sent == true && context.mounted) {
-    showNotice(context, 'Like sent to ${person.name} in this preview.');
+    showNotice(
+        context,
+        person.remote
+            ? 'Like sent to ${person.name}.'
+            : 'Like sent to ${person.name} in this preview.');
   }
 }
 
@@ -1077,15 +1081,16 @@ class LikesScreen extends StatelessWidget {
                                     ]),
                                     const SizedBox(height: 5),
                                     Text(
-                                        'Liked your answer to “My ideal Sunday”',
+                                        _likedWhat(store.likeNotes[p.id]),
                                         style: TextStyle(
                                             fontSize: 12,
                                             color: EverlaneColors.muted)),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                        '“I know just the place. Coffee and a bookstore sounds like a pretty perfect start.”',
-                                        style: TextStyle(
-                                            fontSize: 20, height: 1.45)),
+                                    if (_likeQuote(store, p) case final quote?) ...[
+                                      const SizedBox(height: 16),
+                                      Text('“$quote”',
+                                          style: const TextStyle(
+                                              fontSize: 20, height: 1.45)),
+                                    ],
                                     const SizedBox(height: 20),
                                     Row(children: [
                                       RoundButton(
@@ -1136,7 +1141,8 @@ class LikesScreen extends StatelessWidget {
                                     ]),
                                   ])),
                         ]))),
-        const Center(child: Eyebrow('Demo likes · UI preview')),
+        if (!store.live)
+          const Center(child: Eyebrow('Demo likes · UI preview')),
       ]);
 }
 
@@ -1223,22 +1229,42 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   late final controller = TextEditingController(text: widget.draft);
   final scroll = ScrollController();
+  late int seen = widget.chat.messages.length;
+
+  @override
+  void initState() {
+    super.initState();
+    // Live replies from a real match arrive through the store.
+    widget.store.addListener(changed);
+  }
+
+  void changed() {
+    if (!mounted || widget.chat.messages.length == seen) return;
+    seen = widget.chat.messages.length;
+    setState(() {});
+    toBottom();
+  }
+
+  void toBottom() => WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (scroll.hasClients) {
+          scroll.animateTo(scroll.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut);
+        }
+      });
+
   void send() {
     if (controller.text.trim().isEmpty) return;
     setState(() {
       widget.store.send(widget.chat, controller.text);
       controller.clear();
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (scroll.hasClients) {
-        scroll.animateTo(scroll.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 200), curve: Curves.easeOut);
-      }
-    });
+    toBottom();
   }
 
   @override
   void dispose() {
+    widget.store.removeListener(changed);
     controller.dispose();
     scroll.dispose();
     super.dispose();
@@ -1273,7 +1299,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           padding: const EdgeInsets.all(12),
                           color: EverlaneColors.blush,
                           child: Text(
-                              'Demo conversation · Messages stay on this device',
+                              widget.chat.person.remote
+                                  ? 'You matched · Be kind, be yourself'
+                                  : 'Demo conversation · Messages stay on this device',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                   fontSize: 11, color: EverlaneColors.muted))),
@@ -2386,6 +2414,7 @@ Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
                 ]));
     if (confirmed != true || !context.mounted) return;
   }
+  store.forgetRemotely(person);
   store.passed.add(person.id);
   store.incoming.removeWhere((p) => p.id == person.id);
   store.conversations.removeWhere((c) => c.person.id == person.id);
@@ -2773,4 +2802,21 @@ void showBoost(BuildContext context, PreviewStore store) {
                   const SizedBox(height: 8),
                 ]);
           }));
+}
+
+/// "Liked your photo" / "Liked your answer to …" for an incoming like.
+String _likedWhat(SentLike? note) => switch (note?.target) {
+      null => 'Liked your answer to “My ideal Sunday”',
+      'photo' || 'profile' => 'Liked your photo',
+      'soundtrack' => 'Liked your soundtrack',
+      final t => 'Liked your answer to “$t”',
+    };
+
+/// The comment a real member sent with their like, or the demo line.
+String? _likeQuote(PreviewStore store, Person p) {
+  final note = store.likeNotes[p.id];
+  if (note != null) return note.comment.isEmpty ? null : note.comment;
+  return p.remote
+      ? null
+      : 'I know just the place. Coffee and a bookstore sounds like a pretty perfect start.';
 }
