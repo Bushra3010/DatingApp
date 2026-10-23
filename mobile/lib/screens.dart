@@ -1686,6 +1686,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 20)
                     ]))),
           ]),
+      if (store.signedIn)
+        _ProfileSection(
+            title: 'Account',
+            icon: Icons.person_outline_rounded,
+            iconColor: EverlaneColors.lavender,
+            subtitle: store.accountEmail,
+            children: [
+              if (store.syncError != null) ...[
+                Row(children: [
+                  const Icon(Icons.cloud_off_rounded,
+                      size: 18, color: EverlaneColors.like),
+                  const SizedBox(width: 8),
+                  Expanded(
+                      child: Text(store.syncError!,
+                          style: const TextStyle(
+                              fontSize: 13, color: EverlaneColors.like))),
+                ]),
+                const SizedBox(height: 8),
+              ],
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.logout_rounded),
+                  title: const Text('Log out'),
+                  subtitle: Text('Your profile stays saved to your account',
+                      style:
+                          TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                  onTap: () => store.logOut()),
+            ]),
       _ProfileSection(
           title: 'Preferences',
           icon: Icons.tune_rounded,
@@ -2037,6 +2065,7 @@ Future<void> verifyMe(BuildContext context, PreviewStore store) async {
   if (confirmed == true) {
     store.myVerified = true;
     store.update();
+    store.saveProfile();
     if (context.mounted) showNotice(context, 'Profile verified in this preview.');
   }
 }
@@ -2131,6 +2160,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
     }
     if (post) store.myProfilePosted = true;
     store.update();
+    store.saveProfile();
     Navigator.pop(context);
     showNotice(
         context, post ? 'Profile posted in this preview.' : 'Draft saved.');

@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'backend.dart';
 import 'chemistry.dart';
 import 'question_bank.dart';
 import 'theme.dart';
@@ -284,8 +285,23 @@ class Conversation {
   final List<ChatMessage> messages;
 }
 
-/// Local preview state. No likes, messages or account changes reach the API yet.
+/// App state. The signed-in member's own profile and photos sync to Supabase
+/// through [backend]; likes, messages and discovery are still local demo data.
 class PreviewStore extends ChangeNotifier {
+  PreviewStore({this.backend});
+
+  /// Null in tests and when Supabase can't be reached: everything then stays
+  /// in memory, and "Skip to the app (preview)" works without an account.
+  final ProfileBackend? backend;
+  bool get signedIn => backend?.signedIn ?? false;
+  String? get accountEmail => backend?.user?.email;
+
+  /// True while a returning member's profile is being loaded at start-up.
+  bool restoring = false;
+
+  /// The last sync problem, shown to the member; cleared on the next success.
+  String? syncError;
+
   final Set<String> passed = {};
   final Set<String> liked = {};
   final List<SentLike> sentLikes = [];
@@ -323,6 +339,7 @@ class PreviewStore extends ChangeNotifier {
   void finishOnboarding() {
     onboarded = true;
     notifyListeners();
+    saveProfile();
   }
 
   /// Compatibility quiz answers, saved as each question is answered.
@@ -391,9 +408,10 @@ class PreviewStore extends ChangeNotifier {
       'Good food, better company, and finding a new favourite place.';
   Plan plan = Plan.free;
 
-  /// Photos added during sign-up or from Edit profile. In-memory only, like
-  /// the rest of this preview.
+  /// Photos added during sign-up or from Edit profile, main photo first.
+  /// When signed in, each is uploaded and its storage path kept here.
   final List<Uint8List> myPhotos = [];
+  final Map<Uint8List, String> _photoPaths = Map.identity();
   bool get hasPhoto => myPhotos.isNotEmpty;
   static const maxPhotos = 6;
   bool get canAddPhoto => myPhotos.length < maxPhotos;
@@ -402,11 +420,28 @@ class PreviewStore extends ChangeNotifier {
     if (!canAddPhoto) return;
     myPhotos.add(bytes);
     notifyListeners();
+    _upload(bytes);
+  }
+
+  void _upload(Uint8List bytes) {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    b.uploadPhoto(bytes).then((path) {
+      // Removed while it was uploading.
+      if (!myPhotos.any((p) => identical(p, bytes))) {
+        b.deletePhoto(path).ignore();
+        return;
+      }
+      _photoPaths[bytes] = path;
+      saveProfile();
+    }, onError: (Object e) => _failed('Couldn’t upload that photo. Try again.'));
   }
 
   void removePhoto(int index) {
-    myPhotos.removeAt(index);
+    final path = _photoPaths.remove(myPhotos.removeAt(index));
     notifyListeners();
+    if (path != null && signedIn) backend!.deletePhoto(path).ignore();
+    saveProfile();
   }
 
   /// Makes the photo at [index] the main one (first in the list — the one
@@ -415,6 +450,7 @@ class PreviewStore extends ChangeNotifier {
     if (index <= 0 || index >= myPhotos.length) return;
     myPhotos.insert(0, myPhotos.removeAt(index));
     notifyListeners();
+    saveProfile();
   }
 
   String myBio = '';
@@ -579,4 +615,109 @@ class PreviewStore extends ChangeNotifier {
   }
 
   void update() => notifyListeners();
+
+  void _failed(String message) {
+    syncError = message;
+    notifyListeners();
+  }
+
+  /// The profiles row for the signed-in member.
+  Map<String, dynamic> get profileRow => {
+        'name': myName,
+        'birthday': myBirthday?.toIso8601String().substring(0, 10),
+        'gender': myGender,
+        'interested_in': interestedIn,
+        'city': myCity,
+        'job': myJob,
+        'bio': myBio,
+        'looking_for': myLookingFor,
+        'interests': myInterests.toList(),
+        'prompt_label': myPromptLabel,
+        'prompt_answer': myPrompt,
+        'photos': [
+          for (final b in myPhotos)
+            if (_photoPaths[b] != null) _photoPaths[b]
+        ],
+        'onboarding_answers': onboardingAnswers,
+        'onboarded': onboarded,
+        'posted': myProfilePosted,
+        'verified': myVerified,
+      };
+
+  /// Saves the member's profile in the background. A no-op when not signed
+  /// in (tests, or the account-less preview).
+  void saveProfile() {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    b.saveProfile(profileRow).then((_) {
+      if (syncError != null) {
+        syncError = null;
+        notifyListeners();
+      }
+    }, onError: (Object e) => _failed('Couldn’t save your profile. Check your connection.'));
+  }
+
+  /// A new account starts blank instead of with the demo member's details.
+  void startFreshAccount() {
+    myName = '';
+    myJob = '';
+    myCity = '';
+    myBio = '';
+    myPrompt = '';
+    myPromptLabel = 'My ideal Sunday is';
+    myLookingFor = 'Relationship';
+    myInterests.clear();
+    myBirthday = null;
+    myGender = '';
+    interestedIn = '';
+    onboardingAnswers.clear();
+    myPhotos.clear();
+    _photoPaths.clear();
+    myProfilePosted = false;
+    myVerified = false;
+    onboarded = false;
+    notifyListeners();
+  }
+
+  /// Loads the signed-in member's profile and photos. Returns whether they
+  /// have finished onboarding before (so they can skip straight in).
+  Future<bool> loadProfile() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return false;
+    final row = await b.loadProfile();
+    startFreshAccount();
+    if (row == null) return false;
+    myName = row['name'] as String? ?? '';
+    myBirthday = DateTime.tryParse(row['birthday'] as String? ?? '');
+    myGender = row['gender'] as String? ?? '';
+    interestedIn = row['interested_in'] as String? ?? '';
+    myCity = row['city'] as String? ?? '';
+    myJob = row['job'] as String? ?? '';
+    myBio = row['bio'] as String? ?? '';
+    myLookingFor = row['looking_for'] as String? ?? 'Relationship';
+    myInterests.addAll(List<String>.from(row['interests'] as List? ?? []));
+    myPromptLabel = row['prompt_label'] as String? ?? 'My ideal Sunday is';
+    myPrompt = row['prompt_answer'] as String? ?? '';
+    myProfilePosted = row['posted'] as bool? ?? false;
+    myVerified = row['verified'] as bool? ?? false;
+    (row['onboarding_answers'] as Map? ?? {}).forEach((k, v) =>
+        onboardingAnswers[k as String] = List<String>.from(v as List));
+    for (final path in List<String>.from(row['photos'] as List? ?? [])) {
+      try {
+        final bytes = await b.downloadPhoto(path);
+        myPhotos.add(bytes);
+        _photoPaths[bytes] = path;
+      } catch (_) {
+        // A missing photo shouldn't stop the rest of the profile loading.
+      }
+    }
+    onboarded = row['onboarded'] as bool? ?? false;
+    notifyListeners();
+    return onboarded;
+  }
+
+  Future<void> logOut() async {
+    await backend?.logOut();
+    startFreshAccount();
+  }
 }
