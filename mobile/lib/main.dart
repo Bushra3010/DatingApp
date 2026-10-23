@@ -162,13 +162,10 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                     EverlaneColors.pass,
                                     () => setState(() => selected = 4)),
                                 const Spacer(),
-                                const Padding(
-                                    padding: EdgeInsets.all(26),
+                                Padding(
+                                    padding: const EdgeInsets.all(26),
                                     child: Text('Everlane',
-                                        style: TextStyle(
-                                            fontSize: 25,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: -1))),
+                                        style: EverlaneFonts.logo(size: 32))),
                               ]))),
                       appBar: AppBar(
                           toolbarHeight: 88,
@@ -183,11 +180,12 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                     scaffoldKey.currentState!.openDrawer(),
                                 icon: _Avatar(name: store.myName)),
                             const Spacer(),
-                            const Text('Everlane',
-                                style: TextStyle(
-                                    fontSize: 23,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -1)),
+                            Flexible(
+                                flex: 3,
+                                child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: Text('Everlane',
+                                        style: EverlaneFonts.logo(size: 30)))),
                             const Spacer(),
                             IconButton(
                                 tooltip: 'Filter profiles',
