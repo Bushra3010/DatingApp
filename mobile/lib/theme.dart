@@ -89,10 +89,14 @@ abstract final class EverlaneFonts {
           height: height,
           letterSpacing: letterSpacing);
 
-  /// The Everlane wordmark: a bold brush script, like the chosen logo.
+  /// The Everlane wordmark: hand-lettered marker script (Caveat Bold), like
+  /// the logo the client picked. Caveat runs small, so it's scaled up.
   static TextStyle logo({double size = 30, Color? color}) =>
-      GoogleFonts.kaushanScript(
-          fontSize: size, color: color ?? EverlaneColors.plum, height: 1.1);
+      GoogleFonts.caveat(
+          fontSize: size * 1.25,
+          fontWeight: FontWeight.w700,
+          color: color ?? EverlaneColors.plum,
+          height: 1.0);
 
   /// "Ananya, 27": the name in Plus Jakarta Sans Bold, the age in a
   /// lighter Cormorant Garamond italic. Plain text stays "Name, age".

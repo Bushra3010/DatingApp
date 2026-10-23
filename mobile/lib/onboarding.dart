@@ -268,12 +268,12 @@ class _Welcome extends StatelessWidget {
         ShaderMask(
             shaderCallback: (bounds) =>
                 EverlaneColors.textGradient.createShader(bounds),
-            child: Text('Everlane',
-                style: EverlaneFonts.poppins(
-                    size: 42,
-                    weight: FontWeight.w700,
-                    letterSpacing: -1.2,
-                    color: Colors.white))),
+            // Padding so the script's overhanging last letter still gets
+            // the gradient.
+            child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text('Everlane',
+                    style: EverlaneFonts.logo(size: 52, color: Colors.white)))),
         const SizedBox(height: 12),
         const Eyebrow('Less swiping. More meaningful connections.',
             color: EverlaneColors.like, textAlign: TextAlign.center),
