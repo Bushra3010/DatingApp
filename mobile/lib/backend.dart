@@ -55,6 +55,101 @@ class ProfileBackend {
   Future<void> deletePhoto(String path) =>
       client.storage.from(_bucket).remove([path]);
 
+  String photoUrl(String path) =>
+      client.storage.from(_bucket).getPublicUrl(path);
+
+  // ---- Discovery, likes, matches and chat ----
+
+  Future<List<Map<String, dynamic>>> discover() async =>
+      _rows(await client.rpc('discover_members'));
+
+  Future<List<Map<String, dynamic>>> likesReceived() async =>
+      _rows(await client.rpc('likes_received'));
+
+  Future<List<Map<String, dynamic>>> myMatches() async =>
+      _rows(await client.rpc('my_matches'));
+
+  Future<List<Map<String, dynamic>>> messages(String matchId) async =>
+      _rows(await client
+          .from('messages')
+          .select()
+          .eq('match_id', matchId)
+          .order('created_at'));
+
+  /// Likes [to]; returns the match id if they had already liked you back.
+  Future<String?> like(String to, {String target = 'photo', String comment = ''}) async {
+    final me = user!.id;
+    await client.from('likes').upsert(
+        {'from_user': me, 'to_user': to, 'target': target, 'comment': comment},
+        ignoreDuplicates: true);
+    return matchWith(to);
+  }
+
+  Future<String?> matchWith(String other) async {
+    final me = user!.id;
+    final row = await client
+        .from('matches')
+        .select('id')
+        .or('and(user_a.eq.$me,user_b.eq.$other),and(user_a.eq.$other,user_b.eq.$me)')
+        .maybeSingle();
+    return row?['id'] as String?;
+  }
+
+  Future<void> pass(String to) => client
+      .from('passes')
+      .upsert({'from_user': user!.id, 'to_user': to}, ignoreDuplicates: true);
+
+  Future<void> unpass(String to) => client
+      .from('passes')
+      .delete()
+      .eq('from_user', user!.id)
+      .eq('to_user', to);
+
+  Future<void> unmatch(String matchId) =>
+      client.from('matches').delete().eq('id', matchId);
+
+  Future<void> sendMessage(String matchId, String body) => client
+      .from('messages')
+      .insert({'match_id': matchId, 'sender': user!.id, 'body': body});
+
+  /// Live updates: new messages in your matches, new matches, new likes.
+  /// Row-level security decides which rows each member actually receives.
+  RealtimeChannel listen({
+    required void Function(Map<String, dynamic> message) onMessage,
+    required void Function(Map<String, dynamic> match) onMatch,
+    required void Function(Map<String, dynamic> like) onLike,
+  }) {
+    final me = user!.id;
+    return client
+        .channel('everlane-$me')
+        .onPostgresChanges(
+            event: PostgresChangeEvent.insert,
+            schema: 'public',
+            table: 'messages',
+            callback: (p) => onMessage(p.newRecord))
+        .onPostgresChanges(
+            event: PostgresChangeEvent.insert,
+            schema: 'public',
+            table: 'matches',
+            callback: (p) => onMatch(p.newRecord))
+        .onPostgresChanges(
+            event: PostgresChangeEvent.insert,
+            schema: 'public',
+            table: 'likes',
+            filter: PostgresChangeFilter(
+                type: PostgresChangeFilterType.eq,
+                column: 'to_user',
+                value: me),
+            callback: (p) => onLike(p.newRecord))
+        .subscribe();
+  }
+
+  Future<void> stopListening(RealtimeChannel channel) =>
+      client.removeChannel(channel);
+
+  static List<Map<String, dynamic>> _rows(dynamic data) =>
+      [for (final r in data as List) Map<String, dynamic>.from(r as Map)];
+
   /// Sniffs the file signature; picked photos don't carry a reliable name.
   static (String, String) _imageType(Uint8List b) {
     bool at(int i, List<int> sig) =>

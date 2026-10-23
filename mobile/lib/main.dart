@@ -6,6 +6,7 @@ import 'backend.dart';
 import 'models.dart';
 import 'onboarding.dart';
 import 'hangouts.dart';
+import 'match_celebration.dart';
 import 'screens.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
@@ -115,6 +116,40 @@ class EverlaneShell extends StatefulWidget {
 class _EverlaneShellState extends State<EverlaneShell> {
   int selected = 0;
   final scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    widget.store.newMatch.addListener(celebrate);
+  }
+
+  @override
+  void dispose() {
+    widget.store.newMatch.removeListener(celebrate);
+    super.dispose();
+  }
+
+  /// A real member liked you back (or you liked them back from Discover):
+  /// celebrate, then offer the chat.
+  Future<void> celebrate() async {
+    final chat = widget.store.newMatch.value;
+    if (chat == null || !mounted) return;
+    widget.store.newMatch.value = null;
+    final openChat = await Navigator.push<bool>(
+        context,
+        PageRouteBuilder<bool>(
+            transitionDuration: const Duration(milliseconds: 420),
+            pageBuilder: (_, __, ___) =>
+                MatchCelebration(store: widget.store, person: chat.person),
+            transitionsBuilder: (context, animation, _, child) =>
+                FadeTransition(opacity: animation, child: child)));
+    if (openChat == true && mounted) {
+      Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+              builder: (_) => ChatScreen(store: widget.store, chat: chat)));
+    }
+  }
 
   Widget menuItem(
           IconData icon, String title, Color color, VoidCallback onTap) =>
@@ -277,7 +312,11 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                                   color: states.contains(WidgetState.selected)
                                                       ? EverlaneColors.lavender
                                                       : EverlaneColors.muted))),
-                                      child: NavigationBar(selectedIndex: selected, onDestinationSelected: (value) => setState(() => selected = value), backgroundColor: Colors.transparent, indicatorColor: EverlaneColors.deep.withValues(alpha: .3), height: 76, destinations: [
+                                      child: NavigationBar(selectedIndex: selected, onDestinationSelected: (value) {
+                                        setState(() => selected = value);
+                                        // Pick up anyone who joined since.
+                                        if (value == 0) store.refreshMembers();
+                                      }, backgroundColor: Colors.transparent, indicatorColor: EverlaneColors.deep.withValues(alpha: .3), height: 76, destinations: [
                                 const NavigationDestination(
                                     icon: Icon(Icons.home_outlined),
                                     selectedIcon: Icon(Icons.home_rounded),
