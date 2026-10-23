@@ -21,14 +21,37 @@
   <meta name="description" content="Everlane — a thoughtful place to meet your person. Mobile UI preview.">
 
   <!--
-    Without this, iOS Safari auto-zooms in when a text field is focused
-    (its hidden input element renders smaller than 16px) and then never
-    zooms back out, because Flutter's canvas isn't a normal scrollable
-    document the pinch-zoom gesture can reset. Pinning the scale here
-    stops the zoom from triggering at all.
+    iOS Safari auto-zooms the page when a focused text field's font is under
+    16px, and on a Flutter page it then stays zoomed in. Flutter edits text
+    through hidden <input>/<textarea> elements whose font it sets inline
+    (often 14px), so: force those to 16px (they're transparent, so this
+    changes nothing visible) and keep the page from scaling at all.
   -->
   <meta name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <style>
+    flt-text-editing-host input,
+    flt-text-editing-host textarea,
+    input.flt-text-editing,
+    textarea.flt-text-editing {
+      font-size: 16px !important;
+    }
+  </style>
+  <script>
+    // Flutter replaces the viewport tag above with its own
+    // (maximum-scale=5.0) at start-up; put ours back whenever it does.
+    (function () {
+      var wanted = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+      function pin() {
+        document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
+          if (m.content !== wanted) m.content = wanted;
+        });
+      }
+      new MutationObserver(pin).observe(document.head, {
+        childList: true, subtree: true, attributes: true, attributeFilter: ['content']
+      });
+    })();
+  </script>
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">
@@ -51,6 +74,6 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js?v=everlane-2" async></script>
+  <script src="flutter_bootstrap.js?v=everlane-3" async></script>
 </body>
 </html>

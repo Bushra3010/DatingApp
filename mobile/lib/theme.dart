@@ -89,15 +89,23 @@ abstract final class EverlaneFonts {
           height: height,
           letterSpacing: letterSpacing);
 
-  /// "Ananya, 27": the name in Playfair Display SemiBold, the age in a
+  /// The Everlane wordmark: a bold brush script, like the chosen logo.
+  static TextStyle logo({double size = 30, Color? color}) =>
+      GoogleFonts.kaushanScript(
+          fontSize: size, color: color ?? EverlaneColors.plum, height: 1.1);
+
+  /// "Ananya, 27": the name in Plus Jakarta Sans Bold, the age in a
   /// lighter Cormorant Garamond italic. Plain text stays "Name, age".
   static TextSpan nameAge(String name, int age,
           {double size = 34, Color color = Colors.white}) =>
       TextSpan(children: [
         TextSpan(
             text: name,
-            style: GoogleFonts.playfairDisplay(
-                fontSize: size, fontWeight: FontWeight.w600, color: color)),
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: size * .9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -.6,
+                color: color)),
         TextSpan(
             text: ', $age',
             style: GoogleFonts.cormorantGaramond(
