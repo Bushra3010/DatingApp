@@ -52,14 +52,20 @@ class Person {
       this.interests = const [],
       this.city = 'Bengaluru',
       this.photoUrls = const [],
-      this.remote = false});
+      this.remote = false,
+      this.heightCm,
+      this.languages = const []});
+
+  final int? heightCm;
+  final List<String> languages;
 
   /// A real member, from a Supabase card (see `discover_members`).
   factory Person.fromCard(
       Map<String, dynamic> r, String Function(String path) photoUrl) {
     final looking = switch (r['looking_for'] as String? ?? '') {
-      'Friendship first' => LookingFor.newFriends,
-      'Open to see' => LookingFor.coffeeDate,
+      'Casual' => LookingFor.shortTerm,
+      'Chit chat' || 'Friendship first' => LookingFor.newFriends,
+      'Hangout' || 'Open to see' => LookingFor.coffeeDate,
       _ => LookingFor.longTerm,
     };
     return Person(
@@ -75,6 +81,8 @@ class Person {
         bio: r['bio'] as String? ?? '',
         interests: List<String>.from(r['interests'] as List? ?? const []),
         city: r['city'] as String? ?? '',
+        heightCm: (r['height_cm'] as num?)?.toInt(),
+        languages: List<String>.from(r['languages'] as List? ?? const []),
         photoUrls: [
           for (final path in List<String>.from(r['photos'] as List? ?? const []))
             photoUrl(path)
@@ -522,11 +530,29 @@ class PreviewStore extends ChangeNotifier {
   }
 
   String myBio = '';
-  String myLookingFor = 'Relationship';
+  String myLookingFor = 'Long term';
   static const lookingForOptions = [
-    'Relationship',
-    'Friendship first',
-    'Open to see',
+    'Casual',
+    'Long term',
+    'Chit chat',
+    'Hangout',
+  ];
+
+  /// Height in cm, and languages spoken (optional), from sign-up.
+  int? myHeightCm;
+  final Set<String> myLanguages = {};
+  static const languageOptions = [
+    'English',
+    'Hindi',
+    'Kannada',
+    'Tamil',
+    'Telugu',
+    'Malayalam',
+    'Marathi',
+    'Bengali',
+    'Gujarati',
+    'Punjabi',
+    'Urdu',
   ];
 
   final Set<String> myInterests = {};
@@ -880,6 +906,8 @@ class PreviewStore extends ChangeNotifier {
         'job': myJob,
         'bio': myBio,
         'looking_for': myLookingFor,
+        'height_cm': myHeightCm,
+        'languages': myLanguages.toList(),
         'interests': myInterests.toList(),
         'prompt_label': myPromptLabel,
         'prompt_answer': myPrompt,
@@ -914,7 +942,9 @@ class PreviewStore extends ChangeNotifier {
     myBio = '';
     myPrompt = '';
     myPromptLabel = 'My ideal Sunday is';
-    myLookingFor = 'Relationship';
+    myLookingFor = 'Long term';
+    myHeightCm = null;
+    myLanguages.clear();
     myInterests.clear();
     myBirthday = null;
     myGender = '';
@@ -944,7 +974,9 @@ class PreviewStore extends ChangeNotifier {
     myCity = row['city'] as String? ?? '';
     myJob = row['job'] as String? ?? '';
     myBio = row['bio'] as String? ?? '';
-    myLookingFor = row['looking_for'] as String? ?? 'Relationship';
+    myLookingFor = row['looking_for'] as String? ?? 'Long term';
+    myHeightCm = (row['height_cm'] as num?)?.toInt();
+    myLanguages.addAll(List<String>.from(row['languages'] as List? ?? []));
     myInterests.addAll(List<String>.from(row['interests'] as List? ?? []));
     myPromptLabel = row['prompt_label'] as String? ?? 'My ideal Sunday is';
     myPrompt = row['prompt_answer'] as String? ?? '';
@@ -971,4 +1003,10 @@ class PreviewStore extends ChangeNotifier {
     await backend?.logOut();
     startFreshAccount();
   }
+}
+
+/// 175 → "5′9″ · 175 cm".
+String heightLabel(int cm) {
+  final inches = (cm / 2.54).round();
+  return '${inches ~/ 12}′${inches % 12}″ · $cm cm';
 }

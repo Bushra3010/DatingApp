@@ -28,6 +28,21 @@ class ProfileBackend {
   Future<void> logIn(String email, String password) =>
       client.auth.signInWithPassword(email: email, password: password);
 
+  /// Google sign-in. On the web this leaves the page for Google and comes
+  /// back signed in; Supabase picks the session up when the app reloads.
+  /// Needs the Google provider (client ID + secret) enabled in Supabase.
+  Future<void> continueWithGoogle() => client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: Uri.base.origin);
+
+  /// Sends a one-time code by SMS to [phone] (E.164, e.g. +919876543210).
+  /// Needs the Phone provider and an SMS service set up in Supabase.
+  Future<void> sendPhoneCode(String phone) =>
+      client.auth.signInWithOtp(phone: phone);
+
+  Future<void> verifyPhoneCode(String phone, String code) =>
+      client.auth.verifyOTP(phone: phone, token: code, type: OtpType.sms);
+
   Future<void> logOut() => client.auth.signOut();
 
   Future<Map<String, dynamic>?> loadProfile() =>

@@ -168,7 +168,7 @@ class _Option extends StatelessWidget {
               ]))));
 }
 
-/// First launch: welcome, profile basics, ten questions, then an invitation
+/// First launch: welcome, sign-up, a one-page profile, then an invitation
 /// to the compatibility quiz.
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({super.key, required this.store});
@@ -178,25 +178,19 @@ class OnboardingFlow extends StatefulWidget {
 }
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
-  /// 0 welcome, 1 basics, 2 photo, 3..12 questions, 13 done.
-  int step = 0;
-  static const _firstQuestion = 3;
-  int get _done => _firstQuestion + onboardingQuestions.length;
+  /// 0 welcome, 1 the one-page profile, 2 all set. A member who is already
+  /// signed in (back from Google, or a saved session) starts at the profile.
+  late int step = widget.store.signedIn ? 1 : 0;
 
   void go(int next) => setState(() => step = next);
 
-  /// Sign up starts a blank profile; logging in loads the saved one, and a
-  /// member who already finished onboarding goes straight into the app.
+  /// Sign up or log in; a member who already finished their profile goes
+  /// straight into the app, everyone else fills in the one-page profile.
   Future<void> account({required bool signUp}) async {
     final store = widget.store;
     final result = await showAuthSheet(context, store, signUp: signUp);
     if (result == null || !mounted) return;
-    if (result == AuthResult.signedUp) {
-      store.startFreshAccount();
-      store.saveProfile();
-      // Swap the demo likes and chats for the (empty) real ones.
-      store.loadCommunity().ignore();
-    }
+    if (result == AuthResult.signedUp) store.saveProfile();
     if (!store.onboarded && mounted) go(1);
   }
 
@@ -211,11 +205,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
-    final Widget body;
     if (step == 0) {
-      body = _Welcome(
-          // Already signed in (a saved session that never finished
-          // onboarding): carry on instead of asking for an account again.
+      // The welcome is full-bleed; the rest sit in a phone-width column.
+      return _Welcome(
           onStart: store.backend == null || store.signedIn
               ? () => go(1)
               : () => account(signUp: true),
@@ -223,32 +215,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
               ? null
               : () => account(signUp: false),
           onSkip: store.finishOnboarding);
-    } else if (step == 1) {
-      body = _Basics(store: store, onBack: () => go(0), onDone: () => go(2));
-    } else if (step == 2) {
-      body = _PhotoStep(store: store, onBack: () => go(1), onDone: () => go(3));
-    } else if (step < _done) {
-      final i = step - _firstQuestion;
-      final q = onboardingQuestions[i];
-      body = QuestionStep(
-          key: ValueKey(q.id),
-          question: q,
-          number: i + 1,
-          total: onboardingQuestions.length,
-          initial: store.onboardingAnswers[q.id] ?? const [],
-          onBack: () => go(step - 1),
-          onAnswer: (values) {
-            if (values.isEmpty) {
-              store.onboardingAnswers.remove(q.id);
-            } else {
-              store.onboardingAnswers[q.id] = values;
-            }
-            go(step + 1);
-          });
-    } else {
-      body = _AllSet(
-          store: store, onQuiz: takeQuiz, onLater: store.finishOnboarding);
     }
+    final body = step == 1
+        ? _ProfileSetup(store: store, onBack: () => go(0), onDone: () => go(2))
+        : _AllSet(
+            store: store, onQuiz: takeQuiz, onLater: store.finishOnboarding);
     return Scaffold(
         body: SafeArea(
             child: Center(
@@ -270,6 +241,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 }
 
+/// First screen: a fanned stack of real-looking profile cards over soft
+/// purple and pink light, the promise, and the way in.
 class _Welcome extends StatelessWidget {
   const _Welcome(
       {required this.onStart, required this.onSkip, required this.onLogIn});
@@ -277,77 +250,209 @@ class _Welcome extends StatelessWidget {
 
   /// Null when there's no account backend (tests, offline).
   final VoidCallback? onLogIn;
-  @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.all(28),
-      child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-        const Spacer(),
-        Container(
-            width: 56,
-            height: 56,
-            decoration: const BoxDecoration(
-                gradient: EverlaneColors.premiumGradient,
-                shape: BoxShape.circle),
-            alignment: Alignment.center,
-            child: const Icon(Icons.favorite_rounded,
-                color: Colors.white, size: 28)),
-        const SizedBox(height: 20),
-        ShaderMask(
-            shaderCallback: (bounds) =>
-                EverlaneColors.textGradient.createShader(bounds),
-            // Padding so the script's overhanging last letter still gets
-            // the gradient.
-            child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Text('Everlane',
-                    style: EverlaneFonts.logo(size: 52, color: Colors.white)))),
-        const SizedBox(height: 12),
-        const Eyebrow('Less swiping. More meaningful connections.',
-            color: EverlaneColors.like, textAlign: TextAlign.center),
-        const SizedBox(height: 18),
-        Text(
-            'A few thoughtful questions help us introduce you to people you’ll actually want to talk to. It takes about three minutes, and you can skip anything optional.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: EverlaneColors.muted, height: 1.6)),
-        const Spacer(flex: 2),
-        GradientButton(label: 'Get started', onTap: onStart),
-        if (onLogIn != null) ...[
-          const SizedBox(height: 12),
-          SizedBox(
-              width: double.infinity,
-              child: OutlinedButton(
-                  onPressed: onLogIn,
-                  style: OutlinedButton.styleFrom(
-                      minimumSize: const Size(0, 54),
-                      side: BorderSide(
-                          color: EverlaneColors.deep.withValues(alpha: .7))),
-                  child: const Text('Log in'))),
-        ],
-        const SizedBox(height: 8),
-        Center(
-            child: TextButton(
-                onPressed: onSkip,
-                child: const Text('Skip to the app (preview)'))),
+
+  Widget _card(Person p, double angle, double scale) => Transform.rotate(
+      angle: angle,
+      child: Transform.scale(
+          scale: scale,
+          child: DecoratedBox(
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(
+                      color: Colors.white.withValues(alpha: .14), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: .45),
+                        blurRadius: 30,
+                        offset: const Offset(0, 16))
+                  ]),
+              child: Portrait(p, width: 168, height: 232, radius: 26))));
+
+  Widget _chip(IconData icon, String text, Color color) => Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+          color: EverlaneColors.card.withValues(alpha: .92),
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(color: EverlaneColors.line),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withValues(alpha: .35),
+                blurRadius: 16,
+                offset: const Offset(0, 6))
+          ]),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: 6),
+        Text(text,
+            style: const TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
       ]));
+
+  Widget _trust(IconData icon, String text) => Expanded(
+          child: Column(children: [
+        Icon(icon, size: 20, color: EverlaneColors.lavender),
+        const SizedBox(height: 6),
+        Text(text,
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
+      ]));
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+      body: Stack(children: [
+        // Soft glows behind the cards.
+        Positioned(
+            top: -120,
+            left: -80,
+            child: _glow(EverlaneColors.gradientStart, 360)),
+        Positioned(
+            top: 40, right: -120, child: _glow(EverlaneColors.gradientEnd, 320)),
+        SafeArea(
+            child: Center(
+                child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 480),
+                    child: LayoutBuilder(builder: (context, c) {
+                      final tall = c.maxHeight > 700;
+                      return Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+                          child: Column(children: [
+                            const SizedBox(height: 8),
+                            ShaderMask(
+                                shaderCallback: (b) =>
+                                    EverlaneColors.textGradient.createShader(b),
+                                child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 10),
+                                    child: Text('Everlane',
+                                        style: EverlaneFonts.logo(
+                                            size: 34, color: Colors.white)))),
+                            Expanded(
+                                child: FittedBox(
+                                    child: SizedBox(
+                                        width: 360,
+                                        height: 330,
+                                        child: Stack(
+                                            alignment: Alignment.center,
+                                            clipBehavior: Clip.none,
+                                            children: [
+                                              Positioned(
+                                                  left: 0,
+                                                  top: 40,
+                                                  child: _card(
+                                                      demoPeople[2], -.16, .9)),
+                                              Positioned(
+                                                  right: 0,
+                                                  top: 40,
+                                                  child: _card(
+                                                      demoPeople[1], .16, .9)),
+                                              _card(demoPeople[0], 0, 1),
+                                              Positioned(
+                                                  left: 6,
+                                                  bottom: 18,
+                                                  child: _chip(
+                                                      Icons.verified_rounded,
+                                                      'Verified profiles',
+                                                      const Color(0xFF60A5FA))),
+                                              Positioned(
+                                                  right: 2,
+                                                  top: 10,
+                                                  child: _chip(
+                                                      Icons.favorite_rounded,
+                                                      'It’s a match!',
+                                                      EverlaneColors.like)),
+                                            ])))),
+                            const Eyebrow(
+                                'Less swiping. More meaningful connections.',
+                                color: EverlaneColors.like,
+                                textAlign: TextAlign.center),
+                            const SizedBox(height: 12),
+                            Text('Find someone worth\nstaying for.',
+                                textAlign: TextAlign.center,
+                                style: EverlaneFonts.playfair(
+                                    size: tall ? 32 : 27,
+                                    weight: FontWeight.w600,
+                                    height: 1.15,
+                                    color: EverlaneColors.plum)),
+                            const SizedBox(height: 10),
+                            Text(
+                                'Real profiles, thoughtful matches and conversations that go somewhere.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    color: EverlaneColors.muted, height: 1.5)),
+                            SizedBox(height: tall ? 20 : 14),
+                            Row(children: [
+                              _trust(Icons.verified_user_outlined,
+                                  'Verified\nprofiles'),
+                              _trust(Icons.lock_outline_rounded,
+                                  'Private\nby design'),
+                              _trust(Icons.favorite_border_rounded,
+                                  'Made for\nsomething real'),
+                            ]),
+                            SizedBox(height: tall ? 22 : 14),
+                            GradientButton(
+                                label: 'Get started', onTap: onStart),
+                            if (onLogIn != null) ...[
+                              const SizedBox(height: 10),
+                              SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton(
+                                      onPressed: onLogIn,
+                                      style: OutlinedButton.styleFrom(
+                                          minimumSize: const Size(0, 52),
+                                          side: BorderSide(
+                                              color: EverlaneColors.deep
+                                                  .withValues(alpha: .7))),
+                                      child: const Text(
+                                          'I already have an account'))),
+                            ],
+                            TextButton(
+                                onPressed: onSkip,
+                                child: const Text('Skip to the app (preview)')),
+                          ]));
+                    })))),
+      ]));
+
+  Widget _glow(Color color, double size) => IgnorePointer(
+      child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(colors: [
+                color.withValues(alpha: .35),
+                color.withValues(alpha: 0),
+              ]))));
 }
 
-class _Basics extends StatefulWidget {
-  const _Basics(
+/// Everything sign-up needs, on one page: name, date of birth, gender, who
+/// you'd like to meet, height, languages, what you're looking for and at
+/// least one photo.
+class _ProfileSetup extends StatefulWidget {
+  const _ProfileSetup(
       {required this.store, required this.onBack, required this.onDone});
   final PreviewStore store;
   final VoidCallback onBack, onDone;
   @override
-  State<_Basics> createState() => _BasicsState();
+  State<_ProfileSetup> createState() => _ProfileSetupState();
 }
 
-class _BasicsState extends State<_Basics> {
+class _ProfileSetupState extends State<_ProfileSetup> {
   late final name = TextEditingController(text: widget.store.myName);
   late final city = TextEditingController(text: widget.store.myCity);
   late DateTime? birthday = widget.store.myBirthday;
   late String gender = widget.store.myGender;
   late String interested = widget.store.interestedIn;
+  late double height = (widget.store.myHeightCm ?? 165).toDouble();
+  late final languages = <String>{...widget.store.myLanguages};
+  late String lookingFor = widget.store.myLookingFor;
+  bool picking = false;
+  String? photoError;
+
+  static const _interestedLabels = {
+    'Men': 'Men',
+    'Women': 'Women',
+    'Everyone': 'Something else',
+  };
 
   @override
   void dispose() {
@@ -365,11 +470,15 @@ class _BasicsState extends State<_Basics> {
     return now.year - b.year - (passed ? 0 : 1);
   }
 
-  bool get ready =>
-      name.text.trim().isNotEmpty &&
-      (age ?? 0) >= 18 &&
-      gender.isNotEmpty &&
-      interested.isNotEmpty;
+  /// What's still missing, in the order it appears on the page.
+  List<String> get missing => [
+        if (name.text.trim().isEmpty) 'your name',
+        if ((age ?? 0) < 18) 'your date of birth',
+        if (gender.isEmpty) 'your gender',
+        if (interested.isEmpty) 'who you’d like to meet',
+        if (lookingFor.isEmpty) 'what you’re looking for',
+        if (!widget.store.hasPhoto) 'a photo',
+      ];
 
   Future<void> pickBirthday() async {
     final now = DateTime.now();
@@ -382,185 +491,209 @@ class _BasicsState extends State<_Basics> {
     if (picked != null) setState(() => birthday = picked);
   }
 
+  Future<void> pickPhoto() async {
+    setState(() {
+      picking = true;
+      photoError = null;
+    });
+    try {
+      final bytes = await pickPhotoBytes();
+      if (bytes != null) widget.store.addPhoto(bytes);
+    } catch (_) {
+      photoError = 'Couldn’t open your photos. Try again.';
+    } finally {
+      if (mounted) setState(() => picking = false);
+    }
+  }
+
   void save() {
     final store = widget.store
       ..myName = name.text.trim()
       ..myCity = city.text.trim()
       ..myBirthday = birthday
       ..myGender = gender
-      ..interestedIn = interested;
+      ..interestedIn = interested
+      ..myHeightCm = height.round()
+      ..myLookingFor = lookingFor;
+    store.myLanguages
+      ..clear()
+      ..addAll(languages);
     store.update();
     store.saveProfile();
     widget.onDone();
   }
 
-  Widget chips(List<String> options, String value, ValueChanged<String> pick) =>
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final o in options)
-          ChoiceChip(
-              label: Text(o),
-              selected: value == o,
-              showCheckmark: false,
-              selectedColor: EverlaneColors.like,
-              backgroundColor: EverlaneColors.card,
-              side: BorderSide(
-                  color:
-                      value == o ? EverlaneColors.like : EverlaneColors.line),
-              labelStyle: TextStyle(
-                  color: value == o ? Colors.white : EverlaneColors.plum),
-              onSelected: (_) => setState(() => pick(o))),
-      ]);
+  Widget heading(String text, {String? hint}) => Padding(
+      padding: const EdgeInsets.only(top: 26, bottom: 10),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+        Expanded(
+            child: Text(text,
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700))),
+        if (hint != null)
+          Text(hint,
+              style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+      ]));
 
-  Widget why(String text) => Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Text(text,
-          style: TextStyle(fontSize: 12, color: EverlaneColors.muted)));
-
-  @override
-  Widget build(BuildContext context) {
-    final a = age;
-    final b = birthday;
-    return ListView(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-        children: [
-          Align(
-              alignment: Alignment.centerLeft,
-              child: IconButton(
-                  tooltip: 'Back',
-                  onPressed: widget.onBack,
-                  icon: const Icon(Icons.arrow_back_rounded))),
-          Text('The basics', style: Theme.of(context).textTheme.headlineLarge),
-          const SizedBox(height: 8),
-          Text('Just enough to set up your profile.',
-              style: TextStyle(color: EverlaneColors.muted)),
-          const SizedBox(height: 24),
-          TextField(
-              controller: name,
-              maxLength: 40,
-              onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(labelText: 'First name')),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-              onPressed: pickBirthday,
-              icon: const Icon(Icons.cake_outlined),
-              style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 54),
-                  alignment: Alignment.centerLeft,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16))),
-              label: Text(b == null
-                  ? 'Date of birth'
-                  : '${b.day}/${b.month}/${b.year} · $a years old')),
-          if (a != null && a < 18)
-            Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text('Everlane is for adults aged 18 and over.',
-                    style: TextStyle(fontSize: 12, color: EverlaneColors.like)))
-          else
-            why('Everlane is for adults. Only your age is shown, never your birthday.'),
-          const SizedBox(height: 22),
-          const Text('I am a', style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          chips(['Woman', 'Man', 'Non-binary'], gender, (v) => gender = v),
-          const SizedBox(height: 22),
-          const Text('Interested in',
-              style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          chips(
-              ['Women', 'Men', 'Everyone'], interested, (v) => interested = v),
-          why('Used only to decide who you see and who sees you.'),
-          const SizedBox(height: 22),
-          TextField(
-              controller: city,
-              decoration: const InputDecoration(labelText: 'City or area')),
-          why('We use your approximate area only. Others see “Nearby”, never your exact location.'),
-          const SizedBox(height: 28),
-          FilledButton(
-              onPressed: ready ? save : null,
-              style:
-                  FilledButton.styleFrom(backgroundColor: EverlaneColors.like),
-              child: const Text('Continue')),
-        ]);
-  }
-}
-
-/// At least one photo is required before moving on, same as a real dating
-/// app's sign-up. More can be added later from Edit profile.
-class _PhotoStep extends StatefulWidget {
-  const _PhotoStep(
-      {required this.store, required this.onBack, required this.onDone});
-  final PreviewStore store;
-  final VoidCallback onBack, onDone;
-  @override
-  State<_PhotoStep> createState() => _PhotoStepState();
-}
-
-class _PhotoStepState extends State<_PhotoStep> {
-  bool picking = false;
-  String? error;
-
-  Future<void> pick() async {
-    setState(() {
-      picking = true;
-      error = null;
-    });
-    try {
-      final bytes = await pickPhotoBytes();
-      if (bytes != null) widget.store.addPhoto(bytes);
-    } catch (_) {
-      error = 'Couldn’t open your photos. Try again.';
-    } finally {
-      if (mounted) setState(() => picking = false);
-    }
-  }
+  Widget choice(String label, bool selected, VoidCallback onTap) => ChoiceChip(
+      label: Text(label),
+      selected: selected,
+      showCheckmark: false,
+      selectedColor: EverlaneColors.deep,
+      backgroundColor: EverlaneColors.card,
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+      side: BorderSide(
+          color: selected ? EverlaneColors.deep : EverlaneColors.line),
+      labelStyle: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: selected ? Colors.white : EverlaneColors.plum),
+      onSelected: (_) => setState(onTap));
 
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
-    return ListView(
-        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
-        children: [
-          Align(
+    final a = age;
+    final b = birthday;
+    final todo = missing;
+    const required = 6;
+    return ListView(padding: const EdgeInsets.fromLTRB(24, 0, 24, 32), children: [
+      Align(
+          alignment: Alignment.centerLeft,
+          child: IconButton(
+              tooltip: 'Back',
+              onPressed: widget.onBack,
+              icon: const Icon(Icons.arrow_back_rounded))),
+      Text('Create your profile',
+          style: Theme.of(context).textTheme.headlineLarge),
+      const SizedBox(height: 8),
+      Text('Just the essentials — it takes about a minute.',
+          style: TextStyle(color: EverlaneColors.muted)),
+      const SizedBox(height: 14),
+      ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: TweenAnimationBuilder<double>(
+              tween: Tween(end: (required - todo.length) / required),
+              duration: const Duration(milliseconds: 300),
+              builder: (context, v, _) => LinearProgressIndicator(
+                  value: v,
+                  minHeight: 5,
+                  color: EverlaneColors.like,
+                  backgroundColor: EverlaneColors.line))),
+      heading('What’s your name?'),
+      TextField(
+          controller: name,
+          maxLength: 40,
+          textCapitalization: TextCapitalization.words,
+          onChanged: (_) => setState(() {}),
+          decoration: const InputDecoration(
+              labelText: 'First name', counterText: '')),
+      heading('Your date of birth'),
+      OutlinedButton.icon(
+          onPressed: pickBirthday,
+          icon: const Icon(Icons.cake_outlined),
+          style: OutlinedButton.styleFrom(
+              minimumSize: const Size(double.infinity, 54),
               alignment: Alignment.centerLeft,
-              child: IconButton(
-                  tooltip: 'Previous question',
-                  onPressed: widget.onBack,
-                  icon: const Icon(Icons.arrow_back_rounded))),
-          Text('Add your photos',
-              style: Theme.of(context).textTheme.headlineLarge),
-          const SizedBox(height: 8),
-          Text(
-              'At least one real photo helps people recognise you. Add more anytime from your profile.',
-              style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
-          const SizedBox(height: 22),
-          Wrap(spacing: 12, runSpacing: 12, children: [
-            for (var i = 0; i < store.myPhotos.length; i++)
-              PhotoTile(
-                  bytes: store.myPhotos[i],
-                  isMain: i == 0,
-                  onSetMain: store.myPhotos.length > 1 && i != 0
-                      ? () => setState(() => store.setMainPhoto(i))
-                      : null,
-                  onRemove: () => setState(() => store.removePhoto(i))),
-            if (store.canAddPhoto) AddPhotoTile(busy: picking, onTap: pick),
-          ]),
-          if (error != null) ...[
-            const SizedBox(height: 12),
-            Text(error!, style: TextStyle(color: EverlaneColors.like)),
-          ],
-          const SizedBox(height: 28),
-          FilledButton(
-              onPressed: store.hasPhoto ? widget.onDone : null,
-              style: FilledButton.styleFrom(backgroundColor: EverlaneColors.like),
-              child: const Text('Continue')),
-          const SizedBox(height: 8),
-          Center(
-              child: Text(
-                  store.hasPhoto
-                      ? '${store.myPhotos.length} photo${store.myPhotos.length == 1 ? '' : 's'} added'
-                      : 'Add at least one photo to continue',
-                  style: TextStyle(fontSize: 12, color: EverlaneColors.muted))),
-        ]);
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16))),
+          label: Text(b == null
+              ? 'Date of birth'
+              : '${b.day}/${b.month}/${b.year} · $a years old')),
+      Padding(
+          padding: const EdgeInsets.only(top: 6),
+          child: Text(
+              a != null && a < 18
+                  ? 'Everlane is for adults aged 18 and over.'
+                  : 'Only your age is shown, never your birthday.',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: a != null && a < 18
+                      ? EverlaneColors.like
+                      : EverlaneColors.muted))),
+      heading('Your gender'),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final g in ['Woman', 'Man', 'Non-binary'])
+          choice(g, gender == g, () => gender = g),
+      ]),
+      heading('Looking for'),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final MapEntry(key: value, value: label)
+            in _interestedLabels.entries)
+          choice(label, interested == value, () => interested = value),
+      ]),
+      heading('What’s your height?', hint: heightLabel(height.round())),
+      SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+              activeTrackColor: EverlaneColors.deep,
+              thumbColor: Colors.white,
+              inactiveTrackColor: EverlaneColors.line),
+          child: Slider(
+              value: height,
+              min: 140,
+              max: 210,
+              divisions: 70,
+              label: heightLabel(height.round()),
+              onChanged: (v) => setState(() => height = v))),
+      heading('Languages you speak', hint: 'Optional'),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final l in PreviewStore.languageOptions)
+          FilterChip(
+              label: Text(l),
+              selected: languages.contains(l),
+              showCheckmark: false,
+              selectedColor: EverlaneColors.deep,
+              backgroundColor: EverlaneColors.card,
+              side: BorderSide(
+                  color: languages.contains(l)
+                      ? EverlaneColors.deep
+                      : EverlaneColors.line),
+              labelStyle: TextStyle(
+                  color: languages.contains(l)
+                      ? Colors.white
+                      : EverlaneColors.plum),
+              onSelected: (on) =>
+                  setState(() => on ? languages.add(l) : languages.remove(l))),
+      ]),
+      heading('What are you looking for?'),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final o in PreviewStore.lookingForOptions)
+          choice(o, lookingFor == o, () => lookingFor = o),
+      ]),
+      heading('Where are you based?', hint: 'Optional'),
+      TextField(
+          controller: city,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(
+              labelText: 'City or area',
+              prefixIcon: Icon(Icons.location_on_outlined))),
+      heading('Add your photos',
+          hint: '${store.myPhotos.length}/${PreviewStore.maxPhotos} · at least 1'),
+      Wrap(spacing: 12, runSpacing: 12, children: [
+        for (var i = 0; i < store.myPhotos.length; i++)
+          PhotoTile(
+              bytes: store.myPhotos[i],
+              isMain: i == 0,
+              onSetMain: store.myPhotos.length > 1 && i != 0
+                  ? () => setState(() => store.setMainPhoto(i))
+                  : null,
+              onRemove: () => setState(() => store.removePhoto(i))),
+        if (store.canAddPhoto) AddPhotoTile(busy: picking, onTap: pickPhoto),
+      ]),
+      if (photoError != null)
+        Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: Text(photoError!,
+                style: const TextStyle(color: EverlaneColors.like))),
+      const SizedBox(height: 30),
+      GradientButton(label: 'Continue', onTap: todo.isEmpty ? save : null),
+      const SizedBox(height: 10),
+      Text(
+          todo.isEmpty
+              ? 'Looking good — you can add a bio and interests later.'
+              : 'Add ${todo.join(', ')} to continue.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+    ]);
   }
 }
 
@@ -592,14 +725,14 @@ class _AllSet extends StatelessWidget {
         Text('Your profile so far:',
             style: TextStyle(color: EverlaneColors.muted)),
         const SizedBox(height: 18),
-        item(true, 'First name and date of birth'),
-        item(true, 'Gender and who you’re interested in'),
-        item(store.myCity.isNotEmpty, 'Approximate area'),
-        item(store.hasPhoto, 'At least one photo'),
-        item(store.onboardingAnswers.isNotEmpty,
-            'Dating intentions and preferences'),
+        item(true, 'Name and date of birth'),
+        item(true, 'Gender and who you’d like to meet'),
+        item(store.myHeightCm != null, 'Height'),
+        item(store.myLanguages.isNotEmpty, 'Languages · optional'),
+        item(true, 'Looking for: ${store.myLookingFor}'),
+        item(store.hasPhoto,
+            '${store.myPhotos.length} photo${store.myPhotos.length == 1 ? '' : 's'}'),
         item(false, 'A bio and your interests · add from your profile'),
-        item(false, 'Voice introduction · optional'),
         const SizedBox(height: 24),
         Container(
             padding: const EdgeInsets.all(20),
