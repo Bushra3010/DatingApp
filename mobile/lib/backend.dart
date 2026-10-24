@@ -73,6 +73,20 @@ class ProfileBackend {
   String photoUrl(String path) =>
       client.storage.from(_bucket).getPublicUrl(path);
 
+  // ---- Admin-managed content (readable without signing in) ----
+
+  Future<List<Map<String, dynamic>>> quizQuestions() async => _rows(await client
+      .from('quiz_questions')
+      .select()
+      .eq('active', true)
+      .order('position'));
+
+  Future<List<Map<String, dynamic>>> appOptions() async => _rows(await client
+      .from('app_options')
+      .select('kind, value')
+      .eq('active', true)
+      .order('position'));
+
   // ---- Discovery, likes, matches and chat ----
 
   Future<List<Map<String, dynamic>>> discover() async =>

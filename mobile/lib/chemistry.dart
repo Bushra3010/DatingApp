@@ -181,8 +181,8 @@ class Chemistry {
     final byDimension = <Dimension, List<double>>{};
     final shared = <(String, String)>[];
     final differences = <String>[];
-    for (final q in compatibilityQuestions) {
-      if (q.id == 'q24') continue;
+    for (final q in quizQuestions) {
+      if (q.id == 'q24' || q.dimension == null) continue;
       final a = mine[q.id], b = theirs[q.id];
       if (a == null || a.isEmpty || b == null || b.isEmpty) continue;
       final both = a.toSet().intersection(b.toSet());
@@ -214,10 +214,13 @@ class Chemistry {
     }
 
     // Most heavily weighted dimensions first.
-    int rank(String topic) => compatibilityQuestions
-        .firstWhere((q) => q.topic == topic)
-        .dimension!
-        .weight;
+    int rank(String topic) =>
+        quizQuestions
+            .where((q) => q.topic == topic)
+            .firstOrNull
+            ?.dimension
+            ?.weight ??
+        0;
     shared.sort((x, y) => rank(y.$1).compareTo(rank(x.$1)));
     differences.sort((x, y) => rank(y).compareTo(rank(x)));
 

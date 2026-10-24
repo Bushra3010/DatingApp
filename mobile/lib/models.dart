@@ -2,7 +2,8 @@ import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthException, RealtimeChannel;
 import 'backend.dart';
 import 'chemistry.dart';
 import 'question_bank.dart';
@@ -541,7 +542,7 @@ class PreviewStore extends ChangeNotifier {
   /// Height in cm, and languages spoken (optional), from sign-up.
   int? myHeightCm;
   final Set<String> myLanguages = {};
-  static const languageOptions = [
+  static List<String> languageOptions = [
     'English',
     'Hindi',
     'Kannada',
@@ -556,7 +557,13 @@ class PreviewStore extends ChangeNotifier {
   ];
 
   final Set<String> myInterests = {};
-  static const interestOptions = [
+  static List<String> promptOptions = [
+    'My ideal Sunday is',
+    'I’m happiest when',
+    'Ask me about',
+  ];
+
+  static List<String> interestOptions = [
     'Travel',
     'Coffee',
     'Music',
@@ -958,12 +965,45 @@ class PreviewStore extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Pulls the admin-managed quiz and option lists. Keeps the built-in ones
+  /// if Supabase is unreachable or a list comes back empty.
+  Future<void> loadContent() async {
+    final b = backend;
+    if (b == null) return;
+    try {
+      final rows = await b.quizQuestions();
+      final questions = [
+        for (final r in rows)
+          if ((r['options'] as List? ?? const []).isNotEmpty)
+            questionFromRow(r)
+      ];
+      if (questions.isNotEmpty) quizQuestions = questions;
+      final options = await b.appOptions();
+      List<String> of(String kind) => [
+            for (final o in options)
+              if (o['kind'] == kind) o['value'] as String
+          ];
+      if (of('interest').isNotEmpty) interestOptions = of('interest');
+      if (of('language').isNotEmpty) languageOptions = of('language');
+      if (of('prompt').isNotEmpty) promptOptions = of('prompt');
+      notifyListeners();
+    } catch (_) {
+      // Built-in content is a fine fallback.
+    }
+  }
+
   /// Loads the signed-in member's profile and photos. Returns whether they
   /// have finished onboarding before (so they can skip straight in).
   Future<bool> loadProfile() async {
     final b = backend;
     if (b == null || !b.signedIn) return false;
     final row = await b.loadProfile();
+    if (row?['blocked'] == true) {
+      await b.logOut();
+      startFreshAccount();
+      throw const AuthException(
+          'This account has been blocked. Contact support if you think this is a mistake.');
+    }
     startFreshAccount();
     await _loadCommunitySafely();
     if (row == null) return false;

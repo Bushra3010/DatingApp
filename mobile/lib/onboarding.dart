@@ -773,9 +773,9 @@ class _CompatibilityQuizScreenState extends State<CompatibilityQuizScreen> {
   late int index = _firstUnanswered();
 
   int _firstUnanswered() {
-    final i = compatibilityQuestions
+    final i = quizQuestions
         .indexWhere((q) => !widget.store.quizAnswers.containsKey(q.id));
-    return i < 0 ? compatibilityQuestions.length : i;
+    return i < 0 ? quizQuestions.length : i;
   }
 
   Future<void> deleteAnswers() async {
@@ -801,7 +801,7 @@ class _CompatibilityQuizScreenState extends State<CompatibilityQuizScreen> {
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
-    final total = compatibilityQuestions.length;
+    final total = quizQuestions.length;
     return Scaffold(
         appBar: AppBar(
             title: const Text('Compatibility quiz',
@@ -812,18 +812,18 @@ class _CompatibilityQuizScreenState extends State<CompatibilityQuizScreen> {
                 child: index >= total
                     ? _summary(context, store, total)
                     : QuestionStep(
-                        key: ValueKey(compatibilityQuestions[index].id),
-                        question: compatibilityQuestions[index],
+                        key: ValueKey(quizQuestions[index].id),
+                        question: quizQuestions[index],
                         number: index + 1,
                         total: total,
                         initial: store.quizAnswers[
-                                compatibilityQuestions[index].id] ??
+                                quizQuestions[index].id] ??
                             const [],
                         onBack:
                             index == 0 ? null : () => setState(() => index--),
                         onAnswer: (values) {
                           store.answerQuiz(
-                              compatibilityQuestions[index].id, values);
+                              quizQuestions[index].id, values);
                           setState(() => index++);
                         }))));
   }
@@ -888,7 +888,7 @@ class QuizCard extends StatelessWidget {
   final PreviewStore store;
   @override
   Widget build(BuildContext context) {
-    final total = compatibilityQuestions.length;
+    final total = quizQuestions.length;
     return Material(
         color: EverlaneColors.card,
         borderRadius: BorderRadius.circular(20),
