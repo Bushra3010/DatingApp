@@ -2126,12 +2126,6 @@ class _EditProfileFormState extends State<_EditProfileForm> {
   bool picking = false;
   final key = GlobalKey<FormState>();
 
-  static const promptOptions = [
-    'My ideal Sunday is',
-    'I’m happiest when',
-    'Ask me about',
-  ];
-
   @override
   void dispose() {
     name.dispose();
@@ -2316,7 +2310,9 @@ class _EditProfileFormState extends State<_EditProfileForm> {
               isExpanded: true,
               decoration: const InputDecoration(),
               items: [
-                for (final option in promptOptions)
+                // The member's current prompt stays selectable even if an
+                // admin has since retired it.
+                for (final option in {...PreviewStore.promptOptions, promptLabel})
                   DropdownMenuItem(value: option, child: Text(option)),
               ],
               onChanged: (v) => setState(() => promptLabel = v ?? promptLabel)),

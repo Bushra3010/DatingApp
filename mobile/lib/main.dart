@@ -45,6 +45,7 @@ class _EverlaneAppState extends State<EverlaneApp> {
     store.onboarded = widget.onboarded;
     EverlaneColors.dark = store.darkMode;
     store.addListener(syncTheme);
+    store.loadContent();
     // A returning member with a saved session goes straight to their profile.
     if (store.signedIn) {
       store.restoring = true;

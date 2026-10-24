@@ -139,6 +139,27 @@ const _d = 'Lifestyle and daily habits';
 const _e = 'Interests and dating style';
 const _f = 'Boundaries and relationship expectations';
 
+/// The quiz the app actually asks: the built-in set below, replaced by the
+/// admin-managed questions from Supabase when they load.
+List<Question> quizQuestions = [...compatibilityQuestions];
+
+/// Builds a question from a Supabase `quiz_questions` row.
+Question questionFromRow(Map<String, dynamic> r) => Question(
+    r['id'] as String,
+    r['topic'] as String? ?? '',
+    r['prompt'] as String,
+    [
+      for (final o in r['options'] as List? ?? const [])
+        ((o as Map)['value'] as String, o['label'] as String)
+    ],
+    section: r['section'] as String? ?? '',
+    dimension: Dimension.values
+        .where((d) => d.name == r['dimension'])
+        .firstOrNull,
+    maxChoices: (r['max_choices'] as num?)?.toInt() ?? 1,
+    optional: r['optional'] as bool? ?? true,
+    exclusive: {...List<String>.from(r['exclusive'] as List? ?? const [])});
+
 const compatibilityQuestions = [
   Question(
       'q01',

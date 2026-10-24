@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Everlane Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Caveat:wght@700&family=Poppins:wght@600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --bg: #0D0B12; --card: #191621; --card2: #211D2B; --line: #2A2436;
+    --text: #FFFFFF; --body: #E4E4E7; --muted: #A1A1AA; --purple: #7C3AED;
+    --pink: #F472B6; --lavender: #C4B5FD; --green: #2F9E75; --red: #F87171;
+    --grad: linear-gradient(135deg, #7C3AED, #EC4899);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--body);
+         font: 14px/1.5 Inter, system-ui, sans-serif; }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .logo { font-family: Caveat, cursive; font-size: 34px; line-height: 1;
+          background: linear-gradient(135deg, #A78BFA, #F472B6);
+          -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h1, h2, h3 { font-family: Poppins, Inter, sans-serif; color: var(--text); margin: 0; font-weight: 600; }
+  .muted { color: var(--muted); }
+  .hidden { display: none !important; }
+  .btn { border: 1px solid var(--line); background: var(--card2); border-radius: 12px;
+         padding: 9px 14px; cursor: pointer; font-weight: 600; white-space: nowrap; }
+  .btn:hover { border-color: var(--purple); }
+  .btn.primary { background: var(--grad); border: 0; color: #fff; box-shadow: 0 8px 22px rgba(124,58,237,.35); }
+  .btn.danger { color: var(--red); }
+  .btn.small { padding: 5px 10px; font-size: 12px; border-radius: 9px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  input[type=text], input[type=email], input[type=password], input[type=number], select, textarea {
+    width: 100%; background: var(--card2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 10px 12px; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: var(--purple); }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+
+  /* Login */
+  #login { min-height: 100vh; display: grid; place-items: center; padding: 20px;
+           background: radial-gradient(600px 400px at 20% 0%, rgba(124,58,237,.25), transparent),
+                       radial-gradient(500px 400px at 100% 20%, rgba(236,72,153,.18), transparent); }
+  .login-card { width: min(400px, 100%); background: var(--card); border: 1px solid var(--line);
+                border-radius: 24px; padding: 32px; }
+  .err { color: var(--red); font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+  /* Shell */
+  #app { display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
+  nav { border-right: 1px solid var(--line); padding: 24px 16px; display: flex; flex-direction: column; gap: 6px;
+        position: sticky; top: 0; height: 100vh; }
+  nav .tab { text-align: left; background: none; border: 0; padding: 10px 12px; border-radius: 12px;
+             cursor: pointer; color: var(--muted); font-weight: 600; }
+  nav .tab.active { background: rgba(124,58,237,.18); color: var(--lavender); }
+  nav .who { margin-top: auto; font-size: 12px; color: var(--muted); word-break: break-all; }
+  main { padding: 28px 32px; min-width: 0; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  .stat b { display: block; font-size: 28px; color: var(--text); font-family: Poppins, Inter; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .toolbar input { max-width: 320px; } .toolbar select { max-width: 190px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--card); }
+  tbody tr { cursor: pointer; } tbody tr:hover { background: rgba(124,58,237,.07); }
+  .scroll { overflow: auto; max-height: calc(100vh - 220px); border-radius: 18px; }
+  .pill { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .pill.ok { background: rgba(47,158,117,.18); color: #5DD3A6; }
+  .pill.warn { background: rgba(242,169,59,.16); color: #F2A93B; }
+  .pill.bad { background: rgba(248,113,113,.16); color: var(--red); }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--card2);
+            display: inline-grid; place-items: center; color: var(--pink); font-weight: 700; vertical-align: middle; }
+
+  /* Drawer & modal */
+  .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 10; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); background: var(--card);
+            border-left: 1px solid var(--line); z-index: 11; overflow: auto; padding: 24px; }
+  .modal { position: fixed; inset: 0; display: grid; place-items: center; z-index: 11; padding: 16px; }
+  .modal .box { width: min(680px, 100%); max-height: 92vh; overflow: auto; background: var(--card);
+                border: 1px solid var(--line); border-radius: 22px; padding: 24px; }
+  .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+  .photos img { width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 12px; }
+  dl { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; margin: 0; }
+  dt { color: var(--muted); } dd { margin: 0; color: var(--body); word-break: break-word; }
+
+  .q { padding: 16px 18px; border-bottom: 1px solid var(--line); display: flex; gap: 14px; align-items: flex-start; }
+  .q:last-child { border-bottom: 0; }
+  .q .n { color: var(--muted); font-weight: 700; width: 28px; flex: none; }
+  .q .body { flex: 1; min-width: 0; }
+  .q .prompt { color: var(--text); font-weight: 600; }
+  .q .opts { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .q .opts span { background: var(--card2); border: 1px solid var(--line); border-radius: 20px; padding: 2px 10px; font-size: 12px; }
+  .q .actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .opt-row { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .opt-row .chk { font-size: 12px; color: var(--muted); display: flex; gap: 5px; align-items: center; white-space: nowrap; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 18px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--line);
+          border-radius: 20px; padding: 6px 8px 6px 14px; }
+  .chip.off { opacity: .45; }
+  .chip button { background: none; border: 0; cursor: pointer; color: var(--muted); padding: 2px 4px; }
+  .chip button:hover { color: var(--text); }
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--card2);
+           border: 1px solid var(--purple); padding: 10px 18px; border-radius: 12px; z-index: 20; }
+  @media (max-width: 800px) {
+    #app { grid-template-columns: 1fr; }
+    nav { position: static; height: auto; flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); }
+    nav .who { margin-top: 0; width: 100%; }
+    main { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<section id="login" class="hidden">
+  <form class="login-card" id="loginForm">
+    <div class="logo">Everlane</div>
+    <h2 style="margin-top:14px">Admin sign in</h2>
+    <p class="muted" style="margin:6px 0 4px">For Everlane team members only.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <div class="err" id="loginErr"></div>
+    <button class="btn primary" style="width:100%;margin-top:8px" id="loginBtn">Sign in</button>
+  </form>
+</section>
+
+<section id="app" class="hidden">
+  <nav>
+    <div class="logo" style="padding:4px 12px 2px">Everlane</div>
+    <div class="muted" style="padding:0 12px 14px;font-size:12px">Admin</div>
+    <button class="tab active" data-view="overview">Overview</button>
+    <button class="tab" data-view="leads">Leads &amp; members</button>
+    <button class="tab" data-view="questions">Questions</button>
+    <button class="tab" data-view="options">Options</button>
+    <div class="who"><span id="who"></span><br><button class="btn small" id="logout" style="margin-top:8px">Sign out</button></div>
+  </nav>
+  <main>
+    <div id="view-overview">
+      <div class="head"><h1>Overview</h1><button class="btn" data-refresh>Refresh</button></div>
+      <div class="stats" id="stats"></div>
+    </div>
+
+    <div id="view-leads" class="hidden">
+      <div class="head"><h1>Leads &amp; members</h1>
+        <div style="display:flex;gap:8px"><button class="btn" id="exportCsv">Export CSV</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="toolbar">
+        <input type="text" id="search" placeholder="Search name, email, phone, city…">
+        <select id="filter">
+          <option value="all">Everyone</option>
+          <option value="onboarded">Finished profile</option>
+          <option value="incomplete">Didn’t finish sign-up</option>
+          <option value="blocked">Blocked</option>
+        </select>
+      </div>
+      <div class="card scroll"><table>
+        <thead><tr><th></th><th>Name</th><th>Contact</th><th>Age</th><th>Gender → wants</th><th>City</th><th>Looking for</th><th>Joined</th><th>Status</th></tr></thead>
+        <tbody id="members"></tbody>
+      </table></div>
+      <p class="muted" id="memberCount" style="margin-top:10px"></p>
+    </div>
+
+    <div id="view-questions" class="hidden">
+      <div class="head"><div><h1>Compatibility quiz</h1>
+        <p class="muted" style="margin:4px 0 0">Changes show in the app the next time it opens. Keep answer values stable — saved answers use them.</p></div>
+        <button class="btn primary" id="addQuestion">Add question</button></div>
+      <div class="card" id="questions"></div>
+    </div>
+
+    <div id="view-options" class="hidden">
+      <div class="head"><div><h1>Options</h1>
+        <p class="muted" style="margin:4px 0 0">The lists members pick from in the app.</p></div></div>
+      <div id="optionGroups"></div>
+    </div>
+  </main>
+</section>
+
+<div id="overlay"></div>
+
+<script>
+const SUPABASE_URL = 'https://jajpjzdwddbffujitata.supabase.co';
+// Publishable key: safe in a browser; every table and function is guarded by
+// row-level security and the is_admin() check.
+const SUPABASE_KEY = 'sb_publishable_ZYNbsqMGSyZKPog0r3uskw_V50UgbPS';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const $ = (s, el = document) => el.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const toast = msg => { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.append(t); setTimeout(() => t.remove(), 2600); };
+const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '—';
+const photoUrl = p => sb.storage.from('photos').getPublicUrl(p).data.publicUrl;
+const DIMENSIONS = {intentions:'Relationship intentions', valuesBoundaries:'Values and boundaries',
+  communication:'Communication', lifestyle:'Lifestyle', personality:'Personality', interests:'Interests'};
+
+let members = [], questions = [], options = [];
+
+// ---------- Auth ----------
+async function start() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) return showLogin();
+  const { data: admin, error } = await sb.rpc('is_admin');
+  if (error || !admin) {
+    await sb.auth.signOut();
+    return showLogin('This account doesn’t have admin access.');
+  }
+  $('#who').textContent = session.user.email || session.user.phone || '';
+  $('#login').classList.add('hidden');
+  $('#app').classList.remove('hidden');
+  show('overview');
+}
+function showLogin(msg = '') {
+  $('#app').classList.add('hidden');
+  $('#login').classList.remove('hidden');
+  $('#loginErr').textContent = msg;
+}
+$('#loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('#loginBtn').disabled = true; $('#loginErr').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email: $('#email').value.trim(), password: $('#password').value });
+  $('#loginBtn').disabled = false;
+  if (error) return $('#loginErr').textContent = error.message;
+  start();
+});
+$('#logout').onclick = async () => { await sb.auth.signOut(); showLogin(); };
+
+// ---------- Navigation ----------
+let current = 'overview';
+document.querySelectorAll('nav .tab').forEach(b => b.onclick = () => show(b.dataset.view));
+document.querySelectorAll('[data-refresh]').forEach(b => b.onclick = () => show(current));
+function show(view) {
+  current = view;
+  document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  for (const v of ['overview', 'leads', 'questions', 'options']) $('#view-' + v).classList.toggle('hidden', v !== view);
+  ({ overview: loadStats, leads: loadMembers, questions: loadQuestions, options: loadOptions })[view]();
+}
+function fail(error) { console.error(error); toast(error.message || 'Something went wrong'); }
+
+// ---------- Overview ----------
+async function loadStats() {
+  const { data, error } = await sb.rpc('admin_stats');
+  if (error) return fail(error);
+  const items = [['Accounts', data.accounts], ['Finished profiles', data.onboarded],
+    ['Sign-ups today', data.signups_today], ['Sign-ups (7 days)', data.signups_7d],
+    ['Likes', data.likes], ['Matches', data.matches], ['Messages', data.messages], ['Blocked', data.blocked]];
+  $('#stats').innerHTML = items.map(([k, v]) => `<div class="stat"><span class="muted">${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+}
+
+// ---------- Leads ----------
+async function loadMembers() {
+  const { data, error } = await sb.rpc('admin_members');
+  if (error) return fail(error);
+  members = data; renderMembers();
+}
+function filtered() {
+  const q = $('#search').value.trim().toLowerCase(), f = $('#filter').value;
+  return members.filter(m => {
+    if (f === 'onboarded' && !m.onboarded) return false;
+    if (f === 'incomplete' && m.onboarded) return false;
+    if (f === 'blocked' && !m.blocked) return false;
+    if (!q) return true;
+    return [m.name, m.email, m.phone, m.city].some(v => (v || '').toLowerCase().includes(q));
+  });
+}
+function renderMembers() {
+  const rows = filtered();
+  $('#members').innerHTML = rows.map(m => `
+    <tr data-id="${esc(m.id)}">
+      <td>${m.photos?.length ? `<img class="avatar" src="${esc(photoUrl(m.photos[0]))}" alt="">` : `<span class="avatar">${esc((m.name || '?')[0])}</span>`}</td>
+      <td><b style="color:var(--text)">${esc(m.name || '—')}</b></td>
+      <td>${esc(m.email || m.phone || '—')}</td>
+      <td>${m.age || '—'}</td>
+      <td>${esc(m.gender || '—')} → ${esc(m.interested_in || '—')}</td>
+      <td>${esc(m.city || '—')}</td>
+      <td>${esc(m.looking_for || '—')}</td>
+      <td>${fmtDate(m.joined_at)}</td>
+      <td>${m.blocked ? '<span class="pill bad">Blocked</span>' : m.onboarded ? '<span class="pill ok">Active</span>' : '<span class="pill warn">Incomplete</span>'}</td>
+    </tr>`).join('') || `<tr><td colspan="9" class="muted">No members yet.</td></tr>`;
+  $('#memberCount').textContent = `${rows.length} of ${members.length} shown`;
+  document.querySelectorAll('#members tr[data-id]').forEach(tr => tr.onclick = () => openMember(tr.dataset.id));
+}
+$('#search').oninput = renderMembers; $('#filter').onchange = renderMembers;
+
+function openMember(id) {
+  const m = members.find(x => x.id === id); if (!m) return;
+  const ov = $('#overlay');
+  ov.innerHTML = `<div class="backdrop"></div><aside class="drawer">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2>${esc(m.name || 'Unnamed')}${m.age ? ', ' + m.age : ''}</h2><button class="btn small" data-close>Close</button></div>
+    <p class="muted" style="margin:4px 0 0">${m.blocked ? '<span class="pill bad">Blocked</span> ' + esc(m.blocked_reason) : m.onboarded ? '<span class="pill ok">Active</span>' : '<span class="pill warn">Didn’t finish sign-up</span>'}</p>
+    <div class="photos">${(m.photos || []).map(p => `<img src="${esc(photoUrl(p))}" alt="">`).join('') || '<span class="muted">No photos</span>'}</div>
+    <dl>
+      <dt>Email</dt><dd>${esc(m.email || '—')}</dd>
+      <dt>Phone</dt><dd>${esc(m.phone || '—')}</dd>
+      <dt>Signed up with</dt><dd>${esc(m.provider || '—')}</dd>
+      <dt>Joined</dt><dd>${fmtDate(m.joined_at)}</dd>
+      <dt>Last sign-in</dt><dd>${fmtDate(m.last_sign_in_at)}</dd>
+      <dt>Gender</dt><dd>${esc(m.gender || '—')}</dd>
+      <dt>Wants to meet</dt><dd>${esc(m.interested_in || '—')}</dd>
+      <dt>Looking for</dt><dd>${esc(m.looking_for || '—')}</dd>
+      <dt>Height</dt><dd>${m.height_cm ? esc(m.height_cm) + ' cm' : '—'}</dd>
+      <dt>Languages</dt><dd>${esc((m.languages || []).join(', ') || '—')}</dd>
+      <dt>City</dt><dd>${esc(m.city || '—')}</dd>
+      <dt>Job</dt><dd>${esc(m.job || '—')}</dd>
+      <dt>Interests</dt><dd>${esc((m.interests || []).join(', ') || '—')}</dd>
+      <dt>Bio</dt><dd>${esc(m.bio || '—')}</dd>
+      <dt>Likes sent / got</dt><dd>${m.likes_sent} / ${m.likes_received}</dd>
+      <dt>Matches</dt><dd>${m.matches}</dd>
+    </dl>
+    <div style="margin-top:22px">${m.blocked
+      ? '<button class="btn primary" data-unblock>Unblock member</button>'
+      : '<label for="reason">Reason (only admins see this)</label><input type="text" id="reason" placeholder="e.g. Fake profile, harassment"><button class="btn danger" style="margin-top:10px" data-block>Block member</button>'}</div>
+  </aside>`;
+  const close = () => ov.innerHTML = '';
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  const setBlocked = async (block) => {
+    const reason = block ? ($('#reason', ov)?.value || '') : '';
+    if (block && !confirm(`Block ${m.name || 'this member'}? They’ll be signed out of the app and hidden from everyone.`)) return;
+    const { error } = await sb.rpc('admin_set_blocked', { member: m.id, block, reason });
+    if (error) return fail(error);
+    toast(block ? 'Member blocked' : 'Member unblocked'); close(); loadMembers();
+  };
+  $('[data-block]', ov)?.addEventListener('click', () => setBlocked(true));
+  $('[data-unblock]', ov)?.addEventListener('click', () => setBlocked(false));
+}
+
+$('#exportCsv').onclick = () => {
+  const cols = ['name','email','phone','age','gender','interested_in','city','looking_for','height_cm','languages','job','joined_at','last_sign_in_at','onboarded','blocked','likes_sent','likes_received','matches'];
+  const cell = v => `"${String(Array.isArray(v) ? v.join('; ') : v ?? '').replace(/"/g, '""')}"`;
+  const csv = [cols.join(','), ...filtered().map(m => cols.map(c => cell(m[c])).join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `everlane-leads-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+};
+
+// ---------- Questions ----------
+async function loadQuestions() {
+  const { data, error } = await sb.from('quiz_questions').select('*').order('position');
+  if (error) return fail(error);
+  questions = data; renderQuestions();
+}
+function renderQuestions() {
+  $('#questions').innerHTML = questions.map((q, i) => `
+    <div class="q" style="${q.active ? '' : 'opacity:.5'}">
+      <div class="n">${i + 1}</div>
+      <div class="body">
+        <div class="muted" style="font-size:12px">${esc(q.section || q.topic)}${q.dimension ? ' · ' + esc(DIMENSIONS[q.dimension]) : ' · not scored'}${q.max_choices === 1 ? '' : q.max_choices === 0 ? ' · choose any' : ' · choose up to ' + q.max_choices}${q.active ? '' : ' · hidden'}</div>
+        <div class="prompt">${esc(q.prompt)}</div>
+        <div class="opts">${(q.options || []).map(o => `<span>${esc(o.label)}</span>`).join('')}</div>
+      </div>
+      <div class="actions">
+        <button class="btn small" data-up="${i}" ${i === 0 ? 'disabled' : ''}>↑</button>
+        <button class="btn small" data-down="${i}" ${i === questions.length - 1 ? 'disabled' : ''}>↓</button>
+        <button class="btn small" data-toggle="${i}">${q.active ? 'Hide' : 'Show'}</button>
+        <button class="btn small" data-edit="${i}">Edit</button>
+        <button class="btn small danger" data-del="${i}">Delete</button>
+      </div>
+    </div>`).join('') || '<p class="muted" style="padding:18px">No questions yet.</p>';
+  const on = (attr, fn) => document.querySelectorAll(`#questions [${attr}]`).forEach(b => b.onclick = () => fn(+b.getAttribute(attr)));
+  on('data-edit', i => editQuestion(questions[i]));
+  on('data-toggle', i => saveQuestion({ ...questions[i], active: !questions[i].active }));
+  on('data-del', async i => {
+    if (!confirm('Delete this question? Answers members gave to it stop counting.')) return;
+    const { error } = await sb.from('quiz_questions').delete().eq('id', questions[i].id);
+    if (error) return fail(error); toast('Question deleted'); loadQuestions();
+  });
+  on('data-up', i => swap(i, i - 1)); on('data-down', i => swap(i, i + 1));
+}
+async function swap(i, j) {
+  const a = questions[i], b = questions[j];
+  const r = await Promise.all([
+    sb.from('quiz_questions').update({ position: b.position }).eq('id', a.id),
+    sb.from('quiz_questions').update({ position: a.position }).eq('id', b.id)]);
+  const error = r.find(x => x.error)?.error; if (error) return fail(error);
+  loadQuestions();
+}
+async function saveQuestion(q) {
+  const row = { ...q, updated_at: new Date().toISOString() };
+  const { error } = await sb.from('quiz_questions').upsert(row);
+  if (error) return fail(error); toast('Saved'); loadQuestions();
+}
+const slug = s => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 40) || 'option';
+
+$('#addQuestion').onclick = () => editQuestion({
+  id: 'q_' + Date.now().toString(36), position: (questions.at(-1)?.position || 0) + 1, topic: '', prompt: '',
+  section: '', dimension: null, max_choices: 1, optional: true, exclusive: [], options: [], active: true }, true);
+
+function editQuestion(q, isNew = false) {
+  const ov = $('#overlay');
+  let opts = (q.options || []).map(o => ({ ...o, exclusive: (q.exclusive || []).includes(o.value), fresh: false }));
+  ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="qForm">
+    <h2>${isNew ? 'New question' : 'Edit question'}</h2>
+    <label>Question</label><input type="text" id="qPrompt" required value="${esc(q.prompt)}">
+    <div class="row2">
+      <div><label>Short topic (shown in Chemistry)</label><input type="text" id="qTopic" value="${esc(q.topic)}"></div>
+      <div><label>Section</label><input type="text" id="qSection" value="${esc(q.section)}"></div>
+    </div>
+    <div class="row2">
+      <div><label>Scored under</label><select id="qDim"><option value="">Not scored</option>
+        ${Object.entries(DIMENSIONS).map(([k, v]) => `<option value="${k}" ${q.dimension === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></div>
+      <div><label>Answers allowed</label><select id="qMax">
+        <option value="1" ${q.max_choices === 1 ? 'selected' : ''}>One</option>
+        <option value="2" ${q.max_choices === 2 ? 'selected' : ''}>Up to 2</option>
+        <option value="3" ${q.max_choices === 3 ? 'selected' : ''}>Up to 3</option>
+        <option value="0" ${q.max_choices === 0 ? 'selected' : ''}>Any number</option></select></div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:14px"><input type="checkbox" id="qOptional" ${q.optional ? 'checked' : ''} style="width:auto"> Members can skip it</label>
+    <label>Answers</label><div id="optRows"></div>
+    <button type="button" class="btn small" id="addOpt">Add answer</button>
+    <div class="err" id="qErr"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+      <button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save question</button></div>
+  </form></div>`;
+  const rows = () => {
+    $('#optRows', ov).innerHTML = opts.map((o, i) => `<div class="opt-row">
+      <input type="text" data-label="${i}" placeholder="Answer text" value="${esc(o.label)}">
+      <input type="text" data-value="${i}" placeholder="saved value" value="${esc(o.value)}" ${o.fresh ? '' : 'readonly title="Saved answers use this value"'}>
+      <span class="chk"><input type="checkbox" data-excl="${i}" ${o.exclusive ? 'checked' : ''} style="width:auto"> clears others</span>
+      <button type="button" class="btn small danger" data-rm="${i}">✕</button></div>`).join('');
+    ov.querySelectorAll('[data-label]').forEach(el => el.oninput = () => {
+      const o = opts[+el.dataset.label]; o.label = el.value;
+      if (o.fresh) { o.value = slug(el.value); $(`[data-value="${el.dataset.label}"]`, ov).value = o.value; } });
+    ov.querySelectorAll('[data-value]').forEach(el => el.oninput = () => opts[+el.dataset.value].value = el.value);
+    ov.querySelectorAll('[data-excl]').forEach(el => el.onchange = () => opts[+el.dataset.excl].exclusive = el.checked);
+    ov.querySelectorAll('[data-rm]').forEach(el => el.onclick = () => { opts.splice(+el.dataset.rm, 1); rows(); });
+  };
+  rows();
+  $('#addOpt', ov).onclick = () => { opts.push({ label: '', value: '', exclusive: false, fresh: true }); rows(); };
+  const close = () => ov.innerHTML = '';
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  $('#qForm', ov).onsubmit = e => {
+    e.preventDefault();
+    const clean = opts.filter(o => o.label.trim());
+    const values = clean.map(o => o.value.trim());
+    if (clean.length < 2) return $('#qErr', ov).textContent = 'Add at least two answers.';
+    if (values.some(v => !v) || new Set(values).size !== values.length) return $('#qErr', ov).textContent = 'Each answer needs its own saved value.';
+    const prompt = $('#qPrompt', ov).value.trim();
+    const row = { ...q, prompt, topic: $('#qTopic', ov).value.trim() || prompt.slice(0, 40),
+      section: $('#qSection', ov).value.trim(), dimension: $('#qDim', ov).value || null,
+      max_choices: +$('#qMax', ov).value, optional: $('#qOptional', ov).checked,
+      options: clean.map(o => ({ value: o.value.trim(), label: o.label.trim() })),
+      exclusive: clean.filter(o => o.exclusive).map(o => o.value.trim()) };
+    close();
+    saveQuestion(row);
+  };
+}
+
+// ---------- Options ----------
+const KINDS = { interest: 'Interests', language: 'Languages', prompt: 'Profile prompts' };
+async function loadOptions() {
+  const { data, error } = await sb.from('app_options').select('*').order('position');
+  if (error) return fail(error);
+  options = data; renderOptions();
+}
+function renderOptions() {
+  $('#optionGroups').innerHTML = Object.entries(KINDS).map(([kind, title]) => {
+    const list = options.filter(o => o.kind === kind);
+    return `<div class="card" style="margin-bottom:16px">
+      <div class="head" style="padding:18px 18px 0;margin:0"><h3>${title}</h3>
+        <form data-add="${kind}" style="display:flex;gap:8px"><input type="text" placeholder="Add ${title.toLowerCase().replace(/s$/, '')}" style="width:220px"><button class="btn small primary">Add</button></form></div>
+      <div class="chips">${list.map(o => `<span class="chip ${o.active ? '' : 'off'}">${esc(o.value)}
+        <button title="${o.active ? 'Hide in app' : 'Show in app'}" data-opt-toggle="${o.id}">${o.active ? '◉' : '○'}</button>
+        <button title="Delete" data-opt-del="${o.id}">✕</button></span>`).join('') || '<span class="muted">None yet.</span>'}</div></div>`;
+  }).join('');
+  document.querySelectorAll('[data-add]').forEach(f => f.onsubmit = async e => {
+    e.preventDefault(); const value = $('input', f).value.trim(); if (!value) return;
+    const kind = f.dataset.add, position = Math.max(0, ...options.filter(o => o.kind === kind).map(o => o.position)) + 1;
+    const { error } = await sb.from('app_options').insert({ kind, value, position });
+    if (error) return fail(error); toast('Added'); loadOptions();
+  });
+  document.querySelectorAll('[data-opt-toggle]').forEach(b => b.onclick = async () => {
+    const o = options.find(x => x.id == b.dataset.optToggle);
+    const { error } = await sb.from('app_options').update({ active: !o.active }).eq('id', o.id);
+    if (error) return fail(error); loadOptions();
+  });
+  document.querySelectorAll('[data-opt-del]').forEach(b => b.onclick = async () => {
+    const o = options.find(x => x.id == b.dataset.optDel);
+    if (!confirm(`Delete “${o.value}”?`)) return;
+    const { error } = await sb.from('app_options').delete().eq('id', o.id);
+    if (error) return fail(error); toast('Deleted'); loadOptions();
+  });
+}
+
+start();
+</script>
+</body>
+</html>
