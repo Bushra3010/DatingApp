@@ -248,28 +248,35 @@ class _EverlaneShellState extends State<EverlaneShell> {
                       appBar: AppBar(
                           toolbarHeight: 88,
                           automaticallyImplyLeading: false,
-                          titleSpacing: 24,
-                          title: Row(children: [
-                            IconButton(
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                tooltip: 'Open profile menu',
-                                onPressed: () =>
-                                    scaffoldKey.currentState!.openDrawer(),
-                                icon: _Avatar(name: store.myName)),
-                            const Spacer(),
-                            Flexible(
-                                flex: 3,
+                          titleSpacing: 0,
+                          // The wordmark is centred on the bar itself, not
+                          // between the two icons (which differ in width).
+                          title: Stack(alignment: Alignment.center, children: [
+                            Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 72),
                                 child: FittedBox(
                                     fit: BoxFit.scaleDown,
                                     child: Text('Everlane',
-                                        style: EverlaneFonts.logo(size: 30)))),
-                            const Spacer(),
-                            IconButton(
-                                tooltip: 'Filter profiles',
-                                onPressed: () => showFilters(context, store),
-                                icon: Icon(Icons.tune_rounded,
-                                    color: EverlaneColors.muted, size: 25)),
+                                        style: EverlaneFonts.logo(size: 36)))),
+                            Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 10),
+                                child: Row(children: [
+                                  IconButton(
+                                      tooltip: 'Open profile menu',
+                                      onPressed: () => scaffoldKey.currentState!
+                                          .openDrawer(),
+                                      icon: _Avatar(name: store.myName)),
+                                  const Spacer(),
+                                  IconButton(
+                                      tooltip: 'Filter profiles',
+                                      onPressed: () =>
+                                          showFilters(context, store),
+                                      icon: Icon(Icons.tune_rounded,
+                                          color: EverlaneColors.muted,
+                                          size: 25)),
+                                ])),
                           ])),
                       body: IndexedStack(index: selected, children: [
                         DiscoverScreen(store: store),

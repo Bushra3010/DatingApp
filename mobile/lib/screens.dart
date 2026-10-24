@@ -476,6 +476,9 @@ class _PersonCard extends StatelessWidget {
                                   '${person.city} · ${person.distanceLabel}'),
                               _meta(person.lookingFor.first.icon,
                                   person.lookingFor.first.short),
+                              if (person.heightCm != null)
+                                _meta(Icons.height_rounded,
+                                    heightLabel(person.heightCm!)),
                             ]),
                             if (person.bio.isNotEmpty && !compact) ...[
                               const SizedBox(height: 10),
