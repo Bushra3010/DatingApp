@@ -28,8 +28,26 @@
     changes nothing visible) and keep the page from scaling at all.
   -->
   <meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
   <style>
+    /*
+      Keep the page exactly the width of the screen. If anything makes iOS
+      Safari think the page is wider, it zooms out and the app shows up
+      narrower than the screen with bars down both sides.
+
+      The viewport deliberately leaves out viewport-fit=cover: Flutter web
+      doesn't read iOS safe-area insets, so with it the tab bar ends up under
+      the home indicator. Without it, iOS keeps the page inside the safe area.
+    */
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-text-size-adjust: 100%;
+      background: #07060B;
+    }
     flt-text-editing-host input,
     flt-text-editing-host textarea,
     input.flt-text-editing,
@@ -41,7 +59,7 @@
     // Flutter replaces the viewport tag above with its own
     // (maximum-scale=5.0) at start-up; put ours back whenever it does.
     (function () {
-      var wanted = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover';
+      var wanted = 'width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no';
       function pin() {
         document.querySelectorAll('meta[name="viewport"]').forEach(function (m) {
           if (m.content !== wanted) m.content = wanted;
@@ -74,6 +92,6 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js?v=everlane-4" async></script>
+  <script src="flutter_bootstrap.js?v=everlane-5" async></script>
 </body>
 </html>

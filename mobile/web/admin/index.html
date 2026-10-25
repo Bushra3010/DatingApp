@@ -103,6 +103,17 @@
   .chip.off { opacity: .45; }
   .chip button { background: none; border: 0; cursor: pointer; color: var(--muted); padding: 2px 4px; }
   .chip button:hover { color: var(--text); }
+  .queue { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
+  .queue .item { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .queue img { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; }
+  .queue .meta { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .report { padding: 18px; margin-bottom: 14px; }
+  .report .msgs { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  .report .msg { background: var(--card2); border-radius: 12px; padding: 8px 12px; max-width: 80%; }
+  .report .msg.reported { border: 1px solid rgba(248,113,113,.45); }
+  .report .msg.reporter { align-self: flex-end; }
+  .actionbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  nav .tab .pill { margin-left: 4px; }
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--card2);
            border: 1px solid var(--purple); padding: 10px 18px; border-radius: 12px; z-index: 20; }
   @media (max-width: 800px) {
@@ -135,6 +146,10 @@
     <div class="muted" style="padding:0 12px 14px;font-size:12px">Admin</div>
     <button class="tab active" data-view="overview">Overview</button>
     <button class="tab" data-view="leads">Leads &amp; members</button>
+    <button class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
+    <button class="tab" data-view="photos">Photo queue <span class="pill warn hidden" id="photoBadge"></span></button>
+    <button class="tab" data-view="words">Banned words</button>
+    <button class="tab" data-view="audit">Audit log</button>
     <button class="tab" data-view="questions">Questions</button>
     <button class="tab" data-view="options">Options</button>
     <div class="who"><span id="who"></span><br><button class="btn small" id="logout" style="margin-top:8px">Sign out</button></div>
@@ -149,12 +164,16 @@
       <div class="head"><h1>Leads &amp; members</h1>
         <div style="display:flex;gap:8px"><button class="btn" id="exportCsv">Export CSV</button><button class="btn" data-refresh>Refresh</button></div></div>
       <div class="toolbar">
-        <input type="text" id="search" placeholder="Search name, email, phone, city…">
+        <input type="text" id="search" placeholder="Search name, email, phone, city or ID…">
         <select id="filter">
           <option value="all">Everyone</option>
           <option value="onboarded">Finished profile</option>
           <option value="incomplete">Didn’t finish sign-up</option>
           <option value="blocked">Blocked</option>
+          <option value="suspended">Suspended</option>
+          <option value="reported">Reported</option>
+          <option value="paid">Paid plan</option>
+          <option value="test">Test accounts</option>
         </select>
       </div>
       <div class="card scroll"><table>
@@ -162,6 +181,39 @@
         <tbody id="members"></tbody>
       </table></div>
       <p class="muted" id="memberCount" style="margin-top:10px"></p>
+    </div>
+
+    <div id="view-reports" class="hidden">
+      <div class="head"><div><h1>Reports</h1>
+        <p class="muted" style="margin:4px 0 0">What members reported, with the last five messages between them saved at the time.</p></div>
+        <div style="display:flex;gap:8px"><select id="reportFilter" style="width:auto"><option value="open">Open</option><option value="all">All</option></select><button class="btn" data-refresh>Refresh</button></div></div>
+      <div id="reports"></div>
+    </div>
+
+    <div id="view-photos" class="hidden">
+      <div class="head"><div><h1>Photo queue</h1>
+        <p class="muted" style="margin:4px 0 0">New profile photos. Rejecting removes the photo from the profile and deletes the file.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="queue" id="photoQueue"></div>
+    </div>
+
+    <div id="view-words" class="hidden">
+      <div class="head"><div><h1>Banned words</h1>
+        <p class="muted" style="margin:4px 0 0">Messages and profile text (name, job, bio, prompt) containing any of these are refused. Matching ignores case.</p></div></div>
+      <div class="card">
+        <form id="addWord" style="display:flex;gap:8px;padding:18px 18px 0"><input type="text" placeholder="Add a word, phrase or link, e.g. t.me/" style="max-width:340px"><button class="btn small primary">Add</button></form>
+        <div class="chips" id="words"></div>
+      </div>
+    </div>
+
+    <div id="view-audit" class="hidden">
+      <div class="head"><div><h1>Audit log</h1>
+        <p class="muted" style="margin:4px 0 0">Every admin action, newest first. Entries can’t be edited or deleted.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="card scroll"><table>
+        <thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Member</th><th>Details</th></tr></thead>
+        <tbody id="audit"></tbody>
+      </table></div>
     </div>
 
     <div id="view-questions" class="hidden">
@@ -230,24 +282,33 @@ $('#logout').onclick = async () => { await sb.auth.signOut(); showLogin(); };
 
 // ---------- Navigation ----------
 let current = 'overview';
+const VIEWS = ['overview', 'leads', 'reports', 'photos', 'words', 'audit', 'questions', 'options'];
 document.querySelectorAll('nav .tab').forEach(b => b.onclick = () => show(b.dataset.view));
 document.querySelectorAll('[data-refresh]').forEach(b => b.onclick = () => show(current));
 function show(view) {
   current = view;
   document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
-  for (const v of ['overview', 'leads', 'questions', 'options']) $('#view-' + v).classList.toggle('hidden', v !== view);
-  ({ overview: loadStats, leads: loadMembers, questions: loadQuestions, options: loadOptions })[view]();
+  for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== view);
+  ({ overview: loadStats, leads: loadMembers, reports: loadReports, photos: loadPhotos, words: loadWords,
+     audit: loadAudit, questions: loadQuestions, options: loadOptions })[view]();
 }
+function badge(sel, n) { const b = $(sel); b.textContent = n; b.classList.toggle('hidden', !n); }
 function fail(error) { console.error(error); toast(error.message || 'Something went wrong'); }
 
 // ---------- Overview ----------
 async function loadStats() {
   const { data, error } = await sb.rpc('admin_stats');
   if (error) return fail(error);
+  const ratio = data.women ? (data.men / data.women).toFixed(2) + ' : 1' : '—';
   const items = [['Accounts', data.accounts], ['Finished profiles', data.onboarded],
-    ['Sign-ups today', data.signups_today], ['Sign-ups (7 days)', data.signups_7d],
-    ['Likes', data.likes], ['Matches', data.matches], ['Messages', data.messages], ['Blocked', data.blocked]];
-  $('#stats').innerHTML = items.map(([k, v]) => `<div class="stat"><span class="muted">${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+    ['Active today', data.dau], ['Sign-ups today', data.signups_today], ['Sign-ups (7 days)', data.signups_7d],
+    ['Men · women · other', `${data.men} · ${data.women} · ${data.other_gender}`], ['Men to women', ratio],
+    ['Paid plans', data.paid_members], ['Open reports', data.open_reports], ['Photos to review', data.pending_photos],
+    ['Likes', data.likes], ['Matches', data.matches], ['Messages', data.messages],
+    ['Blocked', data.blocked], ['Suspended', data.suspended], ['Test accounts', data.test_accounts]];
+  $('#stats').innerHTML = items.map(([k, v]) => `<div class="stat"><span class="muted">${esc(k)}</span><b>${esc(v)}</b></div>`).join('')
+    + `<p class="muted" style="grid-column:1/-1;margin:4px 0 0">Profile, gender and plan counts leave out test accounts; accounts, sign-ups, likes, matches and messages include them. Revenue appears here once store billing is connected; plans are not charged yet.</p>`;
+  badge('#reportBadge', data.open_reports); badge('#photoBadge', data.pending_photos);
 }
 
 // ---------- Leads ----------
@@ -262,9 +323,28 @@ function filtered() {
     if (f === 'onboarded' && !m.onboarded) return false;
     if (f === 'incomplete' && m.onboarded) return false;
     if (f === 'blocked' && !m.blocked) return false;
+    if (f === 'suspended' && !isSuspended(m)) return false;
+    if (f === 'reported' && !m.reports_against) return false;
+    if (f === 'paid' && !['plus', 'gold', 'platinum'].includes(m.plan)) return false;
+    if (f === 'test' && !m.is_test) return false;
     if (!q) return true;
-    return [m.name, m.email, m.phone, m.city].some(v => (v || '').toLowerCase().includes(q));
+    return [m.id, m.name, m.email, m.phone, m.city].some(v => (v || '').toLowerCase().includes(q));
   });
+}
+const isSuspended = m => m.suspended_until && new Date(m.suspended_until) > new Date();
+const PLAN_NAMES = { '': 'Their own choice', free: 'Free', plus: 'Plus', gold: 'Gold', platinum: 'Platinum' };
+function statusPills(m) {
+  const out = [];
+  if (m.blocked) out.push('<span class="pill bad">Blocked</span>');
+  else if (isSuspended(m)) out.push(`<span class="pill bad">Suspended to ${fmtDate(m.suspended_until)}</span>`);
+  else if (m.onboarded) out.push('<span class="pill ok">Active</span>');
+  else out.push('<span class="pill warn">Incomplete</span>');
+  if (m.verified) out.push('<span class="pill ok">Verified</span>');
+  if (m.plan && m.plan !== 'free') out.push(`<span class="pill ok">${esc(PLAN_NAMES[m.plan])}</span>`);
+  if (m.is_test) out.push('<span class="pill warn">Test</span>');
+  if (m.reports_against) out.push(`<span class="pill bad">${m.reports_against} report${m.reports_against > 1 ? 's' : ''}</span>`);
+  if (m.warnings) out.push(`<span class="pill warn">${m.warnings} warning${m.warnings > 1 ? 's' : ''}</span>`);
+  return out.join(' ');
 }
 function renderMembers() {
   const rows = filtered();
@@ -278,7 +358,7 @@ function renderMembers() {
       <td>${esc(m.city || '—')}</td>
       <td>${esc(m.looking_for || '—')}</td>
       <td>${fmtDate(m.joined_at)}</td>
-      <td>${m.blocked ? '<span class="pill bad">Blocked</span>' : m.onboarded ? '<span class="pill ok">Active</span>' : '<span class="pill warn">Incomplete</span>'}</td>
+      <td>${statusPills(m)}</td>
     </tr>`).join('') || `<tr><td colspan="9" class="muted">No members yet.</td></tr>`;
   $('#memberCount').textContent = `${rows.length} of ${members.length} shown`;
   document.querySelectorAll('#members tr[data-id]').forEach(tr => tr.onclick = () => openMember(tr.dataset.id));
@@ -291,7 +371,7 @@ function openMember(id) {
   ov.innerHTML = `<div class="backdrop"></div><aside class="drawer">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h2>${esc(m.name || 'Unnamed')}${m.age ? ', ' + m.age : ''}</h2><button class="btn small" data-close>Close</button></div>
-    <p class="muted" style="margin:4px 0 0">${m.blocked ? '<span class="pill bad">Blocked</span> ' + esc(m.blocked_reason) : m.onboarded ? '<span class="pill ok">Active</span>' : '<span class="pill warn">Didn’t finish sign-up</span>'}</p>
+    <p class="muted" style="margin:4px 0 0">${statusPills(m)}${m.blocked && m.blocked_reason ? ' ' + esc(m.blocked_reason) : ''}</p>
     <div class="photos">${(m.photos || []).map(p => `<img src="${esc(photoUrl(p))}" alt="">`).join('') || '<span class="muted">No photos</span>'}</div>
     <dl>
       <dt>Email</dt><dd>${esc(m.email || '—')}</dd>
@@ -310,7 +390,23 @@ function openMember(id) {
       <dt>Bio</dt><dd>${esc(m.bio || '—')}</dd>
       <dt>Likes sent / got</dt><dd>${m.likes_sent} / ${m.likes_received}</dd>
       <dt>Matches</dt><dd>${m.matches}</dd>
+      <dt>Member ID</dt><dd style="font-size:12px">${esc(m.id)}</dd>
     </dl>
+
+    <h3 style="margin-top:24px">Actions</h3>
+    <div class="actionbar">
+      <button class="btn small" data-act="${m.verified ? 'unverify' : 'verify'}">${m.verified ? 'Remove verified badge' : 'Verify profile'}</button>
+      ${isSuspended(m)
+        ? '<button class="btn small" data-act="unsuspend">Lift suspension</button>'
+        : '<button class="btn small danger" data-suspend="1">Suspend 24 hours</button><button class="btn small danger" data-suspend="7">Suspend 7 days</button>'}
+      <button class="btn small" data-act="${m.is_test ? 'unmark_test' : 'mark_test'}">${m.is_test ? 'Make a real account' : 'Make a test account'}</button>
+    </div>
+    <label for="warnText">Warn (the member sees this message in the app)</label>
+    <div style="display:flex;gap:8px"><input type="text" id="warnText" placeholder="e.g. Please keep messages respectful."><button class="btn small" data-warn>Send warning</button></div>
+    <label for="planSel">Plan (for support and troubleshooting; no payment is taken or refunded)</label>
+    <div style="display:flex;gap:8px"><select id="planSel">${Object.entries(PLAN_NAMES).map(([k, v]) => `<option value="${k}" ${m.plan === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select><button class="btn small" data-plan>Set plan</button></div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">Test accounts only see, and are seen by, other test accounts.</p>
+
     <div style="margin-top:22px">${m.blocked
       ? '<button class="btn primary" data-unblock>Unblock member</button>'
       : '<label for="reason">Reason (only admins see this)</label><input type="text" id="reason" placeholder="e.g. Fake profile, harassment"><button class="btn danger" style="margin-top:10px" data-block>Block member</button>'}</div>
@@ -324,18 +420,140 @@ function openMember(id) {
     if (error) return fail(error);
     toast(block ? 'Member blocked' : 'Member unblocked'); close(); loadMembers();
   };
+  const act = async (action, extra = {}, done = 'Saved') => {
+    const { error } = await sb.rpc('admin_moderate', { member: m.id, action, ...extra });
+    if (error) return fail(error);
+    toast(done); close(); loadMembers();
+  };
+  ov.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b.dataset.act));
+  ov.querySelectorAll('[data-suspend]').forEach(b => b.onclick = () => {
+    const days = +b.dataset.suspend;
+    if (confirm(`Suspend ${m.name || 'this member'} for ${days === 1 ? '24 hours' : days + ' days'}? They’re signed out and hidden until it ends.`))
+      act('suspend', { days }, 'Member suspended');
+  });
+  $('[data-warn]', ov).onclick = () => {
+    const reason = $('#warnText', ov).value.trim();
+    if (!reason) return toast('Write the warning first');
+    act('warn', { reason }, 'Warning sent');
+  };
+  $('[data-plan]', ov).onclick = () => act('set_plan', { value: $('#planSel', ov).value }, 'Plan updated');
   $('[data-block]', ov)?.addEventListener('click', () => setBlocked(true));
   $('[data-unblock]', ov)?.addEventListener('click', () => setBlocked(false));
 }
 
 $('#exportCsv').onclick = () => {
-  const cols = ['name','email','phone','age','gender','interested_in','city','looking_for','height_cm','languages','job','joined_at','last_sign_in_at','onboarded','blocked','likes_sent','likes_received','matches'];
+  const cols = ['name','email','phone','age','gender','interested_in','city','looking_for','height_cm','languages','job','joined_at','last_sign_in_at','onboarded','verified','blocked','suspended_until','warnings','plan','is_test','reports_against','likes_sent','likes_received','matches'];
   const cell = v => `"${String(Array.isArray(v) ? v.join('; ') : v ?? '').replace(/"/g, '""')}"`;
   const csv = [cols.join(','), ...filtered().map(m => cols.map(c => cell(m[c])).join(','))].join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = `everlane-leads-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
 };
+
+// ---------- Reports ----------
+$('#reportFilter').onchange = () => loadReports();
+async function loadReports() {
+  const { data, error } = await sb.rpc('admin_reports', { only_open: $('#reportFilter').value === 'open' });
+  if (error) return fail(error);
+  badge('#reportBadge', data.filter(r => r.status === 'open').length);
+  $('#reports').innerHTML = data.map(r => `<div class="card report">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><h3>${esc(r.reason)}</h3>
+        <div class="muted" style="font-size:12px">${fmtDate(r.created_at)} · ${esc(r.reporter_name || 'A member')} reported
+          <a href="#" data-member="${esc(r.reported)}" style="color:var(--lavender)">${esc(r.reported_name || 'a member')}</a>
+          · ${r.reports_against} report${r.reports_against > 1 ? 's' : ''} against them${r.reported_blocked ? ' · <span class="pill bad">Blocked</span>' : ''}</div></div>
+      <span class="pill ${r.status === 'open' ? 'bad' : 'ok'}" style="align-self:flex-start">${esc(r.status)}</span>
+    </div>
+    ${r.details ? `<p>${esc(r.details)}</p>` : ''}
+    <div class="msgs">${(r.messages || []).map(x => `<div class="msg ${esc(x.sender)}"><span class="muted" style="font-size:11px">${x.sender === 'reported' ? esc(r.reported_name || 'Reported') : esc(r.reporter_name || 'Reporter')} · ${new Date(x.at).toLocaleString('en-IN')}</span><br>${esc(x.body)}</div>`).join('')
+      || '<span class="muted" style="font-size:12px">They hadn’t messaged each other.</span>'}</div>
+    ${r.resolution ? `<p class="muted" style="font-size:12px">Note: ${esc(r.resolution)}</p>` : ''}
+    <div class="actionbar">${r.status === 'open'
+      ? `<input type="text" data-note="${r.id}" placeholder="Note (optional)" style="max-width:260px">
+         <button class="btn small primary" data-resolve="${r.id}">Resolve</button>
+         <button class="btn small" data-dismiss="${r.id}">Dismiss</button>
+         <button class="btn small" data-member="${esc(r.reported)}">Open member</button>`
+      : `<button class="btn small" data-reopen="${r.id}">Reopen</button>`}</div>
+  </div>`).join('') || '<p class="muted">No reports. 🎉</p>';
+  const resolve = async (id, outcome) => {
+    const note = $(`[data-note="${id}"]`)?.value || '';
+    const { error } = await sb.rpc('admin_resolve_report', { report: +id, outcome, note });
+    if (error) return fail(error); toast('Report ' + outcome); loadReports();
+  };
+  document.querySelectorAll('[data-resolve]').forEach(b => b.onclick = () => resolve(b.dataset.resolve, 'resolved'));
+  document.querySelectorAll('[data-dismiss]').forEach(b => b.onclick = () => resolve(b.dataset.dismiss, 'dismissed'));
+  document.querySelectorAll('[data-reopen]').forEach(b => b.onclick = () => resolve(b.dataset.reopen, 'open'));
+  document.querySelectorAll('#reports [data-member]').forEach(b => b.onclick = async e => {
+    e.preventDefault();
+    if (!members.length) { const { data } = await sb.rpc('admin_members'); members = data || []; }
+    openMember(b.dataset.member);
+  });
+}
+
+// ---------- Photo queue ----------
+async function loadPhotos() {
+  const { data, error } = await sb.rpc('admin_photo_queue');
+  if (error) return fail(error);
+  badge('#photoBadge', data.length);
+  $('#photoQueue').innerHTML = data.map(p => `<div class="item">
+    <img src="${esc(photoUrl(p.path))}" alt="" loading="lazy">
+    <div class="meta"><span><b style="color:var(--text)">${esc(p.name || 'Unnamed')}</b> <span class="muted" style="font-size:12px">${fmtDate(p.created_at)}</span></span>
+      <div style="display:flex;gap:6px"><button class="btn small primary" data-ok="${esc(p.path)}">Approve</button><button class="btn small danger" data-no="${esc(p.path)}">Reject</button></div></div>
+  </div>`).join('') || '<p class="muted">Nothing to review.</p>';
+  const review = async (path, approve) => {
+    const { error } = await sb.rpc('admin_review_photo', { photo: path, approve });
+    if (error) return fail(error);
+    if (!approve) await sb.storage.from('photos').remove([path]);
+    toast(approve ? 'Approved' : 'Rejected and removed'); loadPhotos();
+  };
+  document.querySelectorAll('[data-ok]').forEach(b => b.onclick = () => review(b.dataset.ok, true));
+  document.querySelectorAll('[data-no]').forEach(b => b.onclick = () => {
+    if (confirm('Reject this photo? It’s removed from their profile and deleted.')) review(b.dataset.no, false);
+  });
+}
+
+// ---------- Banned words ----------
+async function loadWords() {
+  const { data, error } = await sb.from('banned_words').select('*').order('word');
+  if (error) return fail(error);
+  $('#words').innerHTML = data.map(w => `<span class="chip">${esc(w.word)}<button title="Remove" data-word="${esc(w.word)}">✕</button></span>`).join('')
+    || '<span class="muted">No banned words yet.</span>';
+  document.querySelectorAll('[data-word]').forEach(b => b.onclick = async () => {
+    const { error } = await sb.from('banned_words').delete().eq('word', b.dataset.word);
+    if (error) return fail(error); toast('Removed'); loadWords();
+  });
+}
+$('#addWord').onsubmit = async e => {
+  e.preventDefault();
+  const input = $('#addWord input'), word = input.value.trim().toLowerCase();
+  if (word.length < 2) return toast('Use at least two characters');
+  const { error } = await sb.from('banned_words').insert({ word });
+  if (error) return fail(error); input.value = ''; toast('Added'); loadWords();
+};
+
+// ---------- Audit log ----------
+const ACTIONS = { ban: 'Blocked', unban: 'Unblocked', verify: 'Verified', unverify: 'Removed verified badge',
+  warn: 'Warned', suspend: 'Suspended', unsuspend: 'Lifted suspension', set_plan: 'Changed plan',
+  mark_test: 'Made test account', unmark_test: 'Made real account', photo_approve: 'Approved photo',
+  photo_reject: 'Rejected photo', report_resolved: 'Resolved report', report_dismissed: 'Dismissed report',
+  report_open: 'Reopened report' };
+async function loadAudit() {
+  const { data, error } = await sb.rpc('admin_audit_log', { max_rows: 300 });
+  if (error) return fail(error);
+  const detail = a => {
+    const d = a.details || {}, out = [];
+    if (d.reason) out.push(esc(d.reason));
+    if (a.action === 'suspend' && d.days) out.push(d.days === 1 ? '24 hours' : d.days + ' days');
+    if (a.action === 'set_plan') out.push(esc(PLAN_NAMES[d.value] || d.value));
+    if (d.report) out.push('Report #' + esc(d.report));
+    if (d.note) out.push(esc(d.note));
+    return out.join(' · ');
+  };
+  $('#audit').innerHTML = data.map(a => `<tr style="cursor:default">
+    <td>${new Date(a.created_at).toLocaleString('en-IN')}</td><td>${esc(a.admin_email)}</td>
+    <td>${esc(ACTIONS[a.action] || a.action)}</td><td>${esc(a.target_name || (a.target ? a.target.slice(0, 8) : '—'))}</td>
+    <td>${detail(a)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">No admin actions yet.</td></tr>';
+}
 
 // ---------- Questions ----------
 async function loadQuestions() {

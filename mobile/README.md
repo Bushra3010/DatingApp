@@ -34,6 +34,12 @@ python3 tool/serve_preview.py  # http://127.0.0.1:8081; prevents stale UI cachin
 - Membership: the four launch tiers from the membership options doc (Free ₹0, Plus ₹249, Gold ₹499, Platinum ₹899 a month; test prices). Daily like limits per plan, Rewind and the intention filter with Plus, Likes You and monthly boosts with Gold, the detailed Chemistry report and Hangouts with Platinum. Safety and privacy controls stay free. Choosing a plan changes it locally; no payment is taken.
 - Onboarding (first launch) and the 24-question Everlane Compatibility Quiz, with a Chemistry card on each profile that follows the question bank's scoring rules: weighted areas, dealbreakers filtered first, intent mismatches never hidden, a preliminary view with too few answers.
 - Privacy: distances show as "Nearby" or rounded, never exact; free Invisible mode setting.
+- Voice prompts: pick a question and record up to 30 seconds (WAV), listen back, save, re-record or remove. They play on profiles.
+- Explore: Nearby profiles, and Crossed paths, a map of ~1 km areas where you and someone else were on the same day. Sharing your area is opt-in; only the rounded area and the day are stored, and turning it off deletes them. Map tiles come from OpenStreetMap, which is for light use only; move to a paid tile provider before launch.
+- Preferences: search a specific city (distance then doesn't apply).
+- Chat: day separators and a time on each message; tap the name to open the profile.
+- Settings: Delete account (needs migration 006).
+- Moderation: reports go to the admin panel with the last five messages; warnings show on the You tab; suspended accounts can't sign in; banned words are refused.
 - Light theme by default, with a Dark mode switch in Settings.
 - Filter by age, distance and verified profiles; handle empty discovery and paused profiles.
 - Accept or remove incoming likes (Gold or Platinum); accepting opens a conversation.

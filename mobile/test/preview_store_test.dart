@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:everlane/models.dart';
+import 'package:everlane/voice.dart';
 
 void main() {
   test('Discovery respects filters, skip, undo, and pause', () {
@@ -100,5 +103,86 @@ void main() {
     expect(store.discover.map((p) => p.id), ['isha']);
     store.choosePlan(Plan.free);
     expect(store.intentFilter, isEmpty);
+  });
+
+  test('A city search ignores distance; Nearby lists only people close by',
+      () {
+    final store = PreviewStore();
+    addTearDown(store.dispose);
+    store.ages = const RangeValues(18, 60);
+    store.distance = 1;
+    expect(store.discover, isEmpty);
+    store.cityFilter = 'bengaluru';
+    expect(store.discover, isNotEmpty,
+        reason: 'case-insensitive, and distance no longer applies');
+    store.cityFilter = 'Mumbai';
+    expect(store.discover, isEmpty);
+    expect(store.cityOptions, contains('Mumbai'));
+    expect(store.nearby.every((p) => p.distance <= 5), isTrue);
+    expect(store.nearby.map((p) => p.distance).toList(),
+        [...store.nearby.map((p) => p.distance)]..sort());
+  });
+
+  test('A voice prompt is saved and removed locally without an account',
+      () async {
+    final store = PreviewStore();
+    addTearDown(store.dispose);
+    expect(store.hasVoice, isFalse);
+    final wav = wavFromPcm16(Uint8List(32000));
+    await store.setVoice('My simple pleasures', wav, 1);
+    expect(store.hasVoice, isTrue);
+    expect(store.myVoiceLabel, 'My simple pleasures');
+    store.removeVoice();
+    expect(store.hasVoice, isFalse);
+  });
+
+  test('Recordings are wrapped in a valid mono 16 kHz WAV header', () {
+    final wav = wavFromPcm16(Uint8List(100));
+    final data = ByteData.sublistView(wav);
+    expect(String.fromCharCodes(wav.sublist(0, 4)), 'RIFF');
+    expect(String.fromCharCodes(wav.sublist(8, 12)), 'WAVE');
+    expect(data.getUint32(4, Endian.little), 136);
+    expect(data.getUint16(22, Endian.little), 1);
+    expect(data.getUint32(24, Endian.little), 16000);
+    expect(data.getUint32(40, Endian.little), 100);
+    expect(wav.length, 144);
+  });
+
+  test('Messages carry their time, including ones from Supabase', () {
+    final m = ChatMessage.fromRow(
+        {'body': 'hi', 'created_at': '2026-10-26T05:46:00Z'},
+        mine: true);
+    expect(m.sentAt, DateTime.utc(2026, 10, 26, 5, 46).toLocal());
+    expect(m.mine, isTrue);
+  });
+
+  test('Areas are rounded to about 1 km before anything is kept', () {
+    final (lat, lng) = snapToArea(12.97843, 77.64071);
+    expect(lat, closeTo(12.975, 1e-9));
+    expect(lng, closeTo(77.645, 1e-9));
+    final (lat2, lng2) = snapToArea(12.97101, 77.64999);
+    expect((lat2, lng2), (lat, lng), reason: 'same ~1 km square');
+  });
+
+  test('Crossed paths is opt-in, and turning it off forgets your area',
+      () async {
+    final store = PreviewStore();
+    addTearDown(store.dispose);
+    expect(store.shareArea, isFalse);
+    expect(store.crossings, isNotEmpty, reason: 'demo crossings');
+    await store.recordArea(12.97843, 77.64071);
+    expect(store.shareArea, isTrue);
+    expect(store.myArea!.$1, closeTo(12.975, 1e-9));
+    store.stopSharingArea();
+    expect(store.shareArea, isFalse);
+    expect(store.myArea, isNull);
+  });
+
+  test('A warning from the team can be dismissed', () {
+    final store = PreviewStore();
+    addTearDown(store.dispose);
+    store.adminWarning = 'Please keep it respectful';
+    store.acknowledgeWarning();
+    expect(store.adminWarning, isEmpty);
   });
 }

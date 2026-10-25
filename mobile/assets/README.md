@@ -6,6 +6,7 @@ The four profile images are illustrative Unsplash photos, bundled to make UI rev
 - Meera: Unsplash photo-1524504388940-b1c1722653e1
 - Isha: Unsplash photo-1524250502761-1ac6f2e30d43
 - Tara: Unsplash photo-1517841905240-472988babdf9
+- Welcome screen (man): Unsplash photo-1507003211169-0a1dd7228f2d
 
 Images retrieved from images.unsplash.com. Replace with consented user content before launch.
 

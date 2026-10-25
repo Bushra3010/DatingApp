@@ -47,6 +47,8 @@ class Person {
       this.soundtrack = '',
       this.voicePrompt = '',
       this.voiceSeconds = 0,
+      this.voiceLabel = '',
+      this.voiceUrl = '',
       this.verified = false,
       this.activeNow = false,
       this.bio = '',
@@ -62,7 +64,9 @@ class Person {
 
   /// A real member, from a Supabase card (see `discover_members`).
   factory Person.fromCard(
-      Map<String, dynamic> r, String Function(String path) photoUrl) {
+      Map<String, dynamic> r, String Function(String path) photoUrl,
+      {String Function(String path)? voiceUrl}) {
+    final voicePath = r['voice_path'] as String? ?? '';
     final looking = switch (r['looking_for'] as String? ?? '') {
       'Casual' => LookingFor.shortTerm,
       'Chit chat' || 'Friendship first' => LookingFor.newFriends,
@@ -84,6 +88,9 @@ class Person {
         city: r['city'] as String? ?? '',
         heightCm: (r['height_cm'] as num?)?.toInt(),
         languages: List<String>.from(r['languages'] as List? ?? const []),
+        voiceLabel: r['voice_prompt_label'] as String? ?? '',
+        voiceSeconds: (r['voice_seconds'] as num?)?.toInt() ?? 0,
+        voiceUrl: voicePath.isEmpty || voiceUrl == null ? '' : voiceUrl(voicePath),
         photoUrls: [
           for (final path in List<String>.from(r['photos'] as List? ?? const []))
             photoUrl(path)
@@ -117,6 +124,11 @@ class Person {
   /// Transcript of a short voice prompt; empty when there is none.
   final String voicePrompt;
   final int voiceSeconds;
+
+  /// A real member's recorded voice prompt: the question they answered and
+  /// the public URL of the recording. Empty when they haven't recorded one.
+  final String voiceLabel, voiceUrl;
+  bool get hasVoice => voicePrompt.isNotEmpty || voiceUrl.isNotEmpty;
 
   /// Exact distance is never shown: close by reads "Nearby", the rest is
   /// rounded up to the next 5 km.
@@ -320,9 +332,57 @@ final demoHangouts = [
 ];
 
 class ChatMessage {
-  ChatMessage(this.text, {this.mine = false});
+  ChatMessage(this.text, {this.mine = false, DateTime? sentAt})
+      : sentAt = sentAt ?? DateTime.now();
+
+  /// From a Supabase `messages` row.
+  factory ChatMessage.fromRow(Map<String, dynamic> m, {bool mine = false}) =>
+      ChatMessage(m['body'] as String,
+          mine: mine,
+          sentAt: DateTime.tryParse(m['created_at'] as String? ?? '')?.toLocal());
+
   final String text;
   final bool mine;
+  final DateTime sentAt;
+}
+
+/// Areas are about 1 km across: coordinates are rounded down to 0.01° and
+/// shown at the centre of that square, so no one's exact spot is kept.
+const areaStep = 0.01;
+(double, double) snapToArea(double lat, double lng) => (
+      ((lat / areaStep).floor() + .5) * areaStep,
+      ((lng / areaStep).floor() + .5) * areaStep,
+    );
+
+/// Someone you were in the same area as on the same day (Happn-style), at
+/// the centre of the area you last shared.
+class Crossing {
+  const Crossing(
+      {required this.person,
+      required this.lat,
+      required this.lng,
+      required this.lastDay,
+      required this.times,
+      this.area = ''});
+
+  /// From a Supabase `crossed_paths` row.
+  factory Crossing.fromRow(Map<String, dynamic> r, Person person) => Crossing(
+      person: person,
+      lat: (r['area_lat'] as num).toDouble(),
+      lng: (r['area_lng'] as num).toDouble(),
+      lastDay: DateTime.tryParse(r['last_day'] as String? ?? '') ??
+          DateTime.now(),
+      times: (r['times'] as num?)?.toInt() ?? 1);
+
+  final Person person;
+  final double lat, lng;
+  final DateTime lastDay;
+  final int times;
+
+  /// A place name for demo areas; real areas have none (no reverse geocoding).
+  final String area;
+
+  String get areaKey => '${lat.toStringAsFixed(3)},${lng.toStringAsFixed(3)}';
 }
 
 class SentLike {
@@ -358,6 +418,27 @@ class PreviewStore extends ChangeNotifier {
   /// The last sync problem, shown to the member; cleared on the next success.
   String? syncError;
 
+  /// A warning from the moderation team, shown until the member dismisses it.
+  String adminWarning = '';
+
+  void acknowledgeWarning() {
+    adminWarning = '';
+    notifyListeners();
+    _remote((b) => b.acknowledgeWarning());
+  }
+
+  /// Sends a report to the moderation team (real members only). Awaited
+  /// before blocking, so the server can keep the last few messages first.
+  Future<void> report(Person p, String reason) async {
+    final b = backend;
+    if (!p.remote || b == null || !b.signedIn) return;
+    try {
+      await b.report(p.id, reason);
+    } catch (_) {
+      _failed('Couldn’t send your report. Try again.');
+    }
+  }
+
   final Set<String> passed = {};
   final Set<String> liked = {};
   final List<SentLike> sentLikes = [];
@@ -368,8 +449,10 @@ class PreviewStore extends ChangeNotifier {
   static List<Conversation> _demoConversations() => [
         Conversation(demoPeople[3], [
           ChatMessage('You liked their answer to “My ideal Sunday”',
-              mine: true),
-          ChatMessage('Okay, important question: what’s your go-to dessert?')
+              mine: true,
+              sentAt: DateTime.now().subtract(const Duration(days: 1, hours: 3))),
+          ChatMessage('Okay, important question: what’s your go-to dessert?',
+              sentAt: DateTime.now().subtract(const Duration(days: 1, hours: 2)))
         ]),
       ];
 
@@ -377,6 +460,78 @@ class PreviewStore extends ChangeNotifier {
   /// cast; the account-less preview (and tests) keep the demo data.
   bool get live => signedIn;
   final List<Person> members = [];
+
+  /// Crossed paths. Sharing your area is opt-in and off by default; only a
+  /// ~1 km area and the day are ever saved.
+  bool shareArea = false;
+  (double, double)? myArea;
+  final List<Crossing> crossings = [..._demoCrossings()];
+
+  static List<Crossing> _demoCrossings() {
+    final now = DateTime.now();
+    Crossing at(int i, double lat, double lng, String area, int daysAgo,
+            int times) =>
+        Crossing(
+            person: demoPeople[i % demoPeople.length],
+            lat: lat,
+            lng: lng,
+            area: area,
+            lastDay: now.subtract(Duration(days: daysAgo)),
+            times: times);
+    return [
+      at(0, 12.9785, 77.6405, '100 Feet Road, Indiranagar', 0, 3),
+      at(2, 12.9785, 77.6405, '100 Feet Road, Indiranagar', 1, 1),
+      at(1, 12.9715, 77.6095, 'MG Road', 2, 2),
+      at(3, 12.9355, 77.6245, 'Koramangala 5th Block', 4, 1),
+    ];
+  }
+
+  /// Saves the area you're in now (after rounding it) and reloads who
+  /// you've crossed paths with. In the account-less preview only the map
+  /// marker moves.
+  Future<void> recordArea(double lat, double lng) async {
+    myArea = snapToArea(lat, lng);
+    shareArea = true;
+    notifyListeners();
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    try {
+      await b.recordArea(myArea!.$1, myArea!.$2);
+      await refreshCrossings();
+    } catch (_) {
+      _failed('Couldn’t update your area. Check your connection.');
+    }
+  }
+
+  /// Turning sharing off also deletes your saved areas.
+  void stopSharingArea() {
+    shareArea = false;
+    myArea = null;
+    notifyListeners();
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    b.clearAreas().then((_) => refreshCrossings(),
+        onError: (Object e) =>
+            _failed('Couldn’t clear your area history. Try again.'));
+  }
+
+  Future<void> refreshCrossings() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    try {
+      final rows = await b.crossedPaths();
+      crossings
+        ..clear()
+        ..addAll([
+          for (final r in rows)
+            Crossing.fromRow(
+                r, Person.fromCard(r, b.photoUrl, voiceUrl: b.voiceUrl))
+        ].where((c) => !passed.contains(c.person.id)));
+      notifyListeners();
+    } catch (_) {
+      _failed('Couldn’t load crossed paths right now.');
+    }
+  }
 
   /// What a real member wrote when they liked you, keyed by their id.
   final Map<String, SentLike> likeNotes = {};
@@ -389,7 +544,34 @@ class PreviewStore extends ChangeNotifier {
   List<Person> get _pool => live ? members : demoPeople;
   RangeValues ages = const RangeValues(24, 32);
   double distance = 25;
+
+  /// Show people in one city only (empty: anywhere within [distance]).
+  /// Looking in another city ignores the distance limit.
+  String cityFilter = '';
   bool verifiedOnly = false;
+
+  static const popularCities = [
+    'Bengaluru',
+    'Mumbai',
+    'Delhi',
+    'Hyderabad',
+    'Chennai',
+    'Pune',
+    'Kolkata',
+    'Ahmedabad',
+    'Jaipur',
+    'Goa',
+  ];
+
+  /// Cities people in the pool live in, then popular ones, for suggestions.
+  List<String> get cityOptions => {
+        for (final p in _pool)
+          if (p.city.trim().isNotEmpty) p.city.trim(),
+        ...popularCities,
+      }.toList();
+
+  bool _inCity(Person p) =>
+      p.city.trim().toLowerCase() == cityFilter.trim().toLowerCase();
   bool paused = false;
   bool notifications = true;
 
@@ -530,6 +712,72 @@ class PreviewStore extends ChangeNotifier {
     saveProfile();
   }
 
+  /// Hinge-style voice prompt: a question and a recorded answer (WAV, up to
+  /// 30 seconds). When signed in, the recording is uploaded and its storage
+  /// path kept in [_voicePath].
+  String myVoiceLabel = '';
+  Uint8List? myVoice;
+  int myVoiceSeconds = 0;
+  String _voicePath = '';
+
+  /// Whether the profiles table has the voice columns (migration 005), so
+  /// saving keeps working on a database that hasn't been migrated yet.
+  bool _voiceColumns = false;
+  bool get hasVoice => myVoice != null || _voicePath.isNotEmpty;
+
+  /// Public URL of the saved recording, for playback once it's uploaded.
+  String get myVoiceUrl =>
+      _voicePath.isEmpty || backend == null ? '' : backend!.voiceUrl(_voicePath);
+
+  static const voicePromptOptions = [
+    'My simple pleasures',
+    'A story only I can tell',
+    'The way to win me over is',
+    'Two truths and a lie',
+    'My most irrational fear',
+    'I’ll know it’s right when',
+  ];
+
+  Future<void> setVoice(String label, Uint8List wav, int seconds) async {
+    final old = _voicePath;
+    myVoiceLabel = label;
+    myVoice = wav;
+    myVoiceSeconds = seconds;
+    _voicePath = '';
+    notifyListeners();
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    try {
+      _voicePath = await b.uploadVoice(wav);
+      await saveProfile();
+      if (old.isNotEmpty) b.deleteVoice(old).ignore();
+    } catch (_) {
+      _failed('Couldn’t save your voice prompt. Try again.');
+    }
+  }
+
+  void removeVoice() {
+    final path = _voicePath;
+    myVoiceLabel = '';
+    myVoice = null;
+    myVoiceSeconds = 0;
+    _voicePath = '';
+    notifyListeners();
+    if (path.isNotEmpty && signedIn) backend!.deleteVoice(path).ignore();
+    saveProfile();
+  }
+
+  /// Permanently deletes the signed-in member's account, photos and voice
+  /// prompt. Throws if Supabase couldn't do it, leaving them signed in.
+  Future<void> deleteAccount() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    await b.deleteAccount(
+        photos: [..._photoPaths.values], voice: _voicePath);
+    _restoreDemo();
+    startFreshAccount();
+  }
+
   String myBio = '';
   String myLookingFor = 'Long term';
   static const lookingForOptions = [
@@ -611,10 +859,20 @@ class PreviewStore extends ChangeNotifier {
               !conversations.any((chat) => chat.person.id == p.id) &&
               // A real member without a birthday has age 0; don't hide them.
               (p.age == 0 || (p.age >= ages.start && p.age <= ages.end)) &&
-              p.distance <= distance &&
+              (cityFilter.isEmpty ? p.distance <= distance : _inCity(p)) &&
               (!verifiedOnly || p.verified) &&
               (intentFilter.isEmpty || p.lookingFor.any(intentFilter.contains)))
           .toList();
+
+  /// People close by (within 5 km, shown as "Nearby"), closest first.
+  /// Exact distances are never shown.
+  List<Person> get nearby => _pool
+      .where((p) =>
+          p.distance <= 5 &&
+          !passed.contains(p.id) &&
+          !conversations.any((chat) => chat.person.id == p.id))
+      .toList()
+    ..sort((a, b) => a.distance.compareTo(b.distance));
 
   /// Everyone looking for [category], minus profiles passed on or hidden.
   List<Person> exploring(LookingFor category) => _pool
@@ -697,7 +955,8 @@ class PreviewStore extends ChangeNotifier {
       final id = chat.matchId ?? await chat.pendingMatch;
       if (id == null) throw StateError('no match yet');
       await b.sendMessage(id, text.trim());
-    }, failure: 'Couldn’t send that message. Check your connection.');
+    }, failure: 'Couldn’t send that message. Check your connection.',
+        banned: 'That message contains words that aren’t allowed, so it wasn’t sent.');
   }
 
   /// Ends a match with a real member (block, report or unmatch).
@@ -716,10 +975,12 @@ class PreviewStore extends ChangeNotifier {
   }
 
   void _remote(Future<void> Function(ProfileBackend b) action,
-      {String failure = 'Couldn’t reach the server. Check your connection.'}) {
+      {String failure = 'Couldn’t reach the server. Check your connection.',
+      String? banned}) {
     final b = backend;
     if (b == null || !b.signedIn) return;
-    action(b).catchError((Object e) => _failed(failure));
+    action(b).catchError((Object e) =>
+        _failed(banned != null && isBannedWordError(e) ? banned : failure));
   }
 
   Conversation _addMatch(Person p, String matchId, {required bool celebrate}) {
@@ -756,7 +1017,7 @@ class PreviewStore extends ChangeNotifier {
       members
         ..clear()
         ..addAll(rows
-            .map((r) => Person.fromCard(r, b.photoUrl))
+            .map((r) => Person.fromCard(r, b.photoUrl, voiceUrl: b.voiceUrl))
             .where((p) => !passed.contains(p.id) && !liked.contains(p.id)));
       notifyListeners();
     } catch (_) {
@@ -772,7 +1033,7 @@ class PreviewStore extends ChangeNotifier {
     final me = b.user!.id;
     final results = await Future.wait(
         [b.discover(), b.likesReceived(), b.myMatches()]);
-    Person card(Map<String, dynamic> r) => Person.fromCard(r, b.photoUrl);
+    Person card(Map<String, dynamic> r) => Person.fromCard(r, b.photoUrl, voiceUrl: b.voiceUrl);
     _clearCommunity();
     members.addAll(results[0].map(card));
     for (final r in results[1]) {
@@ -788,7 +1049,7 @@ class PreviewStore extends ChangeNotifier {
           card(r),
           [
             for (final m in msgs)
-              ChatMessage(m['body'] as String, mine: m['sender'] == me)
+              ChatMessage.fromRow(m, mine: m['sender'] == me)
           ],
           matchId: matchId));
     }
@@ -802,7 +1063,7 @@ class PreviewStore extends ChangeNotifier {
       if (m['sender'] == me) return; // already shown when sent
       for (final c in conversations) {
         if (c.matchId == m['match_id']) {
-          c.messages.add(ChatMessage(m['body'] as String));
+          c.messages.add(ChatMessage.fromRow(m));
           notifyListeners();
           return;
         }
@@ -814,14 +1075,14 @@ class PreviewStore extends ChangeNotifier {
       final rows = await b.myMatches();
       final row = rows.where((r) => r['match_id'] == matchId).firstOrNull;
       if (row == null) return;
-      final p = Person.fromCard(row, b.photoUrl);
+      final p = Person.fromCard(row, b.photoUrl, voiceUrl: b.voiceUrl);
       // You liked them back from Likes: that screen already celebrated.
       final mine = conversations.any((c) => c.person.id == p.id);
       _addMatch(p, matchId, celebrate: !mine);
     }, onLike: (_) async {
       final rows = await b.likesReceived();
       for (final r in rows) {
-        final p = Person.fromCard(r, b.photoUrl);
+        final p = Person.fromCard(r, b.photoUrl, voiceUrl: b.voiceUrl);
         if (incoming.any((x) => x.id == p.id)) continue;
         incoming.insert(0, p);
         likeNotes[p.id] = SentLike(p.id, r['target'] as String? ?? 'photo',
@@ -840,6 +1101,7 @@ class PreviewStore extends ChangeNotifier {
     passHistory.clear();
     liked.clear();
     sentLikes.clear();
+    crossings.clear();
   }
 
   /// Back to the demo cast after logging out.
@@ -850,6 +1112,7 @@ class PreviewStore extends ChangeNotifier {
     _clearCommunity();
     incoming.addAll(_demoIncoming);
     conversations.addAll(_demoConversations());
+    crossings.addAll(_demoCrossings());
   }
 
   /// Hangouts come with Platinum.
@@ -918,6 +1181,11 @@ class PreviewStore extends ChangeNotifier {
         'interests': myInterests.toList(),
         'prompt_label': myPromptLabel,
         'prompt_answer': myPrompt,
+        if (_voiceColumns || _voicePath.isNotEmpty) ...{
+          'voice_prompt_label': _voicePath.isEmpty ? '' : myVoiceLabel,
+          'voice_path': _voicePath,
+          'voice_seconds': _voicePath.isEmpty ? 0 : myVoiceSeconds,
+        },
         'photos': [
           for (final b in myPhotos)
             if (_photoPaths[b] != null) _photoPaths[b]
@@ -938,7 +1206,9 @@ class PreviewStore extends ChangeNotifier {
         syncError = null;
         notifyListeners();
       }
-    }, onError: (Object e) => _failed('Couldn’t save your profile. Check your connection.'));
+    }, onError: (Object e) => _failed(isBannedWordError(e)
+        ? 'Your profile has words that aren’t allowed. Edit them and save again.'
+        : 'Couldn’t save your profile. Check your connection.'));
   }
 
   /// A new account starts blank instead of with the demo member's details.
@@ -959,6 +1229,10 @@ class PreviewStore extends ChangeNotifier {
     onboardingAnswers.clear();
     myPhotos.clear();
     _photoPaths.clear();
+    myVoiceLabel = '';
+    myVoice = null;
+    myVoiceSeconds = 0;
+    _voicePath = '';
     myProfilePosted = false;
     myVerified = false;
     onboarded = false;
@@ -1004,6 +1278,15 @@ class PreviewStore extends ChangeNotifier {
       throw const AuthException(
           'This account has been blocked. Contact support if you think this is a mistake.');
     }
+    final suspendedUntil =
+        DateTime.tryParse(row?['suspended_until'] as String? ?? '')?.toLocal();
+    if (suspendedUntil != null && suspendedUntil.isAfter(DateTime.now())) {
+      await b.logOut();
+      startFreshAccount();
+      final d = suspendedUntil;
+      throw AuthException(
+          'This account is suspended until ${d.day}/${d.month}/${d.year}. Contact support if you think this is a mistake.');
+    }
     startFreshAccount();
     await _loadCommunitySafely();
     if (row == null) return false;
@@ -1020,7 +1303,17 @@ class PreviewStore extends ChangeNotifier {
     myInterests.addAll(List<String>.from(row['interests'] as List? ?? []));
     myPromptLabel = row['prompt_label'] as String? ?? 'My ideal Sunday is';
     myPrompt = row['prompt_answer'] as String? ?? '';
+    _voiceColumns = row.containsKey('voice_path');
+    _voicePath = row['voice_path'] as String? ?? '';
+    myVoiceLabel = row['voice_prompt_label'] as String? ?? '';
+    myVoiceSeconds = (row['voice_seconds'] as num?)?.toInt() ?? 0;
     myProfilePosted = row['posted'] as bool? ?? false;
+    adminWarning = row['warning'] as String? ?? '';
+    // A plan set by an admin (support / troubleshooting) wins.
+    final adminPlan = row['plan'] as String? ?? '';
+    for (final p in Plan.values) {
+      if (p.name == adminPlan) plan = p;
+    }
     myVerified = row['verified'] as bool? ?? false;
     (row['onboarding_answers'] as Map? ?? {}).forEach((k, v) =>
         onboardingAnswers[k as String] = List<String>.from(v as List));

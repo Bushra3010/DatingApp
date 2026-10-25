@@ -251,7 +251,7 @@ class _Welcome extends StatelessWidget {
   /// Null when there's no account backend (tests, offline).
   final VoidCallback? onLogIn;
 
-  Widget _card(Person p, double angle, double scale) => Transform.rotate(
+  Widget _card(String image, double angle, double scale) => Transform.rotate(
       angle: angle,
       child: Transform.scale(
           scale: scale,
@@ -266,7 +266,16 @@ class _Welcome extends StatelessWidget {
                         blurRadius: 30,
                         offset: const Offset(0, 16))
                   ]),
-              child: Portrait(p, width: 168, height: 232, radius: 26))));
+              child: ClipRRect(
+                  borderRadius: BorderRadius.circular(26),
+                  child: Image.asset('assets/images/$image.jpg',
+                      width: 168,
+                      height: 232,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, error, stack) => Container(
+                          width: 168,
+                          height: 232,
+                          color: EverlaneColors.card))))));
 
   Widget _chip(IconData icon, String text, Color color) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -339,19 +348,20 @@ class _Welcome extends StatelessWidget {
                                                   left: 0,
                                                   top: 40,
                                                   child: _card(
-                                                      demoPeople[2], -.16, .9)),
+                                                      'welcome_man', -.16, .9)),
                                               Positioned(
                                                   right: 0,
                                                   top: 40,
                                                   child: _card(
-                                                      demoPeople[1], .16, .9)),
-                                              _card(demoPeople[0], 0, 1),
+                                                      demoPeople[1].id, .16, .9)),
+                                              _card(demoPeople[0].id, 0, 1),
+                                              // Sits on the lower edge of the
+                                              // centre photo.
                                               Positioned(
-                                                  left: 6,
-                                                  bottom: 18,
+                                                  bottom: 62,
                                                   child: _chip(
                                                       Icons.verified_rounded,
-                                                      'Verified profiles',
+                                                      'Verified member',
                                                       const Color(0xFF60A5FA))),
                                               Positioned(
                                                   right: 2,
@@ -381,8 +391,8 @@ class _Welcome extends StatelessWidget {
                                     color: EverlaneColors.muted, height: 1.5)),
                             SizedBox(height: tall ? 20 : 14),
                             Row(children: [
-                              _trust(Icons.verified_user_outlined,
-                                  'Verified\nprofiles'),
+                              _trust(Icons.chat_bubble_outline_rounded,
+                                  'Real\nconversations'),
                               _trust(Icons.lock_outline_rounded,
                                   'Private\nby design'),
                               _trust(Icons.favorite_border_rounded,

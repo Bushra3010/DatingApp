@@ -169,6 +169,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Explore').last);
     await tester.pumpAndSettle();
+    expect(find.text('Nearby profiles'), findsOneWidget);
+    expect(find.text('Crossed paths'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('Long-term relationship'), 200,
+        scrollable: find.byType(Scrollable).first);
     expect(find.text('Long-term relationship'), findsOneWidget);
     await tester.ensureVisible(find.text('Date night'));
     await tester.pumpAndSettle();

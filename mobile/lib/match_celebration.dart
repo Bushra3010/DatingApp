@@ -82,6 +82,7 @@ class _MatchCelebrationState extends State<MatchCelebration>
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     SizedBox(
+                                        width: 240,
                                         height: 132,
                                         child: Stack(
                                             alignment: Alignment.center,
@@ -128,7 +129,14 @@ class _MatchCelebrationState extends State<MatchCelebration>
                                                 foregroundColor:
                                                     EverlaneColors.deep,
                                                 minimumSize:
-                                                    const Size(0, 56)),
+                                                    const Size(0, 56),
+                                                // The theme paints every filled
+                                                // button with the gradient, which
+                                                // would hide this one on the
+                                                // gradient background.
+                                                backgroundBuilder:
+                                                    (context, states, child) =>
+                                                        child!),
                                             onPressed: () =>
                                                 Navigator.pop(context, true),
                                             child: const Text('Start chatting',

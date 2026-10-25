@@ -3,10 +3,12 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'crossed_paths.dart';
 import 'match_celebration.dart';
 import 'models.dart';
 import 'photo_picker.dart';
 import 'theme.dart';
+import 'voice.dart';
 import 'widgets.dart';
 import 'hangouts.dart';
 import 'introductions.dart';
@@ -534,13 +536,21 @@ class _GlassPill extends StatelessWidget {
 
 class PersonDetailsScreen extends StatelessWidget {
   const PersonDetailsScreen(
-      {super.key, required this.person, required this.store});
+      {super.key,
+      required this.person,
+      required this.store,
+      this.fromChat = false});
   final Person person;
   final PreviewStore store;
+
+  /// Opened from a conversation: you've already matched, so there's nothing
+  /// to like.
+  final bool fromChat;
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-            title: const Text('Discover', style: TextStyle(fontSize: 17)),
+            title: Text(fromChat ? person.name : 'Discover',
+                style: const TextStyle(fontSize: 17)),
             actions: [
               IconButton(
                   tooltip: 'Profile options',
@@ -567,11 +577,12 @@ class PersonDetailsScreen extends StatelessWidget {
                         Expanded(
                             child: Text('${person.name}, ${person.age}',
                                 style: Theme.of(context).textTheme.titleLarge)),
-                        RoundButton(
-                            icon: Icons.favorite_border_rounded,
-                            label: 'Like ${person.name}’s photo',
-                            onTap: () => showLikeComposer(
-                                context, store, person, 'photo'))
+                        if (!fromChat)
+                          RoundButton(
+                              icon: Icons.favorite_border_rounded,
+                              label: 'Like ${person.name}’s photo',
+                              onTap: () => showLikeComposer(
+                                  context, store, person, 'photo'))
                       ]),
                       Text('${person.city} · ${person.distanceLabel}',
                           style: TextStyle(
@@ -580,9 +591,9 @@ class PersonDetailsScreen extends StatelessWidget {
                       Wrap(spacing: 8, runSpacing: 8, children: [
                         for (final c in person.lookingFor) Tag(c.icon, c.title)
                       ]),
-                      if (person.voicePrompt.isNotEmpty) ...[
+                      if (person.hasVoice) ...[
                         const SizedBox(height: 22),
-                        VoicePrompt(person: person),
+                        VoicePrompt.of(person),
                       ],
                       const SizedBox(height: 22),
                       ListenableBuilder(
@@ -627,13 +638,17 @@ class PersonDetailsScreen extends StatelessWidget {
                                 Text(person.answer,
                                     style: const TextStyle(
                                         fontSize: 20, height: 1.5)),
-                                Align(
-                                    alignment: Alignment.centerRight,
-                                    child: RoundButton(
-                                        icon: Icons.favorite_border,
-                                        label: 'Like this prompt',
-                                        onTap: () => showLikeComposer(context,
-                                            store, person, 'My ideal Sunday'))),
+                                if (!fromChat)
+                                  Align(
+                                      alignment: Alignment.centerRight,
+                                      child: RoundButton(
+                                          icon: Icons.favorite_border,
+                                          label: 'Like this prompt',
+                                          onTap: () => showLikeComposer(
+                                              context,
+                                              store,
+                                              person,
+                                              'My ideal Sunday'))),
                               ])),
                     ]))),
       );
@@ -750,6 +765,8 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
   var ages = store.ages;
   var distance = store.distance;
   var verified = store.verifiedOnly;
+  var city = store.cityFilter;
+  final cityField = TextEditingController(text: city);
   final intents = {...store.intentFilter};
   await showEverlaneSheet(
       context,
@@ -790,7 +807,56 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                     max: 100,
                     divisions: 99,
                     label: '${distance.round()} km',
-                    onChanged: (value) => setState(() => distance = value)),
+                    onChanged: city.isEmpty
+                        ? (value) => setState(() => distance = value)
+                        : null),
+                const SizedBox(height: 10),
+                Row(children: [
+                  const Expanded(child: Text('City')),
+                  Text(city.isEmpty ? 'Near me' : city,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
+                ]),
+                const SizedBox(height: 10),
+                TextField(
+                    controller: cityField,
+                    textInputAction: TextInputAction.search,
+                    textCapitalization: TextCapitalization.words,
+                    decoration: InputDecoration(
+                        hintText: 'Search a city, e.g. Mumbai',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        suffixIcon: city.isEmpty
+                            ? null
+                            : IconButton(
+                                tooltip: 'Clear city',
+                                onPressed: () => setState(() {
+                                      city = '';
+                                      cityField.clear();
+                                    }),
+                                icon: const Icon(Icons.close_rounded))),
+                    onChanged: (v) => setState(() => city = v.trim())),
+                const SizedBox(height: 10),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  for (final option in store.cityOptions
+                      .where((c) => c
+                          .toLowerCase()
+                          .contains(cityField.text.trim().toLowerCase()))
+                      .take(8))
+                    ChoiceChip(
+                        label: Text(option),
+                        selected: option.toLowerCase() == city.toLowerCase(),
+                        onSelected: (on) => setState(() {
+                              city = on ? option : '';
+                              cityField.text = city;
+                            })),
+                ]),
+                if (city.isNotEmpty)
+                  Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                          'Showing people in $city. Distance doesn’t apply.',
+                          style: TextStyle(
+                              fontSize: 12, color: EverlaneColors.muted))),
+                const SizedBox(height: 18),
                 Row(children: [
                   const Expanded(child: Text('Selfie-verified profiles')),
                   if (!store.canFilterVerified)
@@ -844,6 +910,7 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                     onPressed: () {
                       store.ages = ages;
                       store.distance = distance;
+                      store.cityFilter = city;
                       store.verifiedOnly = store.canFilterVerified && verified;
                       store.intentFilter
                         ..clear()
@@ -857,6 +924,8 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                         onPressed: () => setState(() {
                               ages = const RangeValues(24, 32);
                               distance = 25;
+                              city = '';
+                              cityField.clear();
                               verified = false;
                               intents.clear();
                             }),
@@ -880,6 +949,10 @@ class ExploreScreen extends StatelessWidget {
         HangoutsBanner(store: store),
         const SizedBox(height: 12),
         IntroductionBanner(store: store),
+        const SizedBox(height: 12),
+        _NearbyBanner(store: store),
+        const SizedBox(height: 12),
+        _CrossedPathsBanner(store: store),
         const SizedBox(height: 24),
         GridView(
             shrinkWrap: true,
@@ -901,6 +974,135 @@ class ExploreScreen extends StatelessWidget {
                                 store: store, category: c))))
             ]),
       ]);
+}
+
+/// A wide Explore card that opens a screen.
+class _ExploreLink extends StatelessWidget {
+  const _ExploreLink(
+      {required this.icon,
+      required this.color,
+      required this.title,
+      required this.subtitle,
+      required this.onTap});
+  final IconData icon;
+  final Color color;
+  final String title, subtitle;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Material(
+      color: EverlaneColors.card,
+      borderRadius: BorderRadius.circular(22),
+      child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: onTap,
+          child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: EverlaneColors.line)),
+              child: Row(children: [
+                Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                        color: color, borderRadius: BorderRadius.circular(16)),
+                    child: Icon(icon, color: Colors.white, size: 26)),
+                const SizedBox(width: 16),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 4),
+                      Text(subtitle,
+                          style: TextStyle(
+                              fontSize: 13, color: EverlaneColors.muted)),
+                    ])),
+                Icon(Icons.chevron_right_rounded, color: EverlaneColors.muted),
+              ]))));
+}
+
+class _NearbyBanner extends StatelessWidget {
+  const _NearbyBanner({required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) {
+    final count = store.nearby.length;
+    return _ExploreLink(
+        icon: Icons.near_me_rounded,
+        color: EverlaneColors.boost,
+        title: 'Nearby profiles',
+        subtitle: count == 0
+            ? 'No one close by right now'
+            : count == 1
+                ? '1 person close to you'
+                : '$count people close to you',
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute<void>(builder: (_) => NearbyScreen(store: store))));
+  }
+}
+
+class _CrossedPathsBanner extends StatelessWidget {
+  const _CrossedPathsBanner({required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) {
+    final count = store.crossings.length;
+    return _ExploreLink(
+        icon: Icons.map_rounded,
+        color: EverlaneColors.like,
+        title: 'Crossed paths',
+        subtitle: count == 0
+            ? 'See who you’ve crossed paths with'
+            : count == 1
+                ? '1 person you’ve crossed paths with'
+                : '$count people you’ve crossed paths with',
+        onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+                builder: (_) => CrossedPathsScreen(store: store))));
+  }
+}
+
+/// People within a few km. Distances stay rounded ("Nearby"), never exact.
+class NearbyScreen extends StatelessWidget {
+  const NearbyScreen({super.key, required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+      listenable: store,
+      builder: (context, _) {
+        final people = store.nearby;
+        return Scaffold(
+            appBar: AppBar(
+                title: const Text('Nearby', style: TextStyle(fontSize: 17))),
+            body: people.isEmpty
+                ? const EmptyState(
+                    icon: Icons.near_me_outlined,
+                    title: 'No one close by yet.',
+                    detail:
+                        'Check back later, or widen your distance in preferences.')
+                : ListView(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                    children: [
+                        Text(
+                            'People close to you. We never show exact distance or location.',
+                            style: TextStyle(color: EverlaneColors.muted)),
+                        const SizedBox(height: 20),
+                        for (final p in people)
+                          Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _ExplorePerson(
+                                  person: p,
+                                  onTap: () => Navigator.push(
+                                      context,
+                                      editorialRoute<void>((_) =>
+                                          PersonDetailsScreen(
+                                              person: p, store: store))))),
+                      ]));
+      });
 }
 
 class _CategoryTile extends StatelessWidget {
@@ -1276,14 +1478,34 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-            title: Row(children: [
-              Portrait(widget.chat.person, height: 38, width: 38, radius: 19),
-              const SizedBox(width: 12),
-              Text(widget.chat.person.name,
-                  style: const TextStyle(fontSize: 18)),
-              const SizedBox(width: 6),
-              const Icon(Icons.verified, size: 16, color: EverlaneColors.boost)
-            ]),
+            // Tapping the name or photo opens their profile.
+            title: Semantics(
+                button: true,
+                label: 'View ${widget.chat.person.name}’s profile',
+                child: InkWell(
+                    borderRadius: BorderRadius.circular(24),
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => PersonDetailsScreen(
+                                person: widget.chat.person,
+                                store: widget.store,
+                                fromChat: true))),
+                    child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Portrait(widget.chat.person,
+                              height: 38, width: 38, radius: 19),
+                          const SizedBox(width: 12),
+                          Flexible(
+                              child: Text(widget.chat.person.name,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 18))),
+                          const SizedBox(width: 6),
+                          const Icon(Icons.verified,
+                              size: 16, color: EverlaneColors.boost),
+                          const SizedBox(width: 8),
+                        ])))),
             actions: [
               IconButton(
                   tooltip: 'Conversation safety',
@@ -1318,7 +1540,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                 child: Center(
                                     child: Eyebrow(
                                         'Every good story starts somewhere'))),
-                            for (final message in widget.chat.messages)
+                            for (final (i, message)
+                                in widget.chat.messages.indexed) ...[
+                              if (i == 0 ||
+                                  !_sameDay(widget.chat.messages[i - 1].sentAt,
+                                      message.sentAt))
+                                Padding(
+                                    padding: const EdgeInsets.only(
+                                        top: 6, bottom: 14),
+                                    child: Center(
+                                        child: Text(_dayLabel(message.sentAt),
+                                            style: TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w600,
+                                                color: EverlaneColors.muted)))),
                               Align(
                                   alignment: message.mine
                                       ? Alignment.centerRight
@@ -1327,20 +1562,41 @@ class _ChatScreenState extends State<ChatScreen> {
                                       constraints:
                                           const BoxConstraints(maxWidth: 300),
                                       margin: const EdgeInsets.only(bottom: 12),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 18, vertical: 14),
+                                      padding: const EdgeInsets.fromLTRB(
+                                          18, 12, 14, 8),
                                       decoration: BoxDecoration(
                                           color: message.mine
                                               ? EverlaneColors.deep
                                               : EverlaneColors.card,
                                           borderRadius:
                                               BorderRadius.circular(18)),
-                                      child: Text(message.text,
-                                          style: TextStyle(
-                                              color: message.mine
-                                                  ? Colors.white
-                                                  : EverlaneColors.plum,
-                                              height: 1.5)))),
+                                      child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Align(
+                                                alignment: Alignment.centerLeft,
+                                                widthFactor: 1,
+                                                child: Text(message.text,
+                                                    style: TextStyle(
+                                                        color: message.mine
+                                                            ? Colors.white
+                                                            : EverlaneColors
+                                                                .plum,
+                                                        height: 1.5))),
+                                            const SizedBox(height: 2),
+                                            Text(_clock(message.sentAt),
+                                                style: TextStyle(
+                                                    fontSize: 10.5,
+                                                    color: message.mine
+                                                        ? Colors.white
+                                                            .withValues(
+                                                                alpha: .7)
+                                                        : EverlaneColors
+                                                            .muted)),
+                                          ]))),
+                            ],
                           ])),
                       Padding(
                           padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
@@ -1366,6 +1622,105 @@ class _ChatScreenState extends State<ChatScreen> {
                               ])),
                     ])))),
       );
+}
+
+Future<void> confirmDeleteAccount(
+    BuildContext context, PreviewStore store) async {
+  final confirmed = await showEverlaneSheet<bool>(
+      context,
+      Builder(
+          builder: (context) => Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Delete your account?',
+                        style: Theme.of(context).textTheme.headlineMedium),
+                    const SizedBox(height: 12),
+                    Text(
+                        'This permanently deletes your profile, photos, voice prompt, likes, matches and messages. It can’t be undone.\n\nIf you just need a break, you can take a pause instead and keep your chats.',
+                        style: TextStyle(
+                            color: EverlaneColors.muted, height: 1.5)),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                            style: FilledButton.styleFrom(
+                                minimumSize: const Size(0, 52),
+                                backgroundColor: EverlaneColors.like,
+                                foregroundColor: Colors.white,
+                                backgroundBuilder: (context, states, child) =>
+                                    child!),
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete permanently',
+                                style:
+                                    TextStyle(fontWeight: FontWeight.w700)))),
+                    const SizedBox(height: 6),
+                    Center(
+                        child: TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Keep my account'))),
+                    const SizedBox(height: 10),
+                  ])));
+  if (confirmed != true || !context.mounted) return;
+  try {
+    await store.deleteAccount();
+    if (context.mounted) showNotice(context, 'Your account has been deleted.');
+  } catch (_) {
+    if (context.mounted) {
+      showNotice(context, 'Couldn’t delete your account. Try again.');
+    }
+  }
+}
+
+/// The member's own voice prompt with a way to record or re-record it, or
+/// an invitation to add one.
+class _MyVoicePrompt extends StatelessWidget {
+  const _MyVoicePrompt({required this.store});
+  final PreviewStore store;
+  @override
+  Widget build(BuildContext context) {
+    if (!store.hasVoice) {
+      return OutlinedButton.icon(
+          onPressed: () => recordVoicePrompt(context, store),
+          style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
+          icon: const Icon(Icons.mic_none_rounded),
+          label: const Text('Add a voice prompt'));
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      VoicePrompt(
+          // A new recording gets a fresh player.
+          key: ValueKey(store.myVoice ?? store.myVoiceUrl),
+          id: 'me',
+          label: store.myVoiceLabel,
+          seconds: store.myVoiceSeconds,
+          bytes: store.myVoice,
+          url: store.myVoiceUrl),
+      TextButton.icon(
+          onPressed: () => recordVoicePrompt(context, store),
+          icon: const Icon(Icons.mic_none_rounded, size: 18),
+          label: const Text('Record again')),
+    ]);
+  }
+}
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;
+
+/// "9:05 PM".
+String _clock(DateTime t) {
+  final h = t.hour % 12 == 0 ? 12 : t.hour % 12;
+  return '$h:${t.minute.toString().padLeft(2, '0')} ${t.hour < 12 ? 'AM' : 'PM'}';
+}
+
+/// "Today", "Yesterday", "Mon, 26 Oct", or "26 Oct 2025" in another year.
+String _dayLabel(DateTime t) {
+  final now = DateTime.now();
+  if (_sameDay(t, now)) return 'Today';
+  if (_sameDay(t, now.subtract(const Duration(days: 1)))) return 'Yesterday';
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug',
+      'Sep', 'Oct', 'Nov', 'Dec'];
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  final date = '${t.day} ${months[t.month - 1]}';
+  return t.year == now.year ? '${days[t.weekday - 1]}, $date' : '$date ${t.year}';
 }
 
 class ProfileScreen extends StatefulWidget {
@@ -1410,6 +1765,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final store = widget.store;
     final strength = store.profileCompleteness;
     return ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
+      if (store.adminWarning.isNotEmpty)
+        Container(
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+                color: EverlaneColors.star.withValues(alpha: .14),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                    color: EverlaneColors.star.withValues(alpha: .5))),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: EverlaneColors.star),
+                    SizedBox(width: 8),
+                    Text('A note from our team',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                  ]),
+                  const SizedBox(height: 8),
+                  Text(store.adminWarning, style: const TextStyle(height: 1.5)),
+                  const SizedBox(height: 4),
+                  Text(
+                      'Repeated issues can lead to a suspension. Our community guidelines apply to profiles and messages.',
+                      style: TextStyle(
+                          fontSize: 12, color: EverlaneColors.muted)),
+                  Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                          onPressed: store.acknowledgeWarning,
+                          child: const Text('I understand'))),
+                ])),
       Align(
           alignment: Alignment.centerRight,
           child: IconButton(
@@ -1630,6 +2017,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     fontWeight: FontWeight.w500,
                     color: EverlaneColors.plum)),
             const SizedBox(height: 18),
+            _MyVoicePrompt(store: store),
+            const SizedBox(height: 18),
             Text('Interests',
                 style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
             const SizedBox(height: 8),
@@ -1744,6 +2133,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       style:
                           TextStyle(fontSize: 12, color: EverlaneColors.muted)),
                   onTap: () => store.logOut()),
+              const Divider(height: 1),
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.delete_outline_rounded,
+                      color: EverlaneColors.like),
+                  title: const Text('Delete account',
+                      style: TextStyle(color: EverlaneColors.like)),
+                  subtitle: Text(
+                      'Permanently remove your profile, photos and chats',
+                      style:
+                          TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                  onTap: () => confirmDeleteAccount(context, store)),
             ]),
       _ProfileSection(
           title: 'Preferences',
@@ -2325,6 +2726,13 @@ class _EditProfileFormState extends State<_EditProfileForm> {
               validator: (v) => v == null || v.trim().isEmpty
                   ? 'Tell us a little about this'
                   : null),
+          const SizedBox(height: 8),
+          const Text('Voice prompt',
+              style: TextStyle(fontWeight: FontWeight.w700)),
+          const SizedBox(height: 10),
+          ListenableBuilder(
+              listenable: store,
+              builder: (context, _) => _MyVoicePrompt(store: store)),
           const SizedBox(height: 18),
           Row(children: [
             Expanded(
@@ -2378,8 +2786,9 @@ Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
           Text('What happened?',
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 12),
-          const Text(
-              'This preview hides the profile locally. It does not submit a report to a moderation team.'),
+          Text(person.remote && store.signedIn
+              ? 'Our moderation team will review your report. ${person.name} won’t know who reported them, and you won’t see each other again.'
+              : 'This preview hides the profile locally. It does not submit a report to a moderation team.'),
           for (final r in [
             'Fake or misleading profile',
             'Inappropriate content',
@@ -2413,6 +2822,9 @@ Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
                 ]));
     if (confirmed != true || !context.mounted) return;
   }
+  final reported = action == 'report' && person.remote && store.signedIn;
+  if (reported) await store.report(person, reason!);
+  if (!context.mounted) return;
   store.forgetRemotely(person);
   store.passed.add(person.id);
   store.incoming.removeWhere((p) => p.id == person.id);
@@ -2421,9 +2833,11 @@ Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
   if (chat != null) Navigator.pop(context);
   showNotice(
       context,
-      action == 'report'
-          ? 'Profile hidden in preview. No report was submitted.'
-          : 'Connection removed from this preview.');
+      reported
+          ? 'Thanks for telling us. We’ll review your report.'
+          : action == 'report'
+              ? 'Profile hidden in preview. No report was submitted.'
+              : 'Connection removed from this preview.');
 }
 
 /// Clears the plan-change snackbar on the way out, so it can't cover the

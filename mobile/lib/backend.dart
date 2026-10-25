@@ -73,6 +73,33 @@ class ProfileBackend {
   String photoUrl(String path) =>
       client.storage.from(_bucket).getPublicUrl(path);
 
+  // ---- Voice prompt (a WAV of up to 30 seconds) ----
+
+  static const _voiceBucket = 'voice';
+
+  Future<String> uploadVoice(Uint8List wav) async {
+    final path = '${user!.id}/${DateTime.now().microsecondsSinceEpoch}.wav';
+    await client.storage.from(_voiceBucket).uploadBinary(path, wav,
+        fileOptions: const FileOptions(contentType: 'audio/wav'));
+    return path;
+  }
+
+  Future<void> deleteVoice(String path) =>
+      client.storage.from(_voiceBucket).remove([path]);
+
+  String voiceUrl(String path) =>
+      client.storage.from(_voiceBucket).getPublicUrl(path);
+
+  /// Deletes the member's files, then their account; the database cascades
+  /// to everything else (see migration 006).
+  Future<void> deleteAccount(
+      {required List<String> photos, String voice = ''}) async {
+    if (photos.isNotEmpty) await client.storage.from(_bucket).remove(photos);
+    if (voice.isNotEmpty) await deleteVoice(voice);
+    await client.rpc('delete_my_account');
+    await client.auth.signOut();
+  }
+
   // ---- Admin-managed content (readable without signing in) ----
 
   Future<List<Map<String, dynamic>>> quizQuestions() async => _rows(await client
@@ -86,6 +113,25 @@ class ProfileBackend {
       .select('kind, value')
       .eq('active', true)
       .order('position'));
+
+  // ---- Moderation (see migration 007) ----
+
+  Future<void> report(String member, String reason) =>
+      client.rpc('submit_report', params: {'member': member, 'reason': reason});
+
+  Future<void> acknowledgeWarning() => client.rpc('acknowledge_warning');
+
+  // ---- Crossed paths (see migration 008) ----
+
+  /// The database snaps these to a ~1 km area again, so an exact spot is
+  /// never stored even if one is sent.
+  Future<void> recordArea(double lat, double lng) =>
+      client.rpc('record_area', params: {'lat': lat, 'lng': lng});
+
+  Future<List<Map<String, dynamic>>> crossedPaths() async =>
+      _rows(await client.rpc('crossed_paths'));
+
+  Future<void> clearAreas() => client.rpc('clear_my_areas');
 
   // ---- Discovery, likes, matches and chat ----
 
@@ -194,3 +240,8 @@ class ProfileBackend {
     return ('jpg', 'image/jpeg');
   }
 }
+
+/// The database refuses messages and profile text with a banned word
+/// (migration 007) with this error.
+bool isBannedWordError(Object e) =>
+    e is PostgrestException && e.message.contains('banned_word');
