@@ -768,10 +768,15 @@ class PreviewStore extends ChangeNotifier {
   }
 
   /// Permanently deletes the signed-in member's account, photos and voice
-  /// prompt. Throws if Supabase couldn't do it, leaving them signed in.
+  /// prompt. Throws if Supabase couldn't do it, leaving them signed in. In
+  /// the account-less preview it clears the local profile instead.
   Future<void> deleteAccount() async {
     final b = backend;
-    if (b == null || !b.signedIn) return;
+    if (b == null || !b.signedIn) {
+      _restoreDemo();
+      startFreshAccount();
+      return;
+    }
     await b.deleteAccount(
         photos: [..._photoPaths.values], voice: _voicePath);
     _restoreDemo();

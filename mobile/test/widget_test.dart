@@ -619,4 +619,38 @@ void main() {
     expect(find.textContaining('You’re boosted until'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('Settings has Log out and Delete account, even in the preview',
+      (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(const EverlaneApp());
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Skip to the app (preview)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('You').last);
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Delete account'), 300,
+        scrollable: find.byType(Scrollable).first);
+    // Clear of the bottom navigation bar.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -250));
+    await tester.pumpAndSettle();
+    expect(find.text('Log out'), findsOneWidget);
+    expect(find.text('Preview · not signed in'), findsOneWidget);
+    await tester.tap(find.text('Delete account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Clear preview profile'), findsOneWidget);
+    await tester.tap(find.text('Keep my account'));
+    await tester.pumpAndSettle();
+    expect(find.text('Delete account'), findsOneWidget);
+    await tester.tap(find.text('Delete account'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Clear preview profile'));
+    await tester.pumpAndSettle();
+    expect(find.text('Skip to the app (preview)'), findsOneWidget,
+        reason: 'back on the welcome screen');
+    expect(tester.takeException(), isNull);
+  });
 }

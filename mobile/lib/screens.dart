@@ -1626,6 +1626,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
 Future<void> confirmDeleteAccount(
     BuildContext context, PreviewStore store) async {
+  // Deleting signs out, so remember which kind of account this was.
+  final signedIn = store.signedIn;
   final confirmed = await showEverlaneSheet<bool>(
       context,
       Builder(
@@ -1636,7 +1638,9 @@ Future<void> confirmDeleteAccount(
                         style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 12),
                     Text(
-                        'This permanently deletes your profile, photos, voice prompt, likes, matches and messages. It can’t be undone.\n\nIf you just need a break, you can take a pause instead and keep your chats.',
+                        signedIn
+                            ? 'This permanently deletes your profile, photos, voice prompt, likes, matches and messages. It can’t be undone.\n\nIf you just need a break, you can take a pause instead and keep your chats.'
+                            : 'You’re in the preview, so there’s no account on our servers. This clears the profile, photos and voice prompt you added on this device and takes you back to the start.',
                         style: TextStyle(
                             color: EverlaneColors.muted, height: 1.5)),
                     const SizedBox(height: 22),
@@ -1650,7 +1654,10 @@ Future<void> confirmDeleteAccount(
                                 backgroundBuilder: (context, states, child) =>
                                     child!),
                             onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Delete permanently',
+                            child: Text(
+                                signedIn
+                                    ? 'Delete permanently'
+                                    : 'Clear preview profile',
                                 style:
                                     TextStyle(fontWeight: FontWeight.w700)))),
                     const SizedBox(height: 6),
@@ -1663,7 +1670,13 @@ Future<void> confirmDeleteAccount(
   if (confirmed != true || !context.mounted) return;
   try {
     await store.deleteAccount();
-    if (context.mounted) showNotice(context, 'Your account has been deleted.');
+    if (context.mounted) {
+      showNotice(
+          context,
+          signedIn
+              ? 'Your account has been deleted.'
+              : 'Your preview profile has been cleared.');
+    }
   } catch (_) {
     if (context.mounted) {
       showNotice(context, 'Couldn’t delete your account. Try again.');
@@ -2106,12 +2119,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 20)
                     ]))),
           ]),
-      if (store.signedIn)
-        _ProfileSection(
+      _ProfileSection(
             title: 'Account',
             icon: Icons.person_outline_rounded,
             iconColor: EverlaneColors.lavender,
-            subtitle: store.accountEmail,
+            subtitle: store.signedIn
+                ? store.accountEmail
+                : 'Preview · not signed in',
             children: [
               if (store.syncError != null) ...[
                 Row(children: [
@@ -2129,7 +2143,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.logout_rounded),
                   title: const Text('Log out'),
-                  subtitle: Text('Your profile stays saved to your account',
+                  subtitle: Text(
+                      store.signedIn
+                          ? 'Your profile stays saved to your account'
+                          : 'Leave the preview and go back to the welcome screen',
                       style:
                           TextStyle(fontSize: 12, color: EverlaneColors.muted)),
                   onTap: () => store.logOut()),
@@ -2141,7 +2158,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   title: const Text('Delete account',
                       style: TextStyle(color: EverlaneColors.like)),
                   subtitle: Text(
-                      'Permanently remove your profile, photos and chats',
+                      store.signedIn
+                          ? 'Permanently remove your profile, photos and chats'
+                          : 'Clear your preview profile from this device',
                       style:
                           TextStyle(fontSize: 12, color: EverlaneColors.muted)),
                   onTap: () => confirmDeleteAccount(context, store)),
