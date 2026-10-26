@@ -22,11 +22,11 @@ void main() {
         find.byKey(const ValueKey('stack-card-2')).evaluate().length;
   }
 
-  testWidgets('Likes you stacks one card per extra like, up to two',
+  testWidgets('Likes you keeps the two glass layers shown in the reference',
       (tester) async {
-    expect(await stackedCards(tester, 0), 0);
-    expect(await stackedCards(tester, 1), 0);
-    expect(await stackedCards(tester, 2), 1);
+    expect(await stackedCards(tester, 0), 2);
+    expect(await stackedCards(tester, 1), 2);
+    expect(await stackedCards(tester, 2), 2);
     expect(await stackedCards(tester, 3), 2);
     expect(await stackedCards(tester, 9), 2);
   });

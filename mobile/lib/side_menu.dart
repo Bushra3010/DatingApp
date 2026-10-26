@@ -1,25 +1,20 @@
+import 'dart:ui' as ui;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
 import 'theme.dart';
 
-/// One row of the side menu: a glass pill with a glowing gradient icon.
 class SideMenuItem {
   const SideMenuItem(this.icon, this.title, this.colors, this.onTap,
       {this.badge});
   final IconData icon;
   final String title;
-
-  /// Top-left to bottom-right fill of the icon; the last colour is its glow.
   final List<Color> colors;
   final VoidCallback onTap;
-
-  /// Shown as an outlined pill on the right; the row glows when set.
   final int? badge;
 }
 
-/// The profile side menu: a frosted panel with the member's orb, glass
-/// menu pills and the wordmark at the foot.
+/// Live controls over glass surfaces, with the original reference artwork.
 class SideMenu extends StatelessWidget {
   const SideMenu(
       {super.key,
@@ -32,339 +27,378 @@ class SideMenu extends StatelessWidget {
   final String location;
   final List<SideMenuItem> items;
 
-  static const _radius = BorderRadius.only(
-      topRight: Radius.circular(28), bottomRight: Radius.circular(28));
-
   @override
-  Widget build(BuildContext context) => Drawer(
-      width: 310,
+  Widget build(BuildContext context) {
+    final width =
+        (MediaQuery.sizeOf(context).width * 535 / 768).clamp(0.0, 310.0);
+    final scale = width / 535;
+    final radius = BorderRadius.only(
+        topRight: Radius.circular(47 * scale),
+        bottomRight: Radius.circular(47 * scale));
+    return Drawer(
+      width: width,
       backgroundColor: Colors.transparent,
-      shape: const RoundedRectangleBorder(borderRadius: _radius),
+      shape: RoundedRectangleBorder(borderRadius: radius),
       child: ClipRRect(
-          borderRadius: _radius,
-          child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-              child: DecoratedBox(
-                  decoration: BoxDecoration(
-                      borderRadius: _radius,
-                      gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            EverlaneColors.paper.withValues(alpha: .82),
-                            EverlaneColors.paper.withValues(alpha: .9),
-                          ]),
-                      border: Border.all(
-                          color:
-                              EverlaneColors.lavender.withValues(alpha: .14))),
-                  child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _Header(name: name, age: age, location: location),
-                        Expanded(
-                            child: Stack(children: [
-                          ListView(
-                              padding:
-                                  const EdgeInsets.fromLTRB(18, 28, 18, 12),
-                              children: [
-                                for (final item in items)
-                                  Padding(
-                                      padding: const EdgeInsets.only(bottom: 13),
-                                      child: _Stacked(
-                                          layers: (item.badge ?? 0) - 1,
-                                          child: _Pill(item: item))),
-                              ]),
-                          const Positioned(
-                              left: 22, top: 6, child: _Sparkle(size: 11)),
-                          const Positioned(
-                              right: 8, top: 10, child: _Sparkle(size: 14)),
-                          const Positioned(
-                              right: 36, top: 352, child: _Sparkle(size: 13)),
-                        ])),
-                        _Footer(),
-                      ])))));
+        borderRadius: radius,
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+                borderRadius: radius,
+                gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF191224),
+                      Color(0xF20D0C13),
+                      Color(0xF214101D)
+                    ],
+                    stops: [
+                      0,
+                      .55,
+                      1
+                    ]),
+                border: Border.all(
+                    color: const Color(0xFF80508E).withValues(alpha: .7))),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _Header(
+                      name: name, age: age, location: location, scale: scale),
+                  Expanded(
+                      child: SingleChildScrollView(
+                    padding: EdgeInsets.fromLTRB(
+                        28 * scale, 82 * scale, 32 * scale, 20 * scale),
+                    child: Column(children: [
+                      for (var i = 0; i < items.length; i++)
+                        Padding(
+                            padding: EdgeInsets.only(bottom: 16 * scale),
+                            child: _MenuRow(
+                                item: items[i], index: i, scale: scale)),
+                    ]),
+                  )),
+                  Padding(
+                      padding: EdgeInsets.fromLTRB(24 * scale, 10 * scale, 0,
+                          MediaQuery.paddingOf(context).bottom + 30 * scale),
+                      child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Semantics(
+                              label: 'Everlane',
+                              image: true,
+                              child: _Artwork(
+                                  source:
+                                      const Rect.fromLTWH(24, 1248, 270, 104),
+                                  width: 270 * scale,
+                                  height: 104 * scale,
+                                  feather: true)))),
+                ]),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _Header extends StatelessWidget {
   const _Header(
-      {required this.name, required this.age, required this.location});
+      {required this.name,
+      required this.age,
+      required this.location,
+      required this.scale});
   final String name;
   final int age;
   final String location;
+  final double scale;
 
   @override
   Widget build(BuildContext context) => Container(
+      height: 250 * scale + MediaQuery.paddingOf(context).top,
       padding: EdgeInsets.fromLTRB(
-          30, MediaQuery.paddingOf(context).top + 40, 24, 30),
+          47 * scale,
+          MediaQuery.paddingOf(context).top + 49 * scale,
+          24 * scale,
+          28 * scale),
       decoration: BoxDecoration(
           borderRadius:
-              const BorderRadius.only(bottomRight: Radius.circular(28)),
-          gradient: LinearGradient(
+              BorderRadius.only(bottomLeft: Radius.circular(46 * scale)),
+          gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                EverlaneColors.deep.withValues(alpha: .32),
-                EverlaneColors.deep.withValues(alpha: .08),
-              ]),
-          // The glowing pink rule under the header.
-          border: const Border(
-              bottom: BorderSide(color: Color(0xFFD946EF), width: 1.4)),
+              colors: [Color(0xFF42305E), Color(0xFF30324E), Color(0xFF21172F)],
+              stops: [0, .5, 1]),
+          border: Border(
+              bottom: BorderSide(
+                  color: const Color(0xFFB546AF).withValues(alpha: .65))),
           boxShadow: [
             BoxShadow(
-                color: const Color(0xFFD946EF).withValues(alpha: .35),
-                blurRadius: 18,
-                offset: const Offset(0, 6),
-                spreadRadius: -8),
+                color: const Color(0xFFE443D7).withValues(alpha: .2),
+                blurRadius: 12 * scale,
+                spreadRadius: -6 * scale,
+                offset: Offset(0, 7 * scale))
           ]),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _Orb(letter: name.isEmpty ? 'E' : name[0].toUpperCase()),
-        const SizedBox(height: 18),
-        Text('$name, $age',
-            style: EverlaneFonts.inter(size: 30, weight: FontWeight.w700)),
-        const SizedBox(height: 6),
-        Text(location,
-            style: EverlaneFonts.inter(
-                size: 16, color: const Color(0xFFB794F6))),
+      // The name and city sit beside the avatar, not under it.
+      child: Row(children: [
+        _Artwork(
+            source: const Rect.fromLTWH(38, 49, 160, 160),
+            width: 142 * scale,
+            height: 160 * scale,
+            feather: true),
+        SizedBox(width: 14 * scale),
+        Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+              Text('$name, $age',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: EverlaneFonts.inter(
+                      size: 44 * scale, color: const Color(0xFFF8F5FB))),
+              SizedBox(height: 5 * scale),
+              Text(location,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: EverlaneFonts.inter(
+                      size: 26 * scale, color: const Color(0xFFB08BD7))),
+            ])),
       ]));
 }
 
-/// The member's initial in a glass sphere, with the amber "online" dot.
-class _Orb extends StatelessWidget {
-  const _Orb({required this.letter});
-  final String letter;
-
-  @override
-  Widget build(BuildContext context) =>
-      Stack(clipBehavior: Clip.none, children: [
-        Container(
-            width: 88,
-            height: 88,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const RadialGradient(
-                    center: Alignment(-.35, -.45),
-                    radius: .95,
-                    colors: [
-                      Color(0xFF9F7AEA),
-                      Color(0xFF5B34A8),
-                      Color(0xFF2A1650)
-                    ],
-                    stops: [0, .55, 1]),
-                border: Border.all(
-                    color: EverlaneColors.lavender.withValues(alpha: .55),
-                    width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                      color: EverlaneColors.deep.withValues(alpha: .6),
-                      blurRadius: 26,
-                      spreadRadius: 1),
-                ]),
-            child: Text(letter,
-                style: EverlaneFonts.logo(size: 40, color: Colors.white)
-                    .copyWith(shadows: [
-                  Shadow(
-                      color: EverlaneColors.lavender.withValues(alpha: .9),
-                      blurRadius: 12)
-                ]))),
-        // Glass highlight across the top of the sphere.
-        Positioned(
-            left: 16,
-            top: 8,
-            child: Container(
-                width: 46,
-                height: 20,
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.white.withValues(alpha: .35),
-                          Colors.white.withValues(alpha: 0)
-                        ])))),
-        Positioned(
-            right: -4,
-            top: -4,
-            child: Container(
-                width: 22,
-                height: 22,
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const RadialGradient(
-                        center: Alignment(-.3, -.3),
-                        colors: [Color(0xFFFFC266), Color(0xFFF59E0B)]),
-                    boxShadow: [
-                      BoxShadow(
-                          color: EverlaneColors.star.withValues(alpha: .7),
-                          blurRadius: 12)
-                    ]))),
-      ]);
-}
-
-/// One card edge peeks out above the pill for each extra like (up to two),
-/// so a pile of likes reads as a stack.
-class _Stacked extends StatelessWidget {
-  const _Stacked({required this.layers, required this.child});
-  final int layers;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final count = layers.clamp(0, 2);
-    if (count == 0) return child;
-    Widget card(int depth) => Positioned(
-        key: ValueKey('stack-card-$depth'),
-        left: 14.0 * depth,
-        right: 14.0 * depth,
-        top: -7.0 * depth,
-        height: 64,
-        child: DecoratedBox(
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(32),
-                color: Color.alphaBlend(
-                    EverlaneColors.like.withValues(alpha: .10 / depth),
-                    EverlaneColors.card),
-                border: Border.all(
-                    color: EverlaneColors.like.withValues(alpha: .4 / depth)))));
-    return Padding(
-        padding: EdgeInsets.only(top: 7.0 * count),
-        child: Stack(clipBehavior: Clip.none, children: [
-          for (var depth = count; depth >= 1; depth--) card(depth),
-          // Solid backing so the cards behind don't show through the glass.
-          Positioned.fill(
-              child: DecoratedBox(
-                  decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(32),
-                      color: EverlaneColors.paper))),
-          child,
-        ]));
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill({required this.item});
+class _MenuRow extends StatelessWidget {
+  const _MenuRow(
+      {required this.item, required this.index, required this.scale});
   final SideMenuItem item;
+  final int index;
+  final double scale;
+
+  static const _art = [
+    Rect.fromLTWH(42, 463, 86, 79),
+    Rect.fromLTWH(42, 575, 86, 80),
+    Rect.fromLTWH(42, 690, 86, 82),
+    Rect.fromLTWH(42, 806, 86, 82),
+    Rect.fromLTWH(42, 921, 86, 84),
+    Rect.fromLTWH(42, 1037, 86, 81),
+  ];
 
   @override
   Widget build(BuildContext context) {
-    final highlighted = item.badge != null;
-    return Material(
-        color: Colors.transparent,
-        child: InkWell(
-            borderRadius: BorderRadius.circular(32),
-            onTap: item.onTap,
-            child: Ink(
-                height: 64,
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(32),
-                    gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          EverlaneColors.plum.withValues(alpha: .09),
-                          EverlaneColors.plum.withValues(alpha: .03),
-                        ]),
-                    border: Border.all(
-                        color: highlighted
-                            ? EverlaneColors.like.withValues(alpha: .55)
-                            : EverlaneColors.plum.withValues(alpha: .16),
-                        width: 1.2),
-                    boxShadow: highlighted
-                        ? [
-                            BoxShadow(
-                                color:
-                                    EverlaneColors.like.withValues(alpha: .28),
-                                blurRadius: 18,
-                                spreadRadius: -4)
-                          ]
-                        : null),
-                padding: const EdgeInsets.only(left: 12, right: 16),
-                child: Row(children: [
-                  _GlowIcon(icon: item.icon, colors: item.colors),
-                  const SizedBox(width: 18),
-                  Expanded(
-                      child: Text(item.title,
-                          overflow: TextOverflow.ellipsis,
-                          style: EverlaneFonts.inter(
-                              size: 18, weight: FontWeight.w500))),
-                  if (highlighted)
-                    Container(
-                        constraints: const BoxConstraints(minWidth: 32),
-                        height: 24,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: EverlaneColors.like, width: 1.5),
-                            boxShadow: [
-                              BoxShadow(
-                                  color: EverlaneColors.like
-                                      .withValues(alpha: .35),
-                                  blurRadius: 8)
-                            ]),
-                        child: Text('${item.badge}',
-                            style: EverlaneFonts.inter(
-                                size: 13,
-                                weight: FontWeight.w600,
-                                color: EverlaneColors.like))),
-                ]))));
+    final likes = item.badge != null;
+    final shape = BorderRadius.circular(50 * scale);
+    Widget surface({bool behind = false}) => DecoratedBox(
+            decoration: BoxDecoration(
+                borderRadius: shape,
+                gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: behind
+                        ? [const Color(0xFF302538), const Color(0xFF17131F)]
+                        : [
+                            const Color(0xFF2D2936),
+                            const Color(0xFF201D27),
+                            const Color(0xFF24202E)
+                          ],
+                    stops: behind ? null : [0, .45, 1]),
+                border: Border.all(
+                    color: const Color(0xFFAB8BB9)
+                        .withValues(alpha: behind ? .35 : .6),
+                    width: 1.5 * scale),
+                boxShadow: [
+              BoxShadow(
+                  color: (likes
+                          ? const Color(0xFFE55CC0)
+                          : const Color(0xFFB9A2CC))
+                      .withValues(alpha: .12),
+                  blurRadius: 10 * scale,
+                  spreadRadius: -3 * scale)
+            ]));
+    return Stack(clipBehavior: Clip.none, children: [
+      if (likes) ...[
+        for (var depth = 2; depth >= 1; depth--)
+          Positioned(
+              key: ValueKey('stack-card-$depth'),
+              left: 0,
+              right: 0,
+              top: -19 * scale * depth,
+              height: 98 * scale,
+              child: surface(behind: true)),
+        Positioned(
+            left: 18 * scale,
+            top: -47 * scale,
+            child: _Sparkle(size: 28 * scale)),
+      ],
+      Positioned.fill(child: surface()),
+      Material(
+          color: Colors.transparent,
+          borderRadius: shape,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+              onTap: item.onTap,
+              borderRadius: shape,
+              child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: 98 * scale),
+                  child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                          14 * scale, 7 * scale, 22 * scale, 7 * scale),
+                      child: Row(children: [
+                        if (index < _art.length)
+                          ExcludeSemantics(
+                              child: _Artwork(
+                                  source: _art[index],
+                                  width: 86 * scale,
+                                  height: 82 * scale,
+                                  feather: true))
+                        else
+                          Icon(item.icon,
+                              color: item.colors.first, size: 70 * scale),
+                        SizedBox(width: 14 * scale),
+                        Expanded(
+                            child: Text(item.title,
+                                style: EverlaneFonts.inter(
+                                    size: 32 * scale,
+                                    color: const Color(0xFFFAF8FC)),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis)),
+                        if (likes) ...[
+                          SizedBox(width: 8 * scale),
+                          Container(
+                              width: 46 * scale,
+                              height: 40 * scale,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                  borderRadius:
+                                      BorderRadius.circular(22 * scale),
+                                  color: const Color(0xFF382033),
+                                  border: Border.all(
+                                      color: const Color(0xFFF15ABD),
+                                      width: 2 * scale),
+                                  boxShadow: [
+                                    BoxShadow(
+                                        color: const Color(0xFFF535A8)
+                                            .withValues(alpha: .65),
+                                        blurRadius: 10 * scale)
+                                  ]),
+                              child: Text('${item.badge}',
+                                  style: EverlaneFonts.inter(
+                                      size: 25 * scale,
+                                      color: const Color(0xFFF45ABA)))),
+                        ],
+                      ]))))),
+      if (likes)
+        Positioned(
+            right: -8 * scale,
+            top: -8 * scale,
+            child: IgnorePointer(child: _Sparkle(size: 38 * scale))),
+      if (index == 4)
+        Positioned(
+            right: 20 * scale,
+            top: -14 * scale,
+            child: IgnorePointer(child: _Sparkle(size: 30 * scale))),
+    ]);
   }
 }
 
-/// An icon filled with a gradient and lit from behind by its own colour.
-class _GlowIcon extends StatelessWidget {
-  const _GlowIcon({required this.icon, required this.colors});
-  final IconData icon;
-  final List<Color> colors;
+/// Clips the supplied reference at render time, retaining its exact icon art.
+/// A soft edge lets the original glow blend into the live glass surface.
+class _Artwork extends StatefulWidget {
+  const _Artwork(
+      {required this.source,
+      required this.width,
+      required this.height,
+      this.feather = false});
+  final Rect source;
+  final double width;
+  final double height;
+  final bool feather;
 
   @override
-  Widget build(BuildContext context) => Container(
-      width: 46,
-      height: 46,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
-        BoxShadow(
-            color: colors.last.withValues(alpha: .45),
-            blurRadius: 16,
-            spreadRadius: -2)
-      ]),
-      child: ShaderMask(
-          blendMode: BlendMode.srcIn,
-          shaderCallback: (bounds) => LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: colors)
-              .createShader(bounds),
-          child: Icon(icon, size: 36)));
+  State<_Artwork> createState() => _ArtworkState();
 }
 
-class _Footer extends StatelessWidget {
+class _ArtworkState extends State<_Artwork> {
+  ImageStream? _stream;
+  ImageInfo? _image;
+  late final _listener = ImageStreamListener((image, _) {
+    final previous = _image;
+    setState(() => _image = image);
+    previous?.dispose();
+  });
+
   @override
-  Widget build(BuildContext context) => Padding(
-      padding: EdgeInsets.fromLTRB(
-          30, 12, 24, MediaQuery.paddingOf(context).bottom + 26),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Flexible(
-            child: Text('Everlane',
-                maxLines: 1,
-                overflow: TextOverflow.fade,
-                softWrap: false,
-                style: EverlaneFonts.logo(size: 32).copyWith(shadows: [
-              Shadow(
-                  color: EverlaneColors.lavender.withValues(alpha: .8),
-                  blurRadius: 14),
-              Shadow(
-                  color: EverlaneColors.deep.withValues(alpha: .9),
-                  blurRadius: 28),
-            ]))),
-        const Padding(
-            padding: EdgeInsets.only(left: 2), child: _Sparkle(size: 14)),
-      ]));
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final stream = const AssetImage('assets/images/side_menu_reference.png')
+        .resolve(createLocalImageConfiguration(context));
+    if (stream.key == _stream?.key) return;
+    _stream?.removeListener(_listener);
+    _stream = stream..addListener(_listener);
+  }
+
+  @override
+  void dispose() {
+    _stream?.removeListener(_listener);
+    _image?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+      size: Size(widget.width, widget.height),
+      painter: _ArtworkPainter(_image?.image, widget.source, widget.feather));
 }
 
-/// A four-pointed twinkle.
+/// Paint only the requested source rectangle. Keeping the blend layer bounded
+/// to the icon prevents web compositing from masking the rest of the drawer.
+class _ArtworkPainter extends CustomPainter {
+  const _ArtworkPainter(this.image, this.source, this.feather);
+  final ui.Image? image;
+  final Rect source;
+  final bool feather;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (image == null) return;
+    final bounds = Offset.zero & size;
+    canvas.save();
+    canvas.clipRect(bounds);
+    if (feather) canvas.saveLayer(bounds, Paint());
+    canvas.drawImageRect(
+        image!, source, bounds, Paint()..filterQuality = FilterQuality.high);
+    if (feather) {
+      for (final vertical in [false, true]) {
+        canvas.drawRect(
+            bounds,
+            Paint()
+              ..blendMode = BlendMode.dstIn
+              ..shader = LinearGradient(
+                  begin: vertical ? Alignment.topCenter : Alignment.centerLeft,
+                  end:
+                      vertical ? Alignment.bottomCenter : Alignment.centerRight,
+                  colors: const [
+                    Colors.transparent,
+                    Colors.white,
+                    Colors.white,
+                    Colors.transparent
+                  ],
+                  stops: const [
+                    0,
+                    .16,
+                    .84,
+                    1
+                  ]).createShader(bounds));
+      }
+      canvas.restore();
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_ArtworkPainter oldDelegate) =>
+      image != oldDelegate.image ||
+      source != oldDelegate.source ||
+      feather != oldDelegate.feather;
+}
+
 class _Sparkle extends StatelessWidget {
   const _Sparkle({required this.size});
   final double size;
@@ -379,21 +413,20 @@ class _SparklePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
     final r = size.width / 2;
-    final w = r * .22;
-    final star = Path()
+    final w = r * .18;
+    final path = Path()
       ..moveTo(c.dx, c.dy - r)
       ..quadraticBezierTo(c.dx + w, c.dy - w, c.dx + r, c.dy)
       ..quadraticBezierTo(c.dx + w, c.dy + w, c.dx, c.dy + r)
       ..quadraticBezierTo(c.dx - w, c.dy + w, c.dx - r, c.dy)
       ..quadraticBezierTo(c.dx - w, c.dy - w, c.dx, c.dy - r)
       ..close();
-    canvas
-      ..drawPath(
-          star,
-          Paint()
-            ..color = EverlaneColors.lavender.withValues(alpha: .8)
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3))
-      ..drawPath(star, Paint()..color = Colors.white);
+    canvas.drawPath(
+        path,
+        Paint()
+          ..color = const Color(0xFFC78CF9)
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
+    canvas.drawPath(path, Paint()..color = const Color(0xFFE8CCFF));
   }
 
   @override

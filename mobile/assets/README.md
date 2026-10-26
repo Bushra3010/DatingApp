@@ -1,5 +1,7 @@
 # Preview assets
 
+`images/side_menu_reference.png` is the user-supplied `image.png`. The sidebar clips its original neon icons, profile orb and Everlane wordmark at render time; labels, counts and navigation remain live Flutter controls.
+
 The four profile images are illustrative Unsplash photos, bundled to make UI review independent of network availability. The names, ages, work, prompts, likes and conversations are fictional. These images do not represent real dating-app users.
 
 - Ananya: https://unsplash.com/photos/IF9TK5Uy-KI (photo-1534528741775-53994a69daeb)
