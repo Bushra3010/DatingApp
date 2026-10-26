@@ -344,13 +344,9 @@ void main() {
     Navigator.of(tester.element(find.text('You’re liking Ananya’s photo.')))
         .pop();
     await tester.pumpAndSettle();
-    await tester.tap(find.textContaining('Ananya’s soundtrack'));
-    await tester.pumpAndSettle();
-    expect(find.text('You’re liking Ananya’s soundtrack.'), findsOneWidget);
-    Navigator.of(
-            tester.element(find.text('You’re liking Ananya’s soundtrack.')))
-        .pop();
-    await tester.pumpAndSettle();
+    // The Discover card shows neither the soundtrack nor the bio.
+    expect(find.textContaining('Ananya’s soundtrack'), findsNothing);
+    expect(find.textContaining('Designer by day'), findsNothing);
     await tester.tap(find.text('You'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Invisible mode'), 200,
@@ -498,37 +494,38 @@ void main() {
         findsOneWidget);
     await tester.tap(find.text('Get started'));
     await tester.pumpAndSettle();
-    // One page: name, date of birth, gender, who to meet, height,
-    // languages, what you're looking for and a photo.
-    expect(find.text('Create your profile'), findsOneWidget);
-    await tester.enterText(find.byType(TextField).first, 'Aarav');
-    await tester.tap(find.text('Date of birth'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('OK'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('years old'), findsOneWidget);
-    final page = find
-        .descendant(
-            of: find.byType(ListView), matching: find.byType(Scrollable))
-        .first;
-    Future<void> tapOnPage(String text) async {
-      await tester.scrollUntilVisible(find.text(text), 100, scrollable: page);
+    // One question per page.
+    Future<void> tapText(String text) async {
       await tester.ensureVisible(find.text(text));
       await tester.pumpAndSettle();
       await tester.tap(find.text(text));
       await tester.pumpAndSettle();
     }
 
-    await tapOnPage('Man');
-    await tapOnPage('Women');
-    await tapOnPage('Hindi');
-    await tapOnPage('Casual');
-    expect(find.textContaining('Add a photo to continue'), findsOneWidget);
-    await tapOnPage('Add photo');
-    await tester.scrollUntilVisible(find.text('Continue'), 200,
-        scrollable: page);
-    expect(find.textContaining('Looking good'), findsOneWidget);
-    await tapOnPage('Continue');
+    expect(find.text('What’s your first name?'), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Aarav');
+    await tapText('Continue');
+    expect(find.text('Select your birth date'), findsOneWidget);
+    await tester.tap(find.textContaining('y.o.'));
+    await tester.pumpAndSettle();
+    expect(find.text('What’s your gender?'), findsOneWidget);
+    await tapText('Man');
+    await tapText('Continue');
+    expect(find.text('Who are you into?'), findsOneWidget);
+    await tapText('Women');
+    await tapText('Continue');
+    await tapText('Continue'); // height
+    await tapText('Hindi');
+    await tapText('Continue');
+    await tapText('Casual');
+    await tapText('Continue');
+    expect(find.text('What do you enjoy?'), findsOneWidget);
+    await tapText('📚  Books');
+    await tapText('Continue');
+    await tapText('Skip'); // city
+    expect(find.text('Add your photos'), findsOneWidget);
+    await tapText('Add photo');
+    await tapText('Finish');
     expect(find.text('You’re all set, Aarav.'), findsOneWidget);
     await tester.ensureVisible(find.text('Take the compatibility quiz'));
     await tester.pumpAndSettle();

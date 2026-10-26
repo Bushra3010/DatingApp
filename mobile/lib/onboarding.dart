@@ -168,7 +168,7 @@ class _Option extends StatelessWidget {
               ]))));
 }
 
-/// First launch: welcome, sign-up, a one-page profile, then an invitation
+/// First launch: welcome, sign-up, profile questions one per page, then an invitation
 /// to the compatibility quiz.
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({super.key, required this.store});
@@ -178,7 +178,7 @@ class OnboardingFlow extends StatefulWidget {
 }
 
 class _OnboardingFlowState extends State<OnboardingFlow> {
-  /// 0 welcome, 1 the one-page profile, 2 all set. A member who is already
+  /// 0 welcome, 1 the profile questions (one per page), 2 all set. A member who is already
   /// signed in (back from Google, or a saved session) starts at the profile.
   late int step = widget.store.signedIn ? 1 : 0;
 
@@ -437,6 +437,93 @@ class _Welcome extends StatelessWidget {
 /// Everything sign-up needs, on one page: name, date of birth, gender, who
 /// you'd like to meet, height, languages, what you're looking for and at
 /// least one photo.
+/// Interests offered at sign-up, by category: emoji and the stored label.
+const interestCatalog = <(String, List<(String, String)>)>[
+  ('Lifestyle', [
+    ('📚', 'Books'),
+    ('✈️', 'Travel'),
+    ('🐶', 'Pets'),
+    ('🎬', 'Movies'),
+    ('🎮', 'Video games'),
+    ('🎲', 'Board games'),
+    ('🎤', 'Karaoke'),
+    ('🪴', 'Growing plants'),
+    ('🏕️', 'Camping'),
+    ('🎣', 'Fishing'),
+    ('🧘', 'Meditation'),
+    ('🛍️', 'Shopping'),
+  ]),
+  ('Creativity', [
+    ('🎨', 'Art'),
+    ('📸', 'Photography'),
+    ('🎵', 'Music'),
+    ('🎙️', 'Singing'),
+    ('👗', 'Fashion'),
+    ('🪶', 'Poetry'),
+    ('✍️', 'Writing'),
+    ('💄', 'Make-up'),
+    ('🎸', 'Guitar'),
+    ('🧶', 'Crafts'),
+  ]),
+  ('Sports', [
+    ('🏃', 'Running'),
+    ('💪', 'Fitness'),
+    ('🥾', 'Hiking'),
+    ('💃', 'Dancing'),
+    ('🏏', 'Cricket'),
+    ('⚽', 'Football'),
+    ('🏸', 'Badminton'),
+    ('🚴', 'Cycling'),
+    ('🧗', 'Climbing'),
+    ('🏊', 'Swimming'),
+    ('🤸', 'Yoga'),
+    ('🎾', 'Tennis'),
+  ]),
+  ('Food & Drink', [
+    ('☕', 'Coffee'),
+    ('🍳', 'Cooking'),
+    ('🍷', 'Wine tasting'),
+    ('🧁', 'Baking'),
+    ('🍜', 'Street food'),
+    ('🍵', 'Tea'),
+    ('🍕', 'Foodie'),
+    ('🌱', 'Vegan food'),
+  ]),
+  ('Going out', [
+    ('🎶', 'Concerts'),
+    ('🎭', 'Theatre'),
+    ('😂', 'Stand-up comedy'),
+    ('🏛️', 'Museums'),
+    ('🍸', 'Cocktails'),
+    ('🎉', 'Festivals'),
+  ]),
+  ('Self-development', [
+    ('🗣️', 'Languages'),
+    ('🧠', 'Psychology'),
+    ('💼', 'Startups'),
+    ('📈', 'Investing'),
+    ('🙏', 'Volunteering'),
+    ('🔭', 'Science'),
+  ]),
+];
+
+/// The sign-up questions, one per page.
+enum _SetupStep {
+  name,
+  birthday,
+  gender,
+  interested,
+  height,
+  languages,
+  lookingFor,
+  interests,
+  city,
+  photos;
+
+  /// Skippable steps show Skip and allow Continue with nothing picked.
+  bool get optional => this == languages || this == interests || this == city;
+}
+
 class _ProfileSetup extends StatefulWidget {
   const _ProfileSetup(
       {required this.store, required this.onBack, required this.onDone});
@@ -447,58 +534,86 @@ class _ProfileSetup extends StatefulWidget {
 }
 
 class _ProfileSetupState extends State<_ProfileSetup> {
+  static const maxInterests = 10;
+  static const _months = [
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', //
+    'August', 'September', 'October', 'November', 'December',
+  ];
+
   late final name = TextEditingController(text: widget.store.myName);
   late final city = TextEditingController(text: widget.store.myCity);
-  late DateTime? birthday = widget.store.myBirthday;
   late String gender = widget.store.myGender;
   late String interested = widget.store.interestedIn;
   late double height = (widget.store.myHeightCm ?? 165).toDouble();
   late final languages = <String>{...widget.store.myLanguages};
   late String lookingFor = widget.store.myLookingFor;
+  late final interests = <String>{...widget.store.myInterests};
+  final expanded = <String>{};
+  int index = 0;
   bool picking = false;
   String? photoError;
 
-  static const _interestedLabels = {
-    'Men': 'Men',
-    'Women': 'Women',
-    'Everyone': 'Something else',
-  };
+  /// The birth date wheels: day, month and a year from 100 years ago to now.
+  final firstYear = DateTime.now().year - 100;
+  late final DateTime _start = widget.store.myBirthday ??
+      DateTime(DateTime.now().year - 25, DateTime.now().month, 1);
+  late int day = _start.day, month = _start.month, year = _start.year;
+  late final dayWheel = FixedExtentScrollController(initialItem: day - 1);
+  late final monthWheel = FixedExtentScrollController(initialItem: month - 1);
+  late final yearWheel =
+      FixedExtentScrollController(initialItem: year - firstYear);
+
+  _SetupStep get step => _SetupStep.values[index];
 
   @override
   void dispose() {
     name.dispose();
     city.dispose();
+    dayWheel.dispose();
+    monthWheel.dispose();
+    yearWheel.dispose();
     super.dispose();
   }
 
-  int? get age {
+  DateTime get birthday {
+    final days = DateUtils.getDaysInMonth(year, month);
+    return DateTime(year, month, day.clamp(1, days));
+  }
+
+  int get age {
     final b = birthday;
-    if (b == null) return null;
     final now = DateTime.now();
     final passed =
         now.month > b.month || (now.month == b.month && now.day >= b.day);
     return now.year - b.year - (passed ? 0 : 1);
   }
 
-  /// What's still missing, in the order it appears on the page.
-  List<String> get missing => [
-        if (name.text.trim().isEmpty) 'your name',
-        if ((age ?? 0) < 18) 'your date of birth',
-        if (gender.isEmpty) 'your gender',
-        if (interested.isEmpty) 'who you’d like to meet',
-        if (lookingFor.isEmpty) 'what you’re looking for',
-        if (!widget.store.hasPhoto) 'a photo',
-      ];
+  bool get canContinue => switch (step) {
+        _SetupStep.name => name.text.trim().isNotEmpty,
+        _SetupStep.birthday => age >= 18,
+        _SetupStep.gender => gender.isNotEmpty,
+        _SetupStep.interested => interested.isNotEmpty,
+        _SetupStep.lookingFor => lookingFor.isNotEmpty,
+        _SetupStep.photos => widget.store.hasPhoto,
+        _ => true,
+      };
 
-  Future<void> pickBirthday() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-        context: context,
-        initialDate: birthday ?? DateTime(now.year - 25, now.month, now.day),
-        firstDate: DateTime(now.year - 100),
-        lastDate: now,
-        helpText: 'Date of birth');
-    if (picked != null) setState(() => birthday = picked);
+  void back() {
+    FocusScope.of(context).unfocus();
+    if (index == 0) {
+      widget.onBack();
+    } else {
+      setState(() => index--);
+    }
+  }
+
+  void next() {
+    FocusScope.of(context).unfocus();
+    if (index < _SetupStep.values.length - 1) {
+      setState(() => index++);
+    } else {
+      save();
+    }
   }
 
   Future<void> pickPhoto() async {
@@ -528,183 +643,420 @@ class _ProfileSetupState extends State<_ProfileSetup> {
     store.myLanguages
       ..clear()
       ..addAll(languages);
+    store.myInterests
+      ..clear()
+      ..addAll(interests);
     store.update();
     store.saveProfile();
     widget.onDone();
   }
 
-  Widget heading(String text, {String? hint}) => Padding(
-      padding: const EdgeInsets.only(top: 26, bottom: 10),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-        Expanded(
-            child: Text(text,
-                style: const TextStyle(
-                    fontSize: 16, fontWeight: FontWeight.w700))),
-        if (hint != null)
-          Text(hint,
-              style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
-      ]));
-
-  Widget choice(String label, bool selected, VoidCallback onTap) => ChoiceChip(
-      label: Text(label),
-      selected: selected,
-      showCheckmark: false,
-      selectedColor: EverlaneColors.deep,
-      backgroundColor: EverlaneColors.card,
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-      side: BorderSide(
-          color: selected ? EverlaneColors.deep : EverlaneColors.line),
-      labelStyle: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: selected ? Colors.white : EverlaneColors.plum),
-      onSelected: (_) => setState(onTap));
+  String get buttonLabel => switch (step) {
+        _SetupStep.birthday when age >= 18 => 'I’m $age y.o.',
+        _SetupStep.birthday => 'You must be 18 or older',
+        _SetupStep.photos => 'Finish',
+        _ => 'Continue',
+      };
 
   @override
   Widget build(BuildContext context) {
-    final store = widget.store;
-    final a = age;
-    final b = birthday;
-    final todo = missing;
-    const required = 6;
-    return ListView(padding: const EdgeInsets.fromLTRB(24, 0, 24, 32), children: [
-      Align(
-          alignment: Alignment.centerLeft,
-          child: IconButton(
-              tooltip: 'Back',
-              onPressed: widget.onBack,
-              icon: const Icon(Icons.arrow_back_rounded))),
-      Text('Create your profile',
-          style: Theme.of(context).textTheme.headlineLarge),
-      const SizedBox(height: 8),
-      Text('Just the essentials — it takes about a minute.',
-          style: TextStyle(color: EverlaneColors.muted)),
-      const SizedBox(height: 14),
-      ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: TweenAnimationBuilder<double>(
-              tween: Tween(end: (required - todo.length) / required),
-              duration: const Duration(milliseconds: 300),
-              builder: (context, v, _) => LinearProgressIndicator(
-                  value: v,
-                  minHeight: 5,
-                  color: EverlaneColors.like,
-                  backgroundColor: EverlaneColors.line))),
-      heading('What’s your name?'),
-      TextField(
-          controller: name,
-          maxLength: 40,
-          textCapitalization: TextCapitalization.words,
-          onChanged: (_) => setState(() {}),
-          decoration: const InputDecoration(
-              labelText: 'First name', counterText: '')),
-      heading('Your date of birth'),
-      OutlinedButton.icon(
-          onPressed: pickBirthday,
-          icon: const Icon(Icons.cake_outlined),
-          style: OutlinedButton.styleFrom(
-              minimumSize: const Size(double.infinity, 54),
-              alignment: Alignment.centerLeft,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16))),
-          label: Text(b == null
-              ? 'Date of birth'
-              : '${b.day}/${b.month}/${b.year} · $a years old')),
+    final total = _SetupStep.values.length;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
-          padding: const EdgeInsets.only(top: 6),
-          child: Text(
-              a != null && a < 18
-                  ? 'Everlane is for adults aged 18 and over.'
-                  : 'Only your age is shown, never your birthday.',
-              style: TextStyle(
-                  fontSize: 12,
-                  color: a != null && a < 18
-                      ? EverlaneColors.like
-                      : EverlaneColors.muted))),
-      heading('Your gender'),
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final g in ['Woman', 'Man', 'Non-binary'])
-          choice(g, gender == g, () => gender = g),
-      ]),
-      heading('Looking for'),
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final MapEntry(key: value, value: label)
-            in _interestedLabels.entries)
-          choice(label, interested == value, () => interested = value),
-      ]),
-      heading('What’s your height?', hint: heightLabel(height.round())),
-      SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-              activeTrackColor: EverlaneColors.deep,
-              thumbColor: Colors.white,
-              inactiveTrackColor: EverlaneColors.line),
-          child: Slider(
-              value: height,
-              min: 140,
-              max: 210,
-              divisions: 70,
-              label: heightLabel(height.round()),
-              onChanged: (v) => setState(() => height = v))),
-      heading('Languages you speak', hint: 'Optional'),
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final l in PreviewStore.languageOptions)
-          FilterChip(
-              label: Text(l),
-              selected: languages.contains(l),
-              showCheckmark: false,
-              selectedColor: EverlaneColors.deep,
-              backgroundColor: EverlaneColors.card,
-              side: BorderSide(
-                  color: languages.contains(l)
-                      ? EverlaneColors.deep
-                      : EverlaneColors.line),
-              labelStyle: TextStyle(
-                  color: languages.contains(l)
-                      ? Colors.white
-                      : EverlaneColors.plum),
-              onSelected: (on) =>
-                  setState(() => on ? languages.add(l) : languages.remove(l))),
-      ]),
-      heading('What are you looking for?'),
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final o in PreviewStore.lookingForOptions)
-          choice(o, lookingFor == o, () => lookingFor = o),
-      ]),
-      heading('Where are you based?', hint: 'Optional'),
-      TextField(
-          controller: city,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-              labelText: 'City or area',
-              prefixIcon: Icon(Icons.location_on_outlined))),
-      heading('Add your photos',
-          hint: '${store.myPhotos.length}/${PreviewStore.maxPhotos} · at least 1'),
-      Wrap(spacing: 12, runSpacing: 12, children: [
-        for (var i = 0; i < store.myPhotos.length; i++)
-          PhotoTile(
-              bytes: store.myPhotos[i],
-              isMain: i == 0,
-              onSetMain: store.myPhotos.length > 1 && i != 0
-                  ? () => setState(() => store.setMainPhoto(i))
-                  : null,
-              onRemove: () => setState(() => store.removePhoto(i))),
-        if (store.canAddPhoto) AddPhotoTile(busy: picking, onTap: pickPhoto),
-      ]),
-      if (photoError != null)
-        Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: Text(photoError!,
-                style: const TextStyle(color: EverlaneColors.like))),
-      const SizedBox(height: 30),
-      GradientButton(label: 'Continue', onTap: todo.isEmpty ? save : null),
-      const SizedBox(height: 10),
-      Text(
-          todo.isEmpty
-              ? 'Looking good — you can add a bio and interests later.'
-              : 'Add ${todo.join(', ')} to continue.',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+          padding: const EdgeInsets.fromLTRB(8, 4, 12, 0),
+          child: Row(children: [
+            IconButton(
+                tooltip: 'Back',
+                onPressed: back,
+                icon: const Icon(Icons.arrow_back_rounded)),
+            Expanded(
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: TweenAnimationBuilder<double>(
+                        tween: Tween(end: (index + 1) / total),
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, v, _) => LinearProgressIndicator(
+                            value: v,
+                            minHeight: 5,
+                            color: EverlaneColors.like,
+                            backgroundColor: EverlaneColors.line)))),
+            SizedBox(
+                width: 64,
+                child: step.optional
+                    ? TextButton(onPressed: next, child: const Text('Skip'))
+                    : null),
+          ])),
+      Expanded(
+          child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOutCubic,
+              transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                      position: Tween(
+                              begin: const Offset(.05, 0), end: Offset.zero)
+                          .animate(animation),
+                      child: child)),
+              child: KeyedSubtree(key: ValueKey(step), child: page(context)))),
+      Padding(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+          child: GradientButton(
+              label: buttonLabel, onTap: canContinue ? next : null)),
     ]);
   }
+
+  /// Title and optional subtitle above every question.
+  Widget titled(String title, String? subtitle, List<Widget> body,
+          {bool scroll = true}) =>
+      ListView(
+          physics: scroll ? null : const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 16),
+          children: [
+            Text(title, style: Theme.of(context).textTheme.headlineLarge),
+            if (subtitle != null) ...[
+              const SizedBox(height: 8),
+              Text(subtitle,
+                  style: TextStyle(color: EverlaneColors.muted, height: 1.4)),
+            ],
+            const SizedBox(height: 26),
+            ...body,
+          ]);
+
+  Widget page(BuildContext context) {
+    final store = widget.store;
+    switch (step) {
+      case _SetupStep.name:
+        return titled('What’s your first name?',
+            'This is how you’ll appear on Everlane.', [
+          TextField(
+              controller: name,
+              maxLength: 40,
+              autofocus: name.text.isEmpty,
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => canContinue ? next() : null,
+              decoration: const InputDecoration(
+                  hintText: 'First name', counterText: '')),
+        ]);
+      case _SetupStep.birthday:
+        return titled('Select your birth date',
+            'Your profile will show only your age.', [
+          const SizedBox(height: 20),
+          _BirthdayWheels(
+              day: dayWheel,
+              month: monthWheel,
+              year: yearWheel,
+              months: _months,
+              firstYear: firstYear,
+              onDay: (i) => setState(() => day = i + 1),
+              onMonth: (i) => setState(() => month = i + 1),
+              onYear: (i) => setState(() => year = firstYear + i)),
+          if (age < 18) ...[
+            const SizedBox(height: 18),
+            const Text('Everlane is for adults aged 18 and over.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: EverlaneColors.like)),
+          ],
+        ]);
+      case _SetupStep.gender:
+        return titled('What’s your gender?', null, [
+          _TileRow(options: const [
+            ('Man', 'Man', Icons.male_rounded),
+            ('Woman', 'Woman', Icons.female_rounded),
+            ('Non-binary', 'Non-binary', Icons.transgender_rounded),
+          ], selected: gender, onPick: (v) => setState(() => gender = v)),
+        ]);
+      case _SetupStep.interested:
+        return titled('Who are you into?', null, [
+          _TileRow(options: const [
+            ('Men', 'Men', Icons.male_rounded),
+            ('Women', 'Women', Icons.female_rounded),
+            ('Everyone', 'Everyone', Icons.people_alt_outlined),
+          ], selected: interested, onPick: (v) => setState(() => interested = v)),
+        ]);
+      case _SetupStep.height:
+        return titled('How tall are you?', null, [
+          Center(
+              child: Text(heightLabel(height.round()),
+                  style: Theme.of(context).textTheme.headlineMedium)),
+          const SizedBox(height: 12),
+          SliderTheme(
+              data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: EverlaneColors.deep,
+                  thumbColor: Colors.white,
+                  inactiveTrackColor: EverlaneColors.line),
+              child: Slider(
+                  value: height,
+                  min: 140,
+                  max: 210,
+                  divisions: 70,
+                  label: heightLabel(height.round()),
+                  onChanged: (v) => setState(() => height = v))),
+        ]);
+      case _SetupStep.languages:
+        return titled('Which languages do you speak?', 'Pick any that apply.', [
+          Wrap(spacing: 8, runSpacing: 10, children: [
+            for (final l in PreviewStore.languageOptions)
+              _Pick(
+                  label: l,
+                  selected: languages.contains(l),
+                  onTap: () => setState(() =>
+                      languages.contains(l) ? languages.remove(l) : languages.add(l))),
+          ]),
+        ]);
+      case _SetupStep.lookingFor:
+        return titled('What are you looking for?', null, [
+          for (final o in PreviewStore.lookingForOptions)
+            Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: _Option(
+                    label: o,
+                    selected: lookingFor == o,
+                    multi: false,
+                    onTap: () => setState(() => lookingFor = o))),
+        ]);
+      case _SetupStep.interests:
+        return titled(
+            'What do you enjoy?',
+            'Select all that apply to get the best match. You can add up to $maxInterests (${interests.length}/$maxInterests).',
+            [
+              for (final (category, items) in interestCatalog) ...[
+                Text(category,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                Wrap(spacing: 8, runSpacing: 10, children: [
+                  for (final (emoji, label) in expanded.contains(category)
+                      ? items
+                      : items.take(8))
+                    _Pick(
+                        label: '$emoji  $label',
+                        selected: interests.contains(label),
+                        onTap: () => setState(() {
+                              if (!interests.remove(label) &&
+                                  interests.length < maxInterests) {
+                                interests.add(label);
+                              }
+                            })),
+                ]),
+                if (items.length > 8 && !expanded.contains(category))
+                  _ShowMore(
+                      onTap: () => setState(() => expanded.add(category)))
+                else
+                  const SizedBox(height: 18),
+                const SizedBox(height: 10),
+              ],
+            ]);
+      case _SetupStep.city:
+        return titled('Where are you based?',
+            'We use this to show people near you.', [
+          TextField(
+              controller: city,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                  hintText: 'City or area',
+                  prefixIcon: Icon(Icons.location_on_outlined))),
+        ]);
+      case _SetupStep.photos:
+        return titled('Add your photos',
+            'Add at least 1 (up to ${PreviewStore.maxPhotos}). Your first photo is your main one.',
+            [
+              Wrap(spacing: 12, runSpacing: 12, children: [
+                for (var i = 0; i < store.myPhotos.length; i++)
+                  PhotoTile(
+                      bytes: store.myPhotos[i],
+                      isMain: i == 0,
+                      onSetMain: store.myPhotos.length > 1 && i != 0
+                          ? () => setState(() => store.setMainPhoto(i))
+                          : null,
+                      onRemove: () => setState(() => store.removePhoto(i))),
+                if (store.canAddPhoto)
+                  AddPhotoTile(busy: picking, onTap: pickPhoto),
+              ]),
+              if (photoError != null)
+                Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Text(photoError!,
+                        style: const TextStyle(color: EverlaneColors.like))),
+            ]);
+    }
+  }
+}
+
+/// Day, month and year wheels over one highlighted band.
+class _BirthdayWheels extends StatelessWidget {
+  const _BirthdayWheels(
+      {required this.day,
+      required this.month,
+      required this.year,
+      required this.months,
+      required this.firstYear,
+      required this.onDay,
+      required this.onMonth,
+      required this.onYear});
+  final FixedExtentScrollController day, month, year;
+  final List<String> months;
+  final int firstYear;
+  final ValueChanged<int> onDay, onMonth, onYear;
+
+  static const _extent = 44.0;
+
+  Widget wheel(FixedExtentScrollController controller, int count,
+          String Function(int) label, ValueChanged<int> onChanged) =>
+      ListWheelScrollView.useDelegate(
+          controller: controller,
+          itemExtent: _extent,
+          physics: const FixedExtentScrollPhysics(),
+          diameterRatio: 1.6,
+          perspective: .004,
+          overAndUnderCenterOpacity: .4,
+          onSelectedItemChanged: onChanged,
+          childDelegate: ListWheelChildBuilderDelegate(
+              childCount: count,
+              builder: (context, i) => Center(
+                  child: Text(label(i),
+                      style: EverlaneFonts.inter(size: 22)))));
+
+  @override
+  Widget build(BuildContext context) {
+    final years = DateTime.now().year - firstYear + 1;
+    return SizedBox(
+        height: _extent * 5,
+        child: Stack(alignment: Alignment.center, children: [
+          Container(
+              height: _extent,
+              decoration: BoxDecoration(
+                  color: EverlaneColors.card,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: EverlaneColors.line))),
+          Row(children: [
+            Expanded(
+                flex: 2,
+                child: wheel(day, 31, (i) => '${i + 1}', onDay)),
+            Expanded(
+                flex: 4,
+                child: wheel(month, 12, (i) => months[i], onMonth)),
+            Expanded(
+                flex: 3,
+                child: wheel(year, years, (i) => '${firstYear + i}', onYear)),
+          ]),
+        ]));
+  }
+}
+
+/// Three big square choices in a row, like the gender pickers.
+class _TileRow extends StatelessWidget {
+  const _TileRow(
+      {required this.options, required this.selected, required this.onPick});
+  final List<(String, String, IconData)> options;
+  final String selected;
+  final ValueChanged<String> onPick;
+
+  @override
+  Widget build(BuildContext context) => Row(children: [
+        for (final (i, (value, label, icon)) in options.indexed) ...[
+          if (i > 0) const SizedBox(width: 10),
+          Expanded(child: _Tile(
+              label: label,
+              icon: icon,
+              selected: selected == value,
+              onTap: () => onPick(value))),
+        ],
+      ]);
+}
+
+class _Tile extends StatelessWidget {
+  const _Tile(
+      {required this.label,
+      required this.icon,
+      required this.selected,
+      required this.onTap});
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? EverlaneColors.plum : EverlaneColors.muted;
+    return Material(
+        color: selected ? EverlaneColors.blush : EverlaneColors.card,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: onTap,
+            child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                height: 112,
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                        color: selected
+                            ? EverlaneColors.like
+                            : EverlaneColors.line,
+                        width: selected ? 2 : 1)),
+                child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(icon, size: 40, color: color),
+                      const SizedBox(height: 10),
+                      Text(label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight:
+                                  selected ? FontWeight.w600 : FontWeight.w400,
+                              color: color)),
+                    ]))));
+  }
+}
+
+/// A rounded chip for multi-select lists.
+class _Pick extends StatelessWidget {
+  const _Pick(
+      {required this.label, required this.selected, required this.onTap});
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+      color: selected ? EverlaneColors.deep : EverlaneColors.card,
+      shape: StadiumBorder(
+          side: BorderSide(
+              color: selected ? EverlaneColors.deep : EverlaneColors.line)),
+      child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+              child: Text(label,
+                  style: TextStyle(
+                      fontSize: 15,
+                      color: selected ? Colors.white : EverlaneColors.plum)))));
+}
+
+/// "—— Show more ——" under a category.
+class _ShowMore extends StatelessWidget {
+  const _ShowMore({required this.onTap});
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+      padding: const EdgeInsets.only(top: 6),
+      child: Row(children: [
+        Expanded(child: Divider(color: EverlaneColors.line)),
+        TextButton(
+            onPressed: onTap,
+            child: Text('Show more',
+                style: TextStyle(
+                    color: EverlaneColors.muted,
+                    fontWeight: FontWeight.w600))),
+        Expanded(child: Divider(color: EverlaneColors.line)),
+      ]));
 }
 
 class _AllSet extends StatelessWidget {
@@ -742,7 +1094,9 @@ class _AllSet extends StatelessWidget {
         item(true, 'Looking for: ${store.myLookingFor}'),
         item(store.hasPhoto,
             '${store.myPhotos.length} photo${store.myPhotos.length == 1 ? '' : 's'}'),
-        item(false, 'A bio and your interests · add from your profile'),
+        item(store.myInterests.isNotEmpty,
+            '${store.myInterests.length} interest${store.myInterests.length == 1 ? '' : 's'} · optional'),
+        item(false, 'A bio · add from your profile'),
         const SizedBox(height: 24),
         Container(
             padding: const EdgeInsets.all(20),

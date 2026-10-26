@@ -68,8 +68,9 @@ class Person {
       {String Function(String path)? voiceUrl}) {
     final voicePath = r['voice_path'] as String? ?? '';
     final looking = switch (r['looking_for'] as String? ?? '') {
-      'Casual' => LookingFor.shortTerm,
+      'Casual' || 'Short term' => LookingFor.shortTerm,
       'Chit chat' || 'Friendship first' => LookingFor.newFriends,
+      // 'Hangout' is no longer offered; older profiles may still have it.
       'Hangout' || 'Open to see' => LookingFor.coffeeDate,
       _ => LookingFor.longTerm,
     };
@@ -217,38 +218,41 @@ const demoPeople = [
 /// not final. The preview switches plans locally and takes no payment.
 /// Safety and privacy controls are free on every plan.
 enum Plan {
-  free('Free', '₹0', 'The essential dating experience', 8, 0, [
+  free('Free', '₹0', 'The essential dating experience', 8, 0, 1, [
     '8 likes each day',
+    '1 Spark each week to stand out',
     'Like profiles and match when interest is mutual',
     'Message your matches',
     'A Chemistry summary with each person',
     'Blocking, reporting, privacy controls and account deletion',
   ]),
-  plus('Plus', '₹249', 'Simple, affordable upgrade', 25, 0, [
+  plus('Plus', '₹249', 'Simple, affordable upgrade', 25, 0, 1, [
     'Everything in Free',
     '25 likes each day',
     'Filter by relationship intentions',
     'A fuller Chemistry explanation, including where you differ',
     'Rewind your last accidental pass',
   ]),
-  gold('Gold', '₹499', 'The mainstream premium tier', 50, 2, [
+  gold('Gold', '₹499', 'The mainstream premium tier', 50, 2, 2, [
     'Everything in Plus',
     'See who has liked you',
     '50 likes each day',
+    '2 Sparks each week',
     '2 profile boosts each month',
   ]),
-  platinum('Platinum', '₹899', 'The full-featured premium experience', 100, 5, [
+  platinum('Platinum', '₹899', 'The full-featured premium experience', 100, 5, 3, [
     'Everything in Gold',
     '100 likes each day',
+    '3 Sparks each week',
     '5 profile boosts each month',
     'A detailed Chemistry report, area by area',
     'Hangouts: host or join plans nearby',
   ]);
 
   const Plan(this.title, this.price, this.tagline, this.dailyLikes,
-      this.monthlyBoosts, this.perks);
+      this.monthlyBoosts, this.weeklySparks, this.perks);
   final String title, price, tagline;
-  final int dailyLikes, monthlyBoosts;
+  final int dailyLikes, monthlyBoosts, weeklySparks;
   final List<String> perks;
 
   bool atLeast(Plan other) => index >= other.index;
@@ -386,8 +390,12 @@ class Crossing {
 }
 
 class SentLike {
-  const SentLike(this.personId, this.target, this.comment);
+  const SentLike(this.personId, this.target, this.comment,
+      {this.spark = false});
   final String personId, target, comment;
+
+  /// A Spark puts this like at the top of their Likes, highlighted.
+  final bool spark;
 }
 
 class Conversation {
@@ -789,7 +797,7 @@ class PreviewStore extends ChangeNotifier {
     'Casual',
     'Long term',
     'Chit chat',
-    'Hangout',
+    'Short term',
   ];
 
   /// Height in cm, and languages spoken (optional), from sign-up.
@@ -852,8 +860,9 @@ class PreviewStore extends ChangeNotifier {
   /// Rewind (undo a pass) comes with Plus and up.
   bool get canRewind => plan.atLeast(Plan.plus);
 
-  /// Every plan has a daily limit, so actions stay fair-use.
-  int get remaining => plan.dailyLikes - liked.length;
+  /// Every plan has a daily limit, so actions stay fair-use. Sparks come
+  /// from their own weekly allowance, not the daily likes.
+  int get remaining => plan.dailyLikes - (liked.length - sparked.length);
   bool get outOfLikes => remaining <= 0;
   List<Person> get discover => paused
       ? []
@@ -918,6 +927,25 @@ class PreviewStore extends ChangeNotifier {
       // If they'd already liked you, this like makes a match.
       final matchId =
           await b.like(p.id, target: target, comment: comment.trim());
+      if (matchId != null) _addMatch(p, matchId, celebrate: true);
+    });
+  }
+
+  /// Sparks: a weekly allowance of likes that stand out.
+  final Set<String> sparked = {};
+  int get sparksLeft => plan.weeklySparks - sparked.length;
+
+  void spark(Person p, {String comment = ''}) {
+    if (sparksLeft <= 0 || liked.contains(p.id)) return;
+    liked.add(p.id);
+    sparked.add(p.id);
+    sentLikes.add(SentLike(p.id, 'profile', comment.trim(), spark: true));
+    notifyListeners();
+    if (!p.remote) return;
+    _remote((b) async {
+      // Saved as a like for now; the server has no Spark flag yet.
+      final matchId =
+          await b.like(p.id, target: 'profile', comment: comment.trim());
       if (matchId != null) _addMatch(p, matchId, celebrate: true);
     });
   }
@@ -1105,6 +1133,7 @@ class PreviewStore extends ChangeNotifier {
     passed.clear();
     passHistory.clear();
     liked.clear();
+    sparked.clear();
     sentLikes.clear();
     crossings.clear();
   }

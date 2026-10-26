@@ -147,11 +147,10 @@ class DiscoverScreen extends StatelessWidget {
                     onTap: () => pass(context, person)),
                 _RoundAction(
                     icon: Icons.star_rounded,
-                    label: 'Like ${person.name}’s prompt',
+                    label: 'Send ${person.name} a Spark',
                     color: const Color(0xFF38BDF8),
                     size: 48,
-                    onTap: () => showLikeComposer(
-                        context, store, person, 'My ideal Sunday')),
+                    onTap: () => showSpark(context, store, person)),
                 _RoundAction(
                     icon: Icons.favorite_rounded,
                     label: 'Like ${person.name}’s photo',
@@ -371,8 +370,6 @@ class _PersonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
-        // Short screens drop the extras so the name never runs off the top.
-        final compact = c.maxHeight < 400;
         return DecoratedBox(
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(32),
@@ -441,14 +438,6 @@ class _PersonCard extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            if (person.soundtrack.isNotEmpty && !compact) ...[
-                              PhotoPrompt(
-                                  icon: Icons.music_note_rounded,
-                                  text:
-                                      '${person.name}’s soundtrack · ${person.soundtrack}',
-                                  onTap: () => onPrompt('soundtrack')),
-                              const SizedBox(height: 8),
-                            ],
                             PhotoPrompt(
                                 icon: Icons.chat_bubble_outline_rounded,
                                 text: 'Ask about this photo',
@@ -482,17 +471,6 @@ class _PersonCard extends StatelessWidget {
                                 _meta(Icons.height_rounded,
                                     heightLabel(person.heightCm!)),
                             ]),
-                            if (person.bio.isNotEmpty && !compact) ...[
-                              const SizedBox(height: 10),
-                              Text(person.bio,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      height: 1.45,
-                                      color:
-                                          Colors.white.withValues(alpha: .88))),
-                            ],
                             if (person.interests.isNotEmpty) ...[
                               const SizedBox(height: 12),
                               Row(children: [
@@ -1586,15 +1564,28 @@ class _ChatScreenState extends State<ChatScreen> {
                                                                 .plum,
                                                         height: 1.5))),
                                             const SizedBox(height: 2),
-                                            Text(_clock(message.sentAt),
-                                                style: TextStyle(
-                                                    fontSize: 10.5,
-                                                    color: message.mine
-                                                        ? Colors.white
-                                                            .withValues(
-                                                                alpha: .7)
-                                                        : EverlaneColors
-                                                            .muted)),
+                                            Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(_clock(message.sentAt),
+                                                      style: TextStyle(
+                                                          fontSize: 10.5,
+                                                          color: message.mine
+                                                              ? Colors.white
+                                                                  .withValues(
+                                                                      alpha: .7)
+                                                              : EverlaneColors
+                                                                  .muted)),
+                                                  if (message.mine) ...[
+                                                    const SizedBox(width: 4),
+                                                    _ReadTicks(
+                                                        read: widget
+                                                            .chat.messages
+                                                            .skip(i + 1)
+                                                            .any((m) =>
+                                                                !m.mine)),
+                                                  ],
+                                                ]),
                                           ]))),
                             ],
                           ])),
@@ -3234,6 +3225,75 @@ void showBoost(BuildContext context, PreviewStore store) {
                   const SizedBox(height: 8),
                 ]);
           }));
+}
+
+/// A Spark: a like from a small weekly allowance that lands at the top of
+/// their Likes, highlighted. It doesn't use up a daily like.
+void showSpark(BuildContext context, PreviewStore store, Person person) {
+  const sparkBlue = Color(0xFF38BDF8);
+  if (store.sparksLeft <= 0) {
+    showUpgrade(context, store,
+        title: 'You’ve used this week’s Spark.',
+        detail:
+            'Sparks put you at the top of someone’s Likes. Free and Plus include 1 a week, Gold 2 and Platinum 3.');
+    return;
+  }
+  final comment = TextEditingController();
+  showEverlaneSheet(
+      context,
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+                color: sparkBlue, borderRadius: BorderRadius.circular(16)),
+            child:
+                const Icon(Icons.star_rounded, color: Colors.white, size: 28)),
+        const SizedBox(height: 20),
+        Text('Send ${person.name} a Spark',
+            style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 10),
+        Text(
+            'You’ll show up first in ${person.name}’s Likes, highlighted, so you’re hard to miss. It doesn’t use one of your daily likes.',
+            style: TextStyle(color: EverlaneColors.muted, height: 1.6)),
+        const SizedBox(height: 14),
+        Text(
+            '${store.sparksLeft} of ${store.plan.weeklySparks} ${store.plan.weeklySparks == 1 ? 'Spark' : 'Sparks'} left this week',
+            style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 16),
+        TextField(
+            controller: comment,
+            maxLength: 150,
+            decoration:
+                const InputDecoration(hintText: 'Add a note (optional)')),
+        const SizedBox(height: 12),
+        Builder(
+            builder: (sheet) => FilledButton(
+                onPressed: () {
+                  HapticFeedback.mediumImpact();
+                  store.spark(person, comment: comment.text);
+                  Navigator.pop(sheet);
+                  showNotice(context, 'You sent ${person.name} a Spark');
+                },
+                child: const Text('Send Spark'))),
+        const SizedBox(height: 8),
+      ]));
+}
+
+/// Two ticks on every message you send: white once sent, blue once read.
+/// A reply from them after a message means they've read it.
+class _ReadTicks extends StatelessWidget {
+  const _ReadTicks({required this.read});
+  final bool read;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+      label: read ? 'Read' : 'Sent',
+      child: Icon(Icons.done_all_rounded,
+          size: 16,
+          color: read
+              ? const Color(0xFF38BDF8)
+              : Colors.white.withValues(alpha: .7)));
 }
 
 /// "Liked your photo" / "Liked your answer to …" for an incoming like.

@@ -65,7 +65,20 @@ void main() {
     final c = Chemistry.between(mine, isha);
     expect(c.filteredBy, isNull);
     expect(c.intentMismatch, isTrue);
-    expect(c.score, lessThanOrEqualTo(39));
+    expect(c.score, inInclusiveRange(40, 49));
+  });
+
+  test('Scores never drop below 40, overall or by area', () {
+    final opposite = {
+      for (final q in quizQuestions)
+        if (q.id != 'q24')
+          q.id: [q.options.map((o) => o.$1).firstWhere(
+              (v) => !(isha[q.id] ?? const []).contains(v),
+              orElse: () => q.options.first.$1)]
+    };
+    final c = Chemistry.between(opposite, isha);
+    if (c.score != null) expect(c.score, greaterThanOrEqualTo(40));
+    expect(c.areas.values, everyElement(greaterThanOrEqualTo(40)));
   });
 
   test('Multi-select answers count by overlap', () {

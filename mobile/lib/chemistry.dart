@@ -201,6 +201,10 @@ class Chemistry {
     final preliminary =
         answered < minAnswers || byDimension.length < minDimensions;
 
+    // Scores sit between 40 and 100: everyone shown has some common ground,
+    // so a raw 0 reads as 40 rather than a discouraging 0.
+    int scaled(double raw) => (40 + raw * 60).round();
+
     int? score;
     if (!preliminary && filteredBy == null) {
       var total = 0.0, weights = 0;
@@ -208,9 +212,9 @@ class Chemistry {
         total += d.weight * values.reduce((x, y) => x + y) / values.length;
         weights += d.weight;
       });
-      score = (total / weights * 100).round();
+      score = scaled(total / weights);
       // A high total must not hide wanting different things.
-      if (intentMismatch && score > 39) score = 39;
+      if (intentMismatch && score > 49) score = 49;
     }
 
     // Most heavily weighted dimensions first.
@@ -227,7 +231,7 @@ class Chemistry {
     final areas = {
       for (final d in Dimension.values)
         if (byDimension[d] case final values?)
-          d: (values.reduce((x, y) => x + y) / values.length * 100).round()
+          d: scaled(values.reduce((x, y) => x + y) / values.length)
     };
 
     return Chemistry._(
