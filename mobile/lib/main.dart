@@ -8,6 +8,7 @@ import 'onboarding.dart';
 import 'hangouts.dart';
 import 'match_celebration.dart';
 import 'screens.dart';
+import 'side_menu.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
 
@@ -152,22 +153,11 @@ class _EverlaneShellState extends State<EverlaneShell> {
     }
   }
 
-  Widget menuItem(
-          IconData icon, String title, Color color, VoidCallback onTap) =>
-      ListTile(
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 26, vertical: 10),
-          leading: Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                  color: color, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: Colors.white, size: 22)),
-          title: Text(title, style: const TextStyle(fontSize: 15)),
-          onTap: () {
-            Navigator.pop(scaffoldKey.currentContext!);
-            onTap();
-          });
+  /// Closes the side menu, then runs [onTap].
+  VoidCallback fromMenu(VoidCallback onTap) => () {
+        Navigator.pop(scaffoldKey.currentContext!);
+        onTap();
+      };
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -183,69 +173,43 @@ class _EverlaneShellState extends State<EverlaneShell> {
                     constraints: const BoxConstraints(maxWidth: 440),
                     child: Scaffold(
                       key: scaffoldKey,
-                      drawer: Drawer(
-                          backgroundColor: EverlaneColors.paper,
-                          width: 310,
-                          child: SafeArea(
-                              child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                const SizedBox(height: 24),
-                                Padding(
-                                    padding: const EdgeInsets.all(26),
-                                    child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _Avatar(name: store.myName, size: 48),
-                                          const SizedBox(height: 24),
-                                          Text(
-                                              '${store.myName}, ${store.myAge}',
-                                              style: const TextStyle(
-                                                  fontSize: 22,
-                                                  fontWeight: FontWeight.w700)),
-                                          const SizedBox(height: 6),
-                                          Text('Bengaluru, India',
-                                              style: TextStyle(
-                                                  color: EverlaneColors.muted)),
-                                        ])),
-                                const SizedBox(height: 16),
-                                menuItem(
-                                    Icons.favorite_rounded,
-                                    'Likes you · ${store.incoming.length}',
-                                    EverlaneColors.like,
-                                    () => setState(() => selected = 2)),
-                                menuItem(
-                                    Icons.chat_bubble_outline_rounded,
-                                    'Matches',
-                                    EverlaneColors.boost,
-                                    () => setState(() => selected = 3)),
-                                menuItem(
-                                    Icons.search_rounded,
-                                    'Looking for',
-                                    EverlaneColors.deep,
-                                    () => showFilters(context, store)),
-                                menuItem(
-                                    Icons.groups_rounded,
-                                    'Hangouts',
-                                    EverlaneColors.boost,
-                                    () => openHangouts(context, store)),
-                                menuItem(
-                                    Icons.workspace_premium_rounded,
-                                    'Membership · ${store.plan.title}',
-                                    EverlaneColors.star,
-                                    () => openMembership(context, store)),
-                                menuItem(
-                                    Icons.settings_outlined,
-                                    'Settings',
-                                    EverlaneColors.pass,
-                                    () => setState(() => selected = 4)),
-                                const Spacer(),
-                                Padding(
-                                    padding: const EdgeInsets.all(26),
-                                    child: Text('Everlane',
-                                        style: EverlaneFonts.logo(size: 32))),
-                              ]))),
+                      drawer: SideMenu(
+                          name: store.myName,
+                          age: store.myAge,
+                          location: 'Bengaluru, India',
+                          items: [
+                            SideMenuItem(
+                                Icons.monitor_heart_rounded,
+                                'Likes you · ${store.incoming.length}',
+                                const [Color(0xFFFF7AB6), Color(0xFFE11D48)],
+                                fromMenu(() => setState(() => selected = 2)),
+                                badge: store.incoming.length),
+                            SideMenuItem(
+                                Icons.forum_rounded,
+                                'Matches',
+                                const [Color(0xFF7AF5E0), Color(0xFF0EA5A0)],
+                                fromMenu(() => setState(() => selected = 3))),
+                            SideMenuItem(
+                                Icons.person_search_rounded,
+                                'Looking for',
+                                const [Color(0xFFC4B5FD), Color(0xFF7C3AED)],
+                                fromMenu(() => showFilters(context, store))),
+                            SideMenuItem(
+                                Icons.groups_rounded,
+                                'Hangouts',
+                                const [Color(0xFF86EFAC), Color(0xFF10B981)],
+                                fromMenu(() => openHangouts(context, store))),
+                            SideMenuItem(
+                                Icons.workspace_premium_rounded,
+                                'Membership · ${store.plan.title}',
+                                const [Color(0xFFFFD166), Color(0xFFF97316)],
+                                fromMenu(() => openMembership(context, store))),
+                            SideMenuItem(
+                                Icons.settings_rounded,
+                                'Settings',
+                                const [Color(0xFFDDD6FE), Color(0xFF8B5CF6)],
+                                fromMenu(() => setState(() => selected = 4))),
+                          ]),
                       appBar: AppBar(
                           toolbarHeight: 88,
                           automaticallyImplyLeading: false,
@@ -360,9 +324,9 @@ class _EverlaneShellState extends State<EverlaneShell> {
 }
 
 class _Avatar extends StatelessWidget {
-  const _Avatar({required this.name, this.size = 36});
+  const _Avatar({required this.name});
   final String name;
-  final double size;
+  static const size = 36.0;
   @override
   Widget build(BuildContext context) =>
       Stack(clipBehavior: Clip.none, children: [
