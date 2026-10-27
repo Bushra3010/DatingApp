@@ -6,6 +6,17 @@
 	<string>Everlane uses your rough area (about 1 km) to show people you’ve crossed paths with. Your exact location is never saved.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Everlane uses the microphone to record your voice prompt.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.everlane.everlane</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Everlane uses your camera for the live selfie that verifies your profile.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Everlane uses your photos to add pictures to your profile.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

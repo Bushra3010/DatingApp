@@ -842,6 +842,42 @@ class PreviewStore extends ChangeNotifier {
   bool myProfilePosted = false;
   bool myVerified = false;
 
+  /// The live-selfie check: '' (never sent), 'pending', 'rejected'.
+  /// Approval shows up as [myVerified], which only an admin can set.
+  String verificationStatus = '';
+
+  /// Why the last selfie was turned down, from the reviewer.
+  String verificationNote = '';
+
+  /// Sends the selfie burst for review. Without an account (the preview)
+  /// nothing leaves the phone, so the badge is simply switched on.
+  Future<void> submitVerification(List<Uint8List> frames) async {
+    final b = backend;
+    if (b == null || !b.signedIn) {
+      myVerified = true;
+      notifyListeners();
+      return;
+    }
+    await b.submitVerification(frames);
+    verificationStatus = 'pending';
+    verificationNote = '';
+    notifyListeners();
+  }
+
+  Future<void> _loadVerification(ProfileBackend b) async {
+    try {
+      final latest = await b.latestVerification();
+      verificationStatus = switch (latest?.status) {
+        'pending' || 'rejected' => latest!.status,
+        _ => '',
+      };
+      verificationNote = latest?.note ?? '';
+      notifyListeners();
+    } catch (_) {
+      // Before migration 009 the table doesn't exist; leave it unknown.
+    }
+  }
+
   /// A rough sense of how filled-in the preview profile is, out of the
   /// optional extras beyond the required sign-up basics.
   int get profileCompleteness {
@@ -1272,6 +1308,8 @@ class PreviewStore extends ChangeNotifier {
     _voicePath = '';
     myProfilePosted = false;
     myVerified = false;
+    verificationStatus = '';
+    verificationNote = '';
     onboarded = false;
     notifyListeners();
   }
@@ -1356,6 +1394,7 @@ class PreviewStore extends ChangeNotifier {
       if (p.name == adminPlan) plan = p;
     }
     myVerified = row['verified'] as bool? ?? false;
+    if (!myVerified) _loadVerification(b).ignore();
     (row['onboarding_answers'] as Map? ?? {}).forEach((k, v) =>
         onboardingAnswers[k as String] = List<String>.from(v as List));
     final paths = List<String>.from(row['photos'] as List? ?? []);

@@ -108,6 +108,11 @@
   .queue .item { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
   .queue img { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; }
   .queue .meta { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .verify { padding: 16px; margin-bottom: 14px; }
+  .verify .frames { display: flex; gap: 8px; margin: 12px 0; overflow-x: auto; }
+  .verify .frames figure { margin: 0; flex: 0 0 auto; text-align: center; font-size: 11px; color: var(--muted); }
+  .verify .frames img { width: 120px; aspect-ratio: 3/4; object-fit: cover; border-radius: 12px; display: block; margin-bottom: 4px; }
+  .verify .frames figure.profile img { outline: 2px solid var(--line); }
   .report { padding: 18px; margin-bottom: 14px; }
   .report .msgs { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
   .report .msg { background: var(--card2); border-radius: 12px; padding: 8px 12px; max-width: 80%; }
@@ -149,6 +154,7 @@
     <button class="tab" data-view="leads">Leads &amp; members</button>
     <button class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
     <button class="tab" data-view="photos">Photo queue <span class="pill warn hidden" id="photoBadge"></span></button>
+    <button class="tab" data-view="verify">Verifications <span class="pill warn hidden" id="verifyBadge"></span></button>
     <button class="tab" data-view="words">Banned words</button>
     <button class="tab" data-view="audit">Audit log</button>
     <button class="tab" data-view="questions">Questions</button>
@@ -196,6 +202,13 @@
         <p class="muted" style="margin:4px 0 0">New profile photos. Rejecting removes the photo from the profile and deletes the file.</p></div>
         <button class="btn" data-refresh>Refresh</button></div>
       <div class="queue" id="photoQueue"></div>
+    </div>
+
+    <div id="view-verify" class="hidden">
+      <div class="head"><div><h1>Selfie verifications</h1>
+        <p class="muted" style="margin:4px 0 0">Live selfies, in the order taken: eyes open, three frames through a blink, eyes open again. Approve when the eyes close in the blink frames and the face matches the profile photo.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div id="verifyQueue"></div>
     </div>
 
     <div id="view-words" class="hidden">
@@ -283,14 +296,14 @@ $('#logout').onclick = async () => { await sb.auth.signOut(); showLogin(); };
 
 // ---------- Navigation ----------
 let current = 'overview';
-const VIEWS = ['overview', 'leads', 'reports', 'photos', 'words', 'audit', 'questions', 'options'];
+const VIEWS = ['overview', 'leads', 'reports', 'photos', 'verify', 'words', 'audit', 'questions', 'options'];
 document.querySelectorAll('nav .tab').forEach(b => b.onclick = () => show(b.dataset.view));
 document.querySelectorAll('[data-refresh]').forEach(b => b.onclick = () => show(current));
 function show(view) {
   current = view;
   document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== view);
-  ({ overview: loadStats, leads: loadMembers, reports: loadReports, photos: loadPhotos, words: loadWords,
+  ({ overview: loadStats, leads: loadMembers, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
      audit: loadAudit, questions: loadQuestions, options: loadOptions })[view]();
 }
 function badge(sel, n) { const b = $(sel); b.textContent = n; b.classList.toggle('hidden', !n); }
@@ -513,6 +526,42 @@ async function loadPhotos() {
   });
 }
 
+// ---------- Selfie verifications ----------
+const FRAME_LABELS = ['Eyes open', 'Blink', 'Blink', 'Blink', 'Eyes open'];
+async function loadVerifications() {
+  const { data, error } = await sb.rpc('admin_verification_queue');
+  if (error) return fail(error);
+  badge('#verifyBadge', data.length);
+  // The bucket is private, so frames are shown through short-lived links.
+  const paths = data.flatMap(r => r.frames);
+  const signed = {};
+  if (paths.length) {
+    const { data: urls, error: e } = await sb.storage.from('verifications').createSignedUrls(paths, 600);
+    if (e) return fail(e);
+    for (const u of urls) signed[u.path] = u.signedUrl;
+  }
+  $('#verifyQueue').innerHTML = data.map(r => `<div class="card verify">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <span><b>${esc(r.name || 'Unnamed')}</b> <span class="muted" style="font-size:12px">${fmtDate(r.created_at)}</span></span>
+      <div style="display:flex;gap:6px"><button class="btn small primary" data-vok="${r.id}">Approve</button><button class="btn small danger" data-vno="${r.id}">Reject</button></div>
+    </div>
+    <div class="frames">
+      <figure class="profile">${r.photo ? `<img src="${esc(photoUrl(r.photo))}" alt="">` : '<div class="muted" style="width:120px;aspect-ratio:3/4;display:grid;place-items:center">No photo</div>'}Profile photo</figure>
+      ${r.frames.map((f, i) => `<figure><img src="${esc(signed[f] || '')}" alt="" loading="lazy">${FRAME_LABELS[i] || 'Frame ' + (i + 1)}</figure>`).join('')}
+    </div>
+  </div>`).join('') || '<p class="muted">Nothing to review.</p>';
+  const review = async (id, approve, note = '') => {
+    const { error } = await sb.rpc('admin_review_verification', { request: Number(id), approve, note });
+    if (error) return fail(error);
+    toast(approve ? 'Verified' : 'Rejected'); loadVerifications();
+  };
+  document.querySelectorAll('[data-vok]').forEach(b => b.onclick = () => review(b.dataset.vok, true));
+  document.querySelectorAll('[data-vno]').forEach(b => b.onclick = () => {
+    const note = prompt('Why? The member sees this, e.g. “Face not clear” or “Didn’t blink”.', '');
+    if (note !== null) review(b.dataset.vno, false, note.trim());
+  });
+}
+
 // ---------- Banned words ----------
 async function loadWords() {
   const { data, error } = await sb.from('banned_words').select('*').order('word');
@@ -535,7 +584,7 @@ $('#addWord').onsubmit = async e => {
 // ---------- Audit log ----------
 const ACTIONS = { ban: 'Blocked', unban: 'Unblocked', verify: 'Verified', unverify: 'Removed verified badge',
   warn: 'Warned', suspend: 'Suspended', unsuspend: 'Lifted suspension', set_plan: 'Changed plan',
-  mark_test: 'Made test account', unmark_test: 'Made real account', photo_approve: 'Approved photo',
+  mark_test: 'Made test account', unmark_test: 'Made real account', photo_approve: 'Approved photo', verify_reject: 'Rejected selfie',
   photo_reject: 'Rejected photo', report_resolved: 'Resolved report', report_dismissed: 'Dismissed report',
   report_open: 'Reopened report' };
 async function loadAudit() {

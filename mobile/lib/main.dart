@@ -1,6 +1,7 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'backend.dart';
 import 'models.dart';
@@ -191,7 +192,12 @@ class _EverlaneShellState extends State<EverlaneShell> {
                 : const Color(0xFFEFE6FB),
             child: Center(
                 child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
+                    // A phone-width column on tablets and desktops; on a
+                    // phone it fills the screen edge to edge.
+                    constraints: BoxConstraints(
+                        maxWidth: MediaQuery.sizeOf(context).width >= 600
+                            ? 440
+                            : double.infinity),
                     child: Scaffold(
                       key: scaffoldKey,
                       drawer: SideMenu(
@@ -281,77 +287,146 @@ class _EverlaneShellState extends State<EverlaneShell> {
                         MessagesScreen(store: store),
                         ProfileScreen(store: store)
                       ]),
-                      bottomNavigationBar: ClipRRect(
-                          child: BackdropFilter(
-                              filter:
-                                  ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                              child: Container(
-                                  decoration: BoxDecoration(
-                                      color: EverlaneColors.card
-                                          .withValues(alpha: .78),
-                                      border: Border(
-                                          top: BorderSide(
-                                              color: EverlaneColors.line)),
-                                      boxShadow: [
-                                        BoxShadow(
-                                            color: EverlaneColors.deep
-                                                .withValues(alpha: .18),
-                                            blurRadius: 24,
-                                            offset: const Offset(0, -6))
-                                      ]),
-                                  child: NavigationBarTheme(
-                                      data: NavigationBarThemeData(
-                                          labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-                                              fontSize: 10,
-                                              fontWeight: states.contains(WidgetState.selected)
-                                                  ? FontWeight.w700
-                                                  : FontWeight.w400,
-                                              color: states.contains(WidgetState.selected)
-                                                  ? EverlaneColors.lavender
-                                                  : EverlaneColors.muted)),
-                                          iconTheme: WidgetStateProperty.resolveWith(
-                                              (states) => IconThemeData(
-                                                  size: 25,
-                                                  color: states.contains(WidgetState.selected)
-                                                      ? EverlaneColors.lavender
-                                                      : EverlaneColors.muted))),
-                                      child: NavigationBar(selectedIndex: selected, onDestinationSelected: (value) {
-                                        setState(() => selected = value);
-                                        // Pick up anyone who joined since.
-                                        if (value == 0) store.refreshMembers();
-                                      }, backgroundColor: Colors.transparent, indicatorColor: EverlaneColors.deep.withValues(alpha: .3), height: 76, destinations: [
-                                const NavigationDestination(
-                                    icon: Icon(Icons.home_outlined),
-                                    selectedIcon: Icon(Icons.home_rounded),
-                                    label: 'Discover'),
-                                const NavigationDestination(
-                                    icon: Icon(Icons.explore_outlined),
-                                    selectedIcon: Icon(Icons.explore_rounded),
-                                    label: 'Explore'),
-                                NavigationDestination(
-                                    icon: Badge(
-                                        isLabelVisible:
-                                            store.incoming.isNotEmpty,
-                                        backgroundColor: EverlaneColors.like,
-                                        smallSize: 7,
-                                        child: const Icon(
-                                            Icons.favorite_border_rounded)),
-                                    selectedIcon:
-                                        const Icon(Icons.favorite_rounded),
-                                    label: 'Likes you'),
-                                const NavigationDestination(
-                                    icon:
-                                        Icon(Icons.chat_bubble_outline_rounded),
-                                    selectedIcon:
-                                        Icon(Icons.chat_bubble_rounded),
-                                    label: 'Messages'),
-                                const NavigationDestination(
-                                    icon: Icon(Icons.person_outline_rounded),
-                                    selectedIcon: Icon(Icons.person_rounded),
-                                    label: 'You'),
-                              ]))))),
+                      bottomNavigationBar: _PillNavBar(
+                          selected: selected,
+                          onSelect: (value) {
+                            setState(() => selected = value);
+                            // Pick up anyone who joined since.
+                            if (value == 0) store.refreshMembers();
+                          },
+                          items: [
+                            const _NavItem(Icons.home_outlined,
+                                Icons.home_rounded, 'Discover'),
+                            const _NavItem(Icons.explore_outlined,
+                                Icons.explore_rounded, 'Explore'),
+                            _NavItem(Icons.favorite_border_rounded,
+                                Icons.favorite_rounded, 'Likes you',
+                                dot: store.incoming.isNotEmpty),
+                            const _NavItem(Icons.chat_bubble_outline_rounded,
+                                Icons.chat_bubble_rounded, 'Messages'),
+                            const _NavItem(Icons.person_outline_rounded,
+                                Icons.person_rounded, 'You'),
+                          ]),
                     ))));
       });
+}
+
+class _NavItem {
+  const _NavItem(this.icon, this.selectedIcon, this.label, {this.dot = false});
+  final IconData icon, selectedIcon;
+  final String label;
+
+  /// A small pink dot on the icon (new likes).
+  final bool dot;
+}
+
+/// The tab bar: a floating frosted pill. The open tab widens into a soft
+/// highlight with its name; the others show just their icon.
+class _PillNavBar extends StatelessWidget {
+  const _PillNavBar(
+      {required this.selected, required this.onSelect, required this.items});
+  final int selected;
+  final ValueChanged<int> onSelect;
+  final List<_NavItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent =
+        EverlaneColors.dark ? EverlaneColors.lavender : EverlaneColors.deep;
+    return SafeArea(
+        top: false,
+        minimum: const EdgeInsets.only(bottom: 10),
+        child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+            child: DecoratedBox(
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(34),
+                    boxShadow: [
+                      BoxShadow(
+                          color: EverlaneColors.deep.withValues(alpha: .18),
+                          blurRadius: 28,
+                          offset: const Offset(0, 10))
+                    ]),
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(34),
+                    child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                        child: Container(
+                            height: 64,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            decoration: BoxDecoration(
+                                color: EverlaneColors.card.withValues(alpha: .82),
+                                borderRadius: BorderRadius.circular(34),
+                                border: Border.all(color: EverlaneColors.line)),
+                            child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  for (final (i, item) in items.indexed)
+                                    Flexible(
+                                        flex: i == selected ? 3 : 1,
+                                        child: _tab(item, i == selected, accent,
+                                            () {
+                                          if (i == selected) return;
+                                          HapticFeedback.selectionClick();
+                                          onSelect(i);
+                                        })),
+                                ])))))));
+  }
+
+  Widget _tab(_NavItem item, bool on, Color accent, VoidCallback onTap) {
+    final icon = Icon(on ? item.selectedIcon : item.icon,
+        size: 24, color: on ? accent : EverlaneColors.muted);
+    return Tooltip(
+        message: item.label,
+        child: Semantics(
+            selected: on,
+            button: true,
+            label: item.label,
+            child: InkWell(
+                onTap: onTap,
+                borderRadius: BorderRadius.circular(26),
+                child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 280),
+                    curve: Curves.easeOutCubic,
+                    height: 48,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                        color: on
+                            ? accent.withValues(alpha: .14)
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(26)),
+                    child: AnimatedSize(
+                        duration: const Duration(milliseconds: 280),
+                        curve: Curves.easeOutCubic,
+                        child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              // Inside the Row rather than as padding, so it
+                              // goes the moment the tab loses its width.
+                              if (on) const SizedBox(width: 10),
+                              item.dot
+                                  ? Badge(
+                                      backgroundColor: EverlaneColors.like,
+                                      smallSize: 7,
+                                      child: icon)
+                                  : icon,
+                              if (on) ...[
+                                const SizedBox(width: 8),
+                                Flexible(
+                                    child: Text(item.label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.clip,
+                                        softWrap: false,
+                                        style: TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: accent))),
+                                const SizedBox(width: 10),
+                              ],
+                            ]))))));
+  }
 }
 
 class _Avatar extends StatelessWidget {

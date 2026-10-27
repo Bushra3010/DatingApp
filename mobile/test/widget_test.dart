@@ -28,7 +28,7 @@ void main() {
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     expect(find.text('Ananya, 27'), findsOneWidget);
-    await tester.tap(find.text('Likes you'));
+    await tester.tap(find.byTooltip('Likes you'));
     await tester.pumpAndSettle();
     expect(find.text('2 people like you.'), findsOneWidget);
     expect(find.text('Like back & say hello'), findsNothing);
@@ -68,10 +68,10 @@ void main() {
     expect(find.text('What’s your favourite café?'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Messages'));
+    await tester.tap(find.byTooltip('Messages'));
     await tester.pumpAndSettle();
     expect(find.text('What’s your favourite café?'), findsOneWidget);
-    await tester.tap(find.text('You'));
+    await tester.tap(find.byTooltip('You'));
     await tester.pumpAndSettle();
     expect(find.text('Rohan, 29'), findsOneWidget);
   });
@@ -161,7 +161,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Explore').last);
+    await tester.tap(find.byTooltip('Explore'));
     await tester.pumpAndSettle();
     expect(find.text('Nearby profiles'), findsOneWidget);
     expect(find.text('Crossed paths'), findsOneWidget);
@@ -228,7 +228,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Explore').last);
+    await tester.tap(find.byTooltip('Explore'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Hangouts'));
     await tester.pumpAndSettle();
@@ -308,7 +308,7 @@ void main() {
         Theme.of(tester.element(find.byType(Scaffold).first))
             .scaffoldBackgroundColor;
     expect(background(), const Color(0xFF0D0B12));
-    await tester.tap(find.text('You'));
+    await tester.tap(find.byTooltip('You'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Dark mode'), 200,
         scrollable: find.byType(Scrollable).last);
@@ -331,8 +331,8 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
-    expect(find.text('Bengaluru · Nearby'), findsOneWidget);
-    await tester.tap(find.text('Ask about this photo'));
+    expect(find.text('Bengaluru'), findsOneWidget);
+    await tester.tap(find.byTooltip('Ask about this photo'));
     await tester.pumpAndSettle();
     // A like is sent straight away, with no message box.
     expect(find.text('Like sent to Ananya in this preview.'), findsOneWidget);
@@ -340,7 +340,7 @@ void main() {
     // The Discover card shows neither the soundtrack nor the bio.
     expect(find.textContaining('Ananya’s soundtrack'), findsNothing);
     expect(find.textContaining('Designer by day'), findsNothing);
-    await tester.tap(find.text('You'));
+    await tester.tap(find.byTooltip('You'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Invisible mode'), 200,
         scrollable: find.byType(Scrollable).last);
@@ -367,13 +367,13 @@ void main() {
     timeDilation = 3;
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Ask about this photo'));
+    await tester.tap(find.byTooltip('Ask about this photo'));
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 60));
     }
     await tester.pumpAndSettle();
     expect(find.text('Like sent to Ananya in this preview.'), findsOneWidget);
-    await tester.tap(find.text('You'));
+    await tester.tap(find.byTooltip('You'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Edit profile'));
     await tester.pumpAndSettle();
@@ -403,7 +403,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Explore').last);
+    await tester.tap(find.byTooltip('Explore'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Find an introduction'));
     await tester.pumpAndSettle();
@@ -615,7 +615,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Skip to the app (preview)'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('You').last);
+    await tester.tap(find.byTooltip('You'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Delete account'), 300,
         scrollable: find.byType(Scrollable).first);

@@ -7,6 +7,7 @@ import 'crossed_paths.dart';
 import 'match_celebration.dart';
 import 'models.dart';
 import 'photo_picker.dart';
+import 'selfie_verification.dart';
 import 'theme.dart';
 import 'voice.dart';
 import 'widgets.dart';
@@ -115,7 +116,7 @@ class DiscoverScreen extends StatelessWidget {
           ]))),
       Expanded(
           child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: SwipeCard(
                   key: ValueKey('swipe-${person.id}'),
                   onLike: () => swipeLike(context, person),
@@ -124,49 +125,17 @@ class DiscoverScreen extends StatelessWidget {
                       person: person,
                       onOpen: details,
                       onMore: () => showSafety(context, store, person),
+                      onBoost: () => showBoost(context, store),
+                      onPass: () => pass(context, person),
+                      onLike: like,
+                      onSpark: () => showSpark(context, store, person),
+                      onUndo: store.canUndo ? () => undoPass(context) : null,
                       onPrompt: (target) {
                         HapticFeedback.selectionClick();
                         showLikeComposer(context, store, person, target);
                       })))),
       Padding(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 10),
-          child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _RoundAction(
-                    icon: Icons.replay_rounded,
-                    label: 'Undo last pass',
-                    color: EverlaneColors.star,
-                    size: 48,
-                    onTap: store.canUndo ? () => undoPass(context) : null),
-                _RoundAction(
-                    icon: Icons.close_rounded,
-                    label: 'Pass on ${person.name}',
-                    color: const Color(0xFFF87171),
-                    size: 60,
-                    onTap: () => pass(context, person)),
-                _RoundAction(
-                    icon: Icons.star_rounded,
-                    label: 'Send ${person.name} a Spark',
-                    color: const Color(0xFF38BDF8),
-                    size: 48,
-                    onTap: () => showSpark(context, store, person)),
-                _RoundAction(
-                    icon: Icons.favorite_rounded,
-                    label: 'Like ${person.name}’s photo',
-                    color: Colors.white,
-                    size: 72,
-                    hero: true,
-                    onTap: like),
-                _RoundAction(
-                    icon: Icons.bolt_rounded,
-                    label: 'Boost your profile',
-                    color: EverlaneColors.lavender,
-                    size: 48,
-                    onTap: () => showBoost(context, store)),
-              ])),
-      Padding(
-          padding: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
           child: Text(
               [
                 '${store.remaining} likes left today',
@@ -179,8 +148,8 @@ class DiscoverScreen extends StatelessWidget {
   }
 }
 
-/// A round action under the Discover card. The [hero] one (like) is the
-/// big purple-to-pink gradient button; the rest are dark glassy circles.
+/// A round action laid over the Discover card: a [gradient] or solid [fill]
+/// circle with a soft shadow, faded when [onTap] is null.
 class _RoundAction extends StatelessWidget {
   const _RoundAction(
       {required this.icon,
@@ -188,12 +157,18 @@ class _RoundAction extends StatelessWidget {
       required this.color,
       required this.size,
       required this.onTap,
-      this.hero = false});
+      this.fill,
+      this.gradient,
+      this.glow});
   final IconData icon;
   final String label;
   final Color color;
   final double size;
-  final bool hero;
+  final Color? fill;
+  final Gradient? gradient;
+
+  /// Shadow colour; a dark drop shadow when null.
+  final Color? glow;
 
   /// Null shows the button faded and disabled.
   final VoidCallback? onTap;
@@ -206,15 +181,17 @@ class _RoundAction extends StatelessWidget {
           height: size,
           decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: hero ? EverlaneColors.premiumGradient : null,
-              color: hero ? null : EverlaneColors.card,
-              border: hero ? null : Border.all(color: EverlaneColors.line),
+              gradient: gradient,
+              color: gradient == null
+                  ? fill ?? Colors.white.withValues(alpha: .16)
+                  : null,
+              border: gradient == null && fill == null
+                  ? Border.all(color: Colors.white.withValues(alpha: .22))
+                  : null,
               boxShadow: [
                 BoxShadow(
-                    color: hero
-                        ? EverlaneColors.deep.withValues(alpha: .55)
-                        : Colors.black.withValues(alpha: .28),
-                    blurRadius: hero ? 26 : 14,
+                    color: glow ?? Colors.black.withValues(alpha: .35),
+                    blurRadius: glow == null ? 14 : 28,
                     offset: const Offset(0, 8))
               ]),
           child: IconButton(
@@ -349,27 +326,44 @@ class _PersonCard extends StatelessWidget {
       {required this.person,
       required this.onOpen,
       required this.onMore,
+      required this.onBoost,
+      required this.onPass,
+      required this.onLike,
+      required this.onSpark,
+      required this.onUndo,
       required this.onPrompt});
   final Person person;
-  final VoidCallback onOpen, onMore;
+  final VoidCallback onOpen, onMore, onBoost, onPass, onLike, onSpark;
+
+  /// Null when there is no pass to undo.
+  final VoidCallback? onUndo;
 
   /// Opens the like composer aimed at a photo detail ('photo', 'soundtrack').
   final ValueChanged<String> onPrompt;
 
-  Widget _meta(IconData icon, String text) =>
-      Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 15, color: Colors.white.withValues(alpha: .85)),
-        const SizedBox(width: 5),
-        Flexible(
-            child: Text(text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontSize: 13, color: Colors.white.withValues(alpha: .9)))),
-      ]);
+  static const _goldGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFFFD25A), Color(0xFFF59E0B)]);
+  static const _pinkGradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xFFF9A8D4), Color(0xFFEC4899), Color(0xFFC026D3)]);
+
+  Widget _chip(String text) => _GlassPill(
+      child: Text(text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w500)));
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+        // Shrinks the overlay on short screens so the photo stays visible.
+        final big = c.maxHeight > 560 ? 72.0 : 62.0;
+        final small = c.maxHeight > 560 ? 50.0 : 44.0;
         return DecoratedBox(
             decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(32),
@@ -393,12 +387,13 @@ class _PersonCard extends StatelessWidget {
                               gradient: LinearGradient(
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
-                                  stops: [0, .28, .5, 1],
+                                  stops: [0, .22, .45, .75, 1],
                                   colors: [
                         Color(0x73000000),
                         Color(0x00000000),
-                        Color(0x26000000),
-                        Color(0xF50B0812),
+                        Color(0x14000000),
+                        Color(0xB30B0812),
+                        Color(0xFA0B0812),
                       ])))),
                   Positioned(
                       top: 14,
@@ -406,21 +401,34 @@ class _PersonCard extends StatelessWidget {
                       right: 10,
                       child: Row(children: [
                         if (person.activeNow)
-                          const _GlassPill(
-                              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          const Flexible(
+                              child: _GlassPill(
+                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
                             DecoratedBox(
                                 decoration: BoxDecoration(
                                     color: Color(0xFF22C55E),
                                     shape: BoxShape.circle),
                                 child: SizedBox(width: 8, height: 8)),
                             SizedBox(width: 7),
-                            Text('Active now',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w600)),
-                          ])),
+                            Flexible(
+                                child: Text('Active now',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600))),
+                          ]))),
                         const Spacer(),
+                        Material(
+                            color: Colors.black.withValues(alpha: .35),
+                            shape: const CircleBorder(),
+                            child: IconButton(
+                                tooltip: 'Boost your profile',
+                                onPressed: onBoost,
+                                icon: const Icon(Icons.bolt_rounded,
+                                    color: EverlaneColors.lavender, size: 22))),
+                        const SizedBox(width: 8),
                         Material(
                             color: Colors.black.withValues(alpha: .35),
                             shape: const CircleBorder(),
@@ -430,26 +438,23 @@ class _PersonCard extends StatelessWidget {
                                 icon: const Icon(Icons.more_horiz,
                                     color: Colors.white, size: 22))),
                       ])),
+                  // Name and details, bottom left above the like bar.
                   Positioned(
                       left: 18,
-                      right: 18,
-                      bottom: 18,
+                      right: small + 28,
+                      bottom: big + 30,
                       child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            PhotoPrompt(
-                                icon: Icons.chat_bubble_outline_rounded,
-                                text: 'Ask about this photo',
-                                onTap: () => onPrompt('photo')),
-                            const SizedBox(height: 14),
                             Row(children: [
                               Flexible(
                                   child: GestureDetector(
                                       onTap: onOpen,
                                       child: Text.rich(
                                           EverlaneFonts.nameAge(
-                                              person.name, person.age),
+                                              person.name, person.age,
+                                              size: 38),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis))),
                               if (person.verified) ...[
@@ -460,40 +465,89 @@ class _PersonCard extends StatelessWidget {
                                         size: 24, color: Color(0xFF60A5FA))),
                               ],
                             ]),
-                            const SizedBox(height: 6),
-                            Wrap(spacing: 14, runSpacing: 4, children: [
-                              _meta(Icons.work_outline_rounded, person.job),
-                              _meta(Icons.location_on_outlined,
-                                  '${person.city} · ${person.distanceLabel}'),
-                              _meta(person.lookingFor.first.icon,
-                                  person.lookingFor.first.short),
-                              if (person.heightCm != null)
-                                _meta(Icons.height_rounded,
-                                    heightLabel(person.heightCm!)),
+                            const SizedBox(height: 4),
+                            Row(children: [
+                              const Icon(Icons.location_on_rounded,
+                                  size: 18, color: Color(0xFFF43F5E)),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                  child: Text(person.city,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.white
+                                              .withValues(alpha: .92)))),
                             ]),
-                            if (person.interests.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              Row(children: [
-                                const Icon(Icons.auto_awesome_rounded,
-                                    size: 18, color: EverlaneColors.star),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                    child: Wrap(
-                                        spacing: 6,
-                                        runSpacing: 6,
-                                        children: [
-                                      for (final tag in person.interests)
-                                        _GlassPill(
-                                            child: Text(tag,
-                                                style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 12.5,
-                                                    fontWeight:
-                                                        FontWeight.w500))),
-                                    ])),
-                              ]),
-                            ],
+                            const SizedBox(height: 10),
+                            Wrap(spacing: 8, runSpacing: 8, children: [
+                              _chip(person.distanceLabel),
+                              if (person.heightCm != null)
+                                _chip('${person.heightCm} cm'),
+                              if (person.job.isNotEmpty) _chip(person.job),
+                              _chip(person.lookingFor.first.short),
+                            ]),
                           ])),
+                  // Spark, undo and ask-about-photo down the right edge.
+                  Positioned(
+                      right: 14,
+                      bottom: big + 30,
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        _RoundAction(
+                            icon: Icons.star_rounded,
+                            label: 'Send ${person.name} a Spark',
+                            color: const Color(0xFF2A1A05),
+                            size: small + 4,
+                            gradient: _goldGradient,
+                            glow: const Color(0x80F59E0B),
+                            onTap: onSpark),
+                        const SizedBox(height: 12),
+                        _RoundAction(
+                            icon: Icons.undo_rounded,
+                            label: 'Undo last pass',
+                            color: Colors.white,
+                            size: small,
+                            onTap: onUndo),
+                        const SizedBox(height: 12),
+                        _RoundAction(
+                            icon: Icons.chat_bubble_rounded,
+                            label: 'Ask about this photo',
+                            color: Colors.white,
+                            size: small,
+                            fill: Colors.black,
+                            onTap: () => onPrompt('photo')),
+                      ])),
+                  // The like bar: pass, hint, like.
+                  Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 18,
+                      child: Row(children: [
+                        _RoundAction(
+                            icon: Icons.heart_broken_rounded,
+                            label: 'Pass on ${person.name}',
+                            color: const Color(0xFF111111),
+                            size: big,
+                            fill: Colors.white,
+                            onTap: onPass),
+                        Expanded(
+                            child: Text('SWIPE OR TAP',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    letterSpacing: 2.4,
+                                    fontWeight: FontWeight.w500,
+                                    color:
+                                        Colors.white.withValues(alpha: .7)))),
+                        _RoundAction(
+                            icon: Icons.favorite_rounded,
+                            label: 'Like ${person.name}’s photo',
+                            color: Colors.white,
+                            size: big,
+                            gradient: _pinkGradient,
+                            glow: const Color(0x99EC4899),
+                            onTap: onLike),
+                      ])),
                 ])));
       });
 }
@@ -1864,10 +1918,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _pill(
             icon: store.myVerified
                 ? Icons.verified_rounded
-                : Icons.verified_outlined,
-            label: store.myVerified ? 'Verified' : 'Get verified',
+                : store.verificationStatus == 'pending'
+                    ? Icons.hourglass_top_rounded
+                    : Icons.verified_outlined,
+            label: store.myVerified
+                ? 'Verified'
+                : switch (store.verificationStatus) {
+                    'pending' => 'Verification pending',
+                    'rejected' => 'Verify again',
+                    _ => 'Get verified',
+                  },
             color: store.myVerified ? const Color(0xFF60A5FA) : null,
-            onTap: store.myVerified ? null : () => verifyMe(context, store)),
+            onTap: store.myVerified || store.verificationStatus == 'pending'
+                ? null
+                : () => verifyMe(context, store)),
         _pill(
             icon: Icons.visibility_outlined,
             label: 'Preview',
@@ -2374,7 +2438,7 @@ Future<void> previewMyProfile(BuildContext context, PreviewStore store) =>
               child: AspectRatio(
                   aspectRatio: 1,
                   child: store.hasPhoto
-                      ? Image.memory(store.myPhotos.first, fit: BoxFit.cover)
+                      ? _PhotoCarousel(photos: store.myPhotos)
                       : Container(
                           color: EverlaneColors.blush,
                           alignment: Alignment.center,
@@ -2414,33 +2478,111 @@ Future<void> previewMyProfile(BuildContext context, PreviewStore store) =>
               child: const Text('Close')),
         ]));
 
-/// A demo-only verification: a real app would ask for a selfie and match it
-/// against your photos. Here, confirming is enough to flip the badge on.
+/// Swipe through photos, with a bar per photo at the top showing which
+/// one is up. Tapping the left or right side also steps back and forward.
+class _PhotoCarousel extends StatefulWidget {
+  const _PhotoCarousel({required this.photos});
+  final List<Uint8List> photos;
+  @override
+  State<_PhotoCarousel> createState() => _PhotoCarouselState();
+}
+
+class _PhotoCarouselState extends State<_PhotoCarousel> {
+  final controller = PageController();
+  int page = 0;
+
+  @override
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
+  void step(int by) {
+    final to = (page + by).clamp(0, widget.photos.length - 1);
+    controller.animateToPage(to,
+        duration: const Duration(milliseconds: 260), curve: Curves.easeOut);
+  }
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+      builder: (context, c) => Stack(fit: StackFit.expand, children: [
+            GestureDetector(
+                onTapUp: (d) =>
+                    step(d.localPosition.dx < c.maxWidth / 2 ? -1 : 1),
+                child: PageView(
+                    controller: controller,
+                    onPageChanged: (i) => setState(() => page = i),
+                    children: [
+                      for (final bytes in widget.photos)
+                        Image.memory(bytes, fit: BoxFit.cover)
+                    ])),
+            if (widget.photos.length > 1)
+              Positioned(
+                  top: 10,
+                  left: 10,
+                  right: 10,
+                  child: IgnorePointer(
+                      child: Row(children: [
+                    for (var i = 0; i < widget.photos.length; i++)
+                      Expanded(
+                          child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              height: 3,
+                              margin: const EdgeInsets.symmetric(horizontal: 2),
+                              decoration: BoxDecoration(
+                                  color: Colors.white
+                                      .withValues(alpha: i == page ? 1 : .4),
+                                  borderRadius: BorderRadius.circular(3)))),
+                  ]))),
+          ]));
+}
+
+/// Selfie verification: explains the check, then opens the live camera.
+/// The burst goes to the admin panel, which grants the badge.
 Future<void> verifyMe(BuildContext context, PreviewStore store) async {
-  final confirmed = await showEverlaneSheet<bool>(
+  final start = await showEverlaneSheet<bool>(
       context,
       Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text('Verify your profile', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 14),
+        if (store.verificationStatus == 'rejected') ...[
+          Text(
+              store.verificationNote.isEmpty
+                  ? 'Your last selfie couldn’t be matched to your photos.'
+                  : 'Your last selfie wasn’t approved: ${store.verificationNote}',
+              style: const TextStyle(color: Color(0xFFF87171), height: 1.5)),
+          const SizedBox(height: 10),
+        ],
         Text(
-            'In the real app, we’d ask you to match a quick selfie to your photos so people know you’re really you. This preview skips the camera step.',
+            'Take a quick live selfie and blink when we ask. Our team compares it with your profile photos, and once it matches you get the blue badge.',
             style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
+        const SizedBox(height: 10),
+        Text('Your selfie is only used for this check and is never shown on your profile.',
+            style: TextStyle(color: EverlaneColors.muted, fontSize: 12, height: 1.5)),
         const SizedBox(height: 20),
-        FilledButton(
+        FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: EverlaneColors.like),
-            child: const Text('Verify now (preview)')),
+            icon: const Icon(Icons.photo_camera_front_rounded),
+            label: const Text('Take live selfie')),
         const SizedBox(height: 8),
         Center(
             child: TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: const Text('Not now'))),
       ]));
-  if (confirmed == true) {
-    store.myVerified = true;
-    store.update();
-    store.saveProfile();
-    if (context.mounted) showNotice(context, 'Profile verified in this preview.');
+  if (start != true || !context.mounted) return;
+  final sent = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (_) => SelfieVerificationScreen(store: store)));
+  if (sent == true && context.mounted) {
+    showNotice(
+        context,
+        store.myVerified
+            ? 'Profile verified in this preview.'
+            : 'Selfie sent. We’ll add your badge once it’s reviewed.');
   }
 }
 

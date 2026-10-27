@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Talks to Supabase for the signed-in member's own account, profile row and
@@ -28,12 +29,18 @@ class ProfileBackend {
   Future<void> logIn(String email, String password) =>
       client.auth.signInWithPassword(email: email, password: password);
 
+  /// Where Google sends the member back: the page itself on the web, the
+  /// app's own link on Android and iOS (registered in AndroidManifest.xml
+  /// and Info.plist). Both must be in Supabase's Redirect URLs list.
+  static const appCallback = 'com.everlane.everlane://login-callback';
+
   /// Google sign-in. On the web this leaves the page for Google and comes
-  /// back signed in; Supabase picks the session up when the app reloads.
+  /// back signed in; in the app it opens the browser and returns through
+  /// [appCallback]. Supabase picks the session up either way.
   /// Needs the Google provider (client ID + secret) enabled in Supabase.
   Future<void> continueWithGoogle() => client.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: Uri.base.origin);
+      redirectTo: kIsWeb ? Uri.base.origin : appCallback);
 
   /// Sends a one-time code by SMS to [phone] (E.164, e.g. +919876543210).
   /// Needs the Phone provider and an SMS service set up in Supabase.
@@ -62,6 +69,36 @@ class ProfileBackend {
     await client.storage.from(_bucket).uploadBinary(path, bytes,
         fileOptions: FileOptions(contentType: mime));
     return path;
+  }
+
+  /// Uploads a live-selfie burst into the private "verifications" bucket
+  /// and queues it for an admin to review.
+  Future<void> submitVerification(List<Uint8List> frames) async {
+    final stamp = DateTime.now().microsecondsSinceEpoch;
+    final paths = <String>[];
+    for (final (i, bytes) in frames.indexed) {
+      final (ext, mime) = _imageType(bytes);
+      final path = '${user!.id}/$stamp-$i.$ext';
+      await client.storage.from('verifications').uploadBinary(path, bytes,
+          fileOptions: FileOptions(contentType: mime));
+      paths.add(path);
+    }
+    await client.rpc('submit_verification', params: {'frames': paths});
+  }
+
+  /// The member's latest verification request: its status ('pending',
+  /// 'approved', 'rejected') and the reviewer's note, or null if none.
+  Future<({String status, String note})?> latestVerification() async {
+    final row = await client
+        .from('verification_requests')
+        .select('status, note')
+        .eq('user_id', user!.id)
+        .neq('status', 'replaced')
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+    if (row == null) return null;
+    return (status: row['status'] as String, note: row['note'] as String);
   }
 
   Future<Uint8List> downloadPhoto(String path) =>
