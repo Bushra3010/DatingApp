@@ -655,88 +655,20 @@ class DetailHeading extends StatelessWidget {
       ]);
 }
 
+/// Likes a photo, prompt or soundtrack straight away. A like doesn't open a
+/// message box; writing to someone first is what a Spark is for.
 Future<void> showLikeComposer(BuildContext context, PreviewStore store,
     Person person, String target) async {
   if (store.outOfLikes) {
     showOutOfLikes(context, store);
     return;
   }
-  final sent = await showEverlaneSheet<bool>(
-      context, _LikeComposer(store: store, person: person, target: target));
-  if (sent == true && context.mounted) {
-    showNotice(
-        context,
-        person.remote
-            ? 'Like sent to ${person.name}.'
-            : 'Like sent to ${person.name} in this preview.');
-  }
-}
-
-/// Owns its controller so it outlives the sheet's closing animation.
-class _LikeComposer extends StatefulWidget {
-  const _LikeComposer(
-      {required this.store, required this.person, required this.target});
-  final PreviewStore store;
-  final Person person;
-  final String target;
-  @override
-  State<_LikeComposer> createState() => _LikeComposerState();
-}
-
-class _LikeComposerState extends State<_LikeComposer> {
-  final controller = TextEditingController();
-
-  @override
-  void dispose() {
-    controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final store = widget.store;
-    final person = widget.person;
-    final target = widget.target;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Eyebrow('Make the first move'),
-      const SizedBox(height: 12),
-      Text('A little more than a like.',
-          style: Theme.of(context).textTheme.headlineMedium),
-      const SizedBox(height: 18),
-      Row(children: [
-        Portrait(person, height: 62, width: 54, radius: 10),
-        const SizedBox(width: 14),
-        Expanded(
-            child: Text(
-                'You’re liking ${person.name}’s ${target == 'photo' || target == 'soundtrack' ? target : 'answer to “$target”'}.'))
-      ]),
-      const SizedBox(height: 20),
-      TextField(
-          controller: controller,
-          maxLength: 150,
-          maxLines: 3,
-          autofocus: true,
-          decoration: const InputDecoration(
-              hintText:
-                  'What caught your attention?\nAdd a comment (optional).')),
-      const SizedBox(height: 14),
-      FilledButton(
-          onPressed: () {
-            store.like(person, target: target, comment: controller.text);
-            Navigator.pop(context, true);
-          },
-          child: const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.favorite_border, size: 18),
-                SizedBox(width: 8),
-                Text('Send like')
-              ])),
-      const SizedBox(height: 12),
-      Text('Preview only. Your like won’t be sent to a real person.',
-          style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
-    ]);
-  }
+  store.like(person, target: target);
+  showNotice(
+      context,
+      person.remote
+          ? 'Like sent to ${person.name}.'
+          : 'Like sent to ${person.name} in this preview.');
 }
 
 Future<void> showFilters(BuildContext context, PreviewStore store) async {
@@ -2947,9 +2879,19 @@ class _MembershipBanner extends StatelessWidget {
   }
 }
 
-class MembershipScreen extends StatelessWidget {
+class MembershipScreen extends StatefulWidget {
   const MembershipScreen({super.key, required this.store});
   final PreviewStore store;
+  @override
+  State<MembershipScreen> createState() => _MembershipScreenState();
+}
+
+class _MembershipScreenState extends State<MembershipScreen> {
+  /// A paying member sees just their plan until they ask to change it.
+  bool browsing = false;
+
+  PreviewStore get store => widget.store;
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
       listenable: store,
@@ -2968,7 +2910,28 @@ class MembershipScreen extends StatelessWidget {
                         style: TextStyle(
                             fontSize: 12, color: EverlaneColors.plum))),
               ]),
-          body: ListView(
+          body: store.plan != Plan.free && !browsing
+              ? _currentPlan(context)
+              : _allPlans(context)));
+
+  Widget _currentPlan(BuildContext context) => ListView(
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+          children: [
+            Text('Your membership',
+                style: Theme.of(context).textTheme.headlineLarge),
+            const SizedBox(height: 10),
+            Text('Here’s what your ${store.plan.title} plan includes.',
+                style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
+            const SizedBox(height: 24),
+            _PlanCard(plan: store.plan, current: true, onChoose: () {}),
+            const SizedBox(height: 8),
+            Center(
+                child: TextButton(
+                    onPressed: () => setState(() => browsing = true),
+                    child: const Text('Change plan'))),
+          ]);
+
+  Widget _allPlans(BuildContext context) => ListView(
               padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
               children: [
                 Text('Find your person, faster.',
@@ -2986,6 +2949,7 @@ class MembershipScreen extends StatelessWidget {
                           current: store.plan == plan,
                           onChoose: () {
                             store.choosePlan(plan);
+                            setState(() => browsing = false);
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             showNotice(context, 'Welcome to ${plan.title}');
                           })),
@@ -2996,7 +2960,7 @@ class MembershipScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style:
                         TextStyle(fontSize: 11, color: EverlaneColors.muted)),
-              ])));
+              ]);
 }
 
 class _PlanCard extends StatelessWidget {

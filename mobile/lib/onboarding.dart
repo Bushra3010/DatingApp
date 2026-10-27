@@ -326,6 +326,9 @@ class _Welcome extends StatelessWidget {
                           padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                           child: Column(children: [
                             const SizedBox(height: 8),
+                            Image.asset('assets/images/app_logo.png',
+                                width: 64, height: 64),
+                            const SizedBox(height: 6),
                             ShaderMask(
                                 shaderCallback: (b) =>
                                     EverlaneColors.textGradient.createShader(b),

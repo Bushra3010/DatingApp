@@ -137,8 +137,8 @@ class _Header extends StatelessWidget {
                 spreadRadius: -6 * scale,
                 offset: Offset(0, 7 * scale))
           ]),
-      // The name and city sit beside the avatar, not under it.
-      child: Row(children: [
+      // The name and city sit beside the avatar, in its top-right corner.
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _Artwork(
             source: const Rect.fromLTWH(38, 49, 160, 160),
             width: 142 * scale,
@@ -147,17 +147,19 @@ class _Header extends StatelessWidget {
         SizedBox(width: 14 * scale),
         Expanded(
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 mainAxisSize: MainAxisSize.min,
                 children: [
               Text('$name, $age',
                   maxLines: 1,
+                  textAlign: TextAlign.right,
                   overflow: TextOverflow.ellipsis,
                   style: EverlaneFonts.inter(
                       size: 44 * scale, color: const Color(0xFFF8F5FB))),
               SizedBox(height: 5 * scale),
               Text(location,
                   maxLines: 1,
+                  textAlign: TextAlign.right,
                   overflow: TextOverflow.ellipsis,
                   style: EverlaneFonts.inter(
                       size: 26 * scale, color: const Color(0xFFB08BD7))),

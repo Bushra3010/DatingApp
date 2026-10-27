@@ -1075,9 +1075,12 @@ class PreviewStore extends ChangeNotifier {
       likeNotes[p.id] = SentLike(
           p.id, r['target'] as String? ?? 'photo', r['comment'] as String? ?? '');
     }
-    for (final r in results[2]) {
+    // Fetch every conversation's messages at once rather than one by one.
+    final threads = await Future.wait(
+        [for (final r in results[2]) b.messages(r['match_id'] as String)]);
+    for (final (i, r) in results[2].indexed) {
       final matchId = r['match_id'] as String;
-      final msgs = await b.messages(matchId);
+      final msgs = threads[i];
       conversations.add(Conversation(
           card(r),
           [
@@ -1322,8 +1325,12 @@ class PreviewStore extends ChangeNotifier {
           'This account is suspended until ${d.day}/${d.month}/${d.year}. Contact support if you think this is a mistake.');
     }
     startFreshAccount();
-    await _loadCommunitySafely();
-    if (row == null) return false;
+    if (row == null) {
+      await _loadCommunitySafely();
+      return false;
+    }
+    // People, likes and chats load alongside the member's own photos.
+    final community = _loadCommunitySafely();
     myName = row['name'] as String? ?? '';
     myBirthday = DateTime.tryParse(row['birthday'] as String? ?? '');
     myGender = row['gender'] as String? ?? '';
@@ -1351,15 +1358,18 @@ class PreviewStore extends ChangeNotifier {
     myVerified = row['verified'] as bool? ?? false;
     (row['onboarding_answers'] as Map? ?? {}).forEach((k, v) =>
         onboardingAnswers[k as String] = List<String>.from(v as List));
-    for (final path in List<String>.from(row['photos'] as List? ?? [])) {
-      try {
-        final bytes = await b.downloadPhoto(path);
-        myPhotos.add(bytes);
-        _photoPaths[bytes] = path;
-      } catch (_) {
+    final paths = List<String>.from(row['photos'] as List? ?? []);
+    final photos = await Future.wait([
+      for (final path in paths)
         // A missing photo shouldn't stop the rest of the profile loading.
-      }
+        b.downloadPhoto(path).then<Uint8List?>((v) => v, onError: (_) => null)
+    ]);
+    for (final (i, bytes) in photos.indexed) {
+      if (bytes == null) continue;
+      myPhotos.add(bytes);
+      _photoPaths[bytes] = paths[i];
     }
+    await community;
     onboarded = row['onboarded'] as bool? ?? false;
     notifyListeners();
     return onboarded;

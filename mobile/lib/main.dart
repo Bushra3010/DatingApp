@@ -92,12 +92,33 @@ class _EverlaneAppState extends State<EverlaneApp> {
                   : OnboardingFlow(store: store)));
 }
 
-class _Splash extends StatelessWidget {
+class _Splash extends StatefulWidget {
   const _Splash();
+  @override
+  State<_Splash> createState() => _SplashState();
+}
+
+class _SplashState extends State<_Splash> with SingleTickerProviderStateMixin {
+  late final pulse = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 1600))
+    ..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    pulse.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
       body: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
+        ScaleTransition(
+            scale: Tween(begin: 1.0, end: 1.06).animate(
+                CurvedAnimation(parent: pulse, curve: Curves.easeInOut)),
+            child: Image.asset('assets/images/app_logo.png',
+                width: 96, height: 96)),
+        const SizedBox(height: 14),
         Text('Everlane', style: EverlaneFonts.logo(size: 44)),
         const SizedBox(height: 20),
         const SizedBox(
@@ -222,8 +243,18 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                     const EdgeInsets.symmetric(horizontal: 72),
                                 child: FittedBox(
                                     fit: BoxFit.scaleDown,
-                                    child: Text('Everlane',
-                                        style: EverlaneFonts.logo(size: 36)))),
+                                    child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Image.asset(
+                                              'assets/images/app_logo.png',
+                                              width: 34,
+                                              height: 34),
+                                          const SizedBox(width: 8),
+                                          Text('Everlane',
+                                              style: EverlaneFonts.logo(
+                                                  size: 36)),
+                                        ]))),
                             Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 10),

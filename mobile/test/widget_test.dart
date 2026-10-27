@@ -94,12 +94,6 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Like Ananya’s photo'));
     await tester.pumpAndSettle();
-    await tester.enterText(
-        find.byType(TextField), 'Your ideal Sunday sounds lovely.');
-    await tester.ensureVisible(find.text('Send like'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Send like'));
-    await tester.pumpAndSettle();
     expect(find.text('Meera, 28'), findsOneWidget);
   });
   testWidgets('Profile details and drawer navigation work', (tester) async {
@@ -329,7 +323,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Photo prompts invite a reply; Invisible mode is free',
+  testWidgets('Photo likes send at once; Invisible mode is free',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -340,10 +334,9 @@ void main() {
     expect(find.text('Bengaluru · Nearby'), findsOneWidget);
     await tester.tap(find.text('Ask about this photo'));
     await tester.pumpAndSettle();
-    expect(find.text('You’re liking Ananya’s photo.'), findsOneWidget);
-    Navigator.of(tester.element(find.text('You’re liking Ananya’s photo.')))
-        .pop();
-    await tester.pumpAndSettle();
+    // A like is sent straight away, with no message box.
+    expect(find.text('Like sent to Ananya in this preview.'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
     // The Discover card shows neither the soundtrack nor the bio.
     expect(find.textContaining('Ananya’s soundtrack'), findsNothing);
     expect(find.textContaining('Designer by day'), findsNothing);
@@ -375,11 +368,6 @@ void main() {
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Ask about this photo'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Where was this taken?');
-    await tester.ensureVisible(find.text('Send like'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Send like'));
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 60));
     }
