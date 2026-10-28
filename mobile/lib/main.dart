@@ -249,18 +249,8 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                     const EdgeInsets.symmetric(horizontal: 72),
                                 child: FittedBox(
                                     fit: BoxFit.scaleDown,
-                                    child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Image.asset(
-                                              'assets/images/app_logo.png',
-                                              width: 34,
-                                              height: 34),
-                                          const SizedBox(width: 8),
-                                          Text('Everlane',
-                                              style: EverlaneFonts.logo(
-                                                  size: 36)),
-                                        ]))),
+                                    child: Text('Everlane',
+                                        style: EverlaneFonts.logo(size: 36)))),
                             Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 10),

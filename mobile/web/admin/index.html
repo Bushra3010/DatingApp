@@ -120,12 +120,43 @@
   .report .msg.reporter { align-self: flex-end; }
   .actionbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   nav .tab .pill { margin-left: 4px; }
+  .bots { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
+  .bot { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; cursor: pointer; }
+  .bot:hover { border-color: var(--purple); }
+  .bot.off { opacity: .5; }
+  .bot .pic { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: grid; place-items: center;
+              background: var(--card2); color: var(--muted); font-size: 12px; }
+  .bot .meta { padding: 10px 12px; }
+  .bot .meta b { color: var(--text); }
+  .edit-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin: 8px 0; }
+  .edit-photos figure { margin: 0; position: relative; }
+  .edit-photos img { width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 12px; display: block; }
+  .edit-photos figure span { position: absolute; left: 6px; top: 6px; font-size: 10px; }
+  .edit-photos .tools { position: absolute; right: 4px; bottom: 4px; display: flex; gap: 4px; }
+  .edit-photos .add { aspect-ratio: 4/5; border: 1px dashed var(--line); border-radius: 12px; display: grid;
+                      place-items: center; cursor: pointer; color: var(--muted); text-align: center; font-size: 12px; }
+  .edit-photos .add:hover { border-color: var(--purple); color: var(--lavender); }
+  .pick { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pick label { margin: 0; display: inline-flex; gap: 5px; align-items: center; background: var(--card2);
+                border: 1px solid var(--line); border-radius: 20px; padding: 4px 10px; color: var(--body); cursor: pointer; }
+  .pick input { width: auto; margin: 0; }
+  .pending { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .pending button { flex: 1 1 180px; text-align: left; }
+  .pending button b { font-size: 22px; color: var(--text); font-family: Poppins, Inter; margin-right: 6px; }
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--card2);
            border: 1px solid var(--purple); padding: 10px 18px; border-radius: 12px; z-index: 20; }
   @media (max-width: 800px) {
     #app { grid-template-columns: 1fr; }
-    nav { position: static; height: auto; flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); }
-    nav .who { margin-top: 0; width: 100%; }
+    /* One scrolling row of tabs instead of several wrapped ones. */
+    nav { position: sticky; top: 0; z-index: 5; background: var(--bg); height: auto; flex-direction: row;
+          align-items: center; overflow-x: auto; scrollbar-width: none; border-right: 0;
+          border-bottom: 1px solid var(--line); padding: 10px 12px; }
+    nav::-webkit-scrollbar { display: none; }
+    nav > .logo, nav > .muted { display: none; }
+    nav .tab { flex: none; white-space: nowrap; }
+    nav .who { margin: 0 0 0 8px; flex: none; }
+    nav .who #who { display: none; }
+    nav .who #logout { margin-top: 0 !important; }
     main { padding: 20px 16px; }
   }
 </style>
@@ -152,6 +183,7 @@
     <div class="muted" style="padding:0 12px 14px;font-size:12px">Admin</div>
     <button class="tab active" data-view="overview">Overview</button>
     <button class="tab" data-view="leads">Leads &amp; members</button>
+    <button class="tab" data-view="bots">Bots</button>
     <button class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
     <button class="tab" data-view="photos">Photo queue <span class="pill warn hidden" id="photoBadge"></span></button>
     <button class="tab" data-view="verify">Verifications <span class="pill warn hidden" id="verifyBadge"></span></button>
@@ -164,6 +196,7 @@
   <main>
     <div id="view-overview">
       <div class="head"><h1>Overview</h1><button class="btn" data-refresh>Refresh</button></div>
+      <div class="pending" id="pending"></div>
       <div class="stats" id="stats"></div>
     </div>
 
@@ -188,6 +221,14 @@
         <tbody id="members"></tbody>
       </table></div>
       <p class="muted" id="memberCount" style="margin-top:10px"></p>
+    </div>
+
+    <div id="view-bots" class="hidden">
+      <div class="head"><div><h1>Bots</h1>
+        <p class="muted" style="margin:4px 0 0">Profiles you make and add photos to by hand, for testing, demos and store screenshots. Bots are test accounts: only test accounts see them, real members never do. They can’t sign in.</p></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="botsLive"></button><button class="btn" id="bulkBots">Bulk create</button><button class="btn primary" id="newBot">New bot</button></div></div>
+      <div class="bots" id="bots"></div>
+      <p class="muted" id="botCount" style="margin-top:10px"></p>
     </div>
 
     <div id="view-reports" class="hidden">
@@ -296,14 +337,14 @@ $('#logout').onclick = async () => { await sb.auth.signOut(); showLogin(); };
 
 // ---------- Navigation ----------
 let current = 'overview';
-const VIEWS = ['overview', 'leads', 'reports', 'photos', 'verify', 'words', 'audit', 'questions', 'options'];
+const VIEWS = ['overview', 'leads', 'bots', 'reports', 'photos', 'verify', 'words', 'audit', 'questions', 'options'];
 document.querySelectorAll('nav .tab').forEach(b => b.onclick = () => show(b.dataset.view));
 document.querySelectorAll('[data-refresh]').forEach(b => b.onclick = () => show(current));
 function show(view) {
   current = view;
   document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== view);
-  ({ overview: loadStats, leads: loadMembers, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
+  ({ overview: loadStats, leads: loadMembers, bots: loadBots, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
      audit: loadAudit, questions: loadQuestions, options: loadOptions })[view]();
 }
 function badge(sel, n) { const b = $(sel); b.textContent = n; b.classList.toggle('hidden', !n); }
@@ -311,17 +352,24 @@ function fail(error) { console.error(error); toast(error.message || 'Something w
 
 // ---------- Overview ----------
 async function loadStats() {
-  const { data, error } = await sb.rpc('admin_stats');
+  const [{ data, error }, { data: selfies }] = await Promise.all([sb.rpc('admin_stats'), sb.rpc('admin_verification_queue')]);
   if (error) return fail(error);
+  const waiting = [['photos', data.pending_photos, 'photos to review'], ['reports', data.open_reports, 'open reports'],
+    ['verify', selfies?.length || 0, 'selfies to verify']];
+  $('#pending').innerHTML = waiting.map(([view, n, label]) =>
+    `<button class="btn" data-go="${view}"><b>${n}</b>${label}${n ? '' : ' ✓'}</button>`).join('');
+  document.querySelectorAll('#pending [data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
+  badge('#verifyBadge', selfies?.length || 0);
   const ratio = data.women ? (data.men / data.women).toFixed(2) + ' : 1' : '—';
-  const items = [['Accounts', data.accounts], ['Finished profiles', data.onboarded],
+  const finished = data.accounts ? ` (${Math.round(100 * data.onboarded / data.accounts)}%)` : '';
+  const items = [['Accounts', data.accounts], ['Finished profiles', data.onboarded + finished],
     ['Active today', data.dau], ['Sign-ups today', data.signups_today], ['Sign-ups (7 days)', data.signups_7d],
     ['Men · women · other', `${data.men} · ${data.women} · ${data.other_gender}`], ['Men to women', ratio],
     ['Paid plans', data.paid_members], ['Open reports', data.open_reports], ['Photos to review', data.pending_photos],
     ['Likes', data.likes], ['Matches', data.matches], ['Messages', data.messages],
-    ['Blocked', data.blocked], ['Suspended', data.suspended], ['Test accounts', data.test_accounts]];
+    ['Blocked', data.blocked], ['Suspended', data.suspended], ['Test accounts', data.test_accounts], ['Bots', data.bots]];
   $('#stats').innerHTML = items.map(([k, v]) => `<div class="stat"><span class="muted">${esc(k)}</span><b>${esc(v)}</b></div>`).join('')
-    + `<p class="muted" style="grid-column:1/-1;margin:4px 0 0">Profile, gender and plan counts leave out test accounts; accounts, sign-ups, likes, matches and messages include them. Revenue appears here once store billing is connected; plans are not charged yet.</p>`;
+    + `<p class="muted" style="grid-column:1/-1;margin:4px 0 0">Bots are left out of every count except their own. Profile, gender and plan counts also leave out test accounts; accounts, sign-ups, likes, matches and messages include them. Revenue appears here once store billing is connected; plans are not charged yet.</p>`;
   badge('#reportBadge', data.open_reports); badge('#photoBadge', data.pending_photos);
 }
 
@@ -464,6 +512,214 @@ $('#exportCsv').onclick = () => {
   a.download = `everlane-leads-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
 };
 
+// ---------- Bots ----------
+let bots = [];
+const GENDERS = ['Woman', 'Man', 'Non-binary'], WANTS = ['Men', 'Women', 'Everyone'];
+const LOOKING = ['Long term', 'Short term', 'Casual', 'Chit chat'];
+const ageOf = b => b.birthday ? Math.floor((Date.now() - new Date(b.birthday)) / 31557600000) : 0;
+// A birthday that makes the bot [age] today, keeping the old one when the age is unchanged.
+function birthdayFor(age, old) {
+  if (old && ageOf({ birthday: old }) === age) return old;
+  const d = new Date(); d.setFullYear(d.getFullYear() - age); d.setMonth(d.getMonth() - 3);
+  return d.toISOString().slice(0, 10);
+}
+const optionValues = kind => options.filter(o => o.kind === kind && o.active).map(o => o.value);
+async function ensureOptions() {
+  if (options.length) return;
+  const { data } = await sb.from('app_options').select('*').order('position');
+  options = data || [];
+}
+// Uploads files into the bot's folder and returns their storage paths.
+async function uploadBotPhotos(botId, files) {
+  const paths = [];
+  for (const f of files) {
+    const ext = (f.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+    const path = `${botId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error } = await sb.storage.from('photos').upload(path, f, { contentType: f.type });
+    if (error) throw error;
+    paths.push(path);
+  }
+  return paths;
+}
+
+async function loadBots() {
+  const { data, error } = await sb.rpc('admin_bots');
+  if (error) return fail(error);
+  bots = data;
+  const off = bots.filter(b => b.blocked).length;
+  const live = bots.length && off < bots.length;
+  $('#botsLive').textContent = live ? 'Switch all bots off' : 'Switch all bots on';
+  $('#botsLive').className = 'btn' + (live ? ' danger' : '');
+  $('#botsLive').disabled = !bots.length;
+  $('#bots').innerHTML = bots.map(b => `<div class="bot ${b.blocked ? 'off' : ''}" data-bot="${esc(b.id)}">
+    ${b.photos?.length ? `<img class="pic" src="${esc(photoUrl(b.photos[0]))}" alt="" loading="lazy">` : '<div class="pic">No photos yet</div>'}
+    <div class="meta"><b>${esc(b.name || 'Unnamed')}</b>${ageOf(b) ? ', ' + ageOf(b) : ''}
+      <div class="muted" style="font-size:12px">${esc(b.city || 'No city')} · ${b.photos?.length || 0} photo${b.photos?.length === 1 ? '' : 's'}</div>
+      ${b.blocked ? '<span class="pill bad">Off</span>' : ''}</div>
+  </div>`).join('') || '<p class="muted">No bots yet. Use “New bot” or “Bulk create”.</p>';
+  $('#botCount').textContent = bots.length ? `${bots.length} bot${bots.length > 1 ? 's' : ''}${off ? ` · ${off} switched off` : ''}` : '';
+  document.querySelectorAll('[data-bot]').forEach(el => el.onclick = () => editBot(bots.find(b => b.id === el.dataset.bot)));
+}
+$('#newBot').onclick = () => editBot(null);
+$('#botsLive').onclick = async () => {
+  const live = $('#botsLive').textContent.includes('on');
+  if (!live && !confirm('Switch every bot off? They disappear from the app until you switch them back on.')) return;
+  const { error } = await sb.rpc('admin_set_bots_live', { live });
+  if (error) return fail(error);
+  toast(live ? 'Bots switched on' : 'Bots switched off'); loadBots();
+};
+
+async function editBot(bot) {
+  await ensureOptions();
+  const b = bot || { name: '', gender: 'Woman', interested_in: 'Men', city: '', job: '', bio: '',
+    looking_for: 'Long term', interests: [], languages: [], prompt_label: optionValues('prompt')[0] || '',
+    prompt_answer: '', height_cm: null, photos: [] };
+  // Each photo is either saved ({path}) or picked but not uploaded yet ({file, url}).
+  let photos = (b.photos || []).map(path => ({ path }));
+  const select = (id, list, value) => `<select id="${id}">${list.map(v => `<option ${v === value ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+  const pick = (name, list, chosen) => `<div class="pick">${list.map(v =>
+    `<label><input type="checkbox" name="${name}" value="${esc(v)}" ${chosen.includes(v) ? 'checked' : ''}>${esc(v)}</label>`).join('') || '<span class="muted">None set up in Options.</span>'}</div>`;
+  const ov = $('#overlay');
+  ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="botForm">
+    <h2>${bot ? 'Edit bot' : 'New bot'}</h2>
+    <label>Photos (the first is the main photo)</label>
+    <div class="edit-photos" id="botPhotos"></div>
+    <input type="file" id="botFiles" accept="image/jpeg,image/png,image/webp" multiple class="hidden">
+    <div class="row2">
+      <div><label>Name</label><input type="text" id="bName" required value="${esc(b.name)}"></div>
+      <div><label>Age</label><input type="number" id="bAge" min="18" max="80" required value="${ageOf(b) || ''}"></div>
+    </div>
+    <div class="row2">
+      <div><label>Gender</label>${select('bGender', GENDERS, b.gender)}</div>
+      <div><label>Wants to meet</label>${select('bWants', WANTS, b.interested_in)}</div>
+    </div>
+    <div class="row2">
+      <div><label>City</label><input type="text" id="bCity" placeholder="e.g. Bengaluru" value="${esc(b.city)}"></div>
+      <div><label>Job</label><input type="text" id="bJob" value="${esc(b.job)}"></div>
+    </div>
+    <div class="row2">
+      <div><label>Looking for</label>${select('bLooking', LOOKING, b.looking_for)}</div>
+      <div><label>Height (cm, optional)</label><input type="number" id="bHeight" min="120" max="230" value="${b.height_cm ?? ''}"></div>
+    </div>
+    <label>Bio</label><textarea id="bBio" rows="3">${esc(b.bio)}</textarea>
+    <div class="row2">
+      <div><label>Prompt</label>${select('bPrompt', optionValues('prompt').includes(b.prompt_label) || !b.prompt_label ? optionValues('prompt') : [b.prompt_label, ...optionValues('prompt')], b.prompt_label)}</div>
+      <div><label>Answer</label><input type="text" id="bAnswer" value="${esc(b.prompt_answer)}"></div>
+    </div>
+    <label>Interests</label>${pick('interest', optionValues('interest'), b.interests || [])}
+    <label>Languages</label>${pick('language', optionValues('language'), b.languages || [])}
+    <div class="err" id="bErr"></div>
+    <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px;flex-wrap:wrap">
+      <div>${bot ? '<button type="button" class="btn danger" id="bDelete">Delete bot</button>' : ''}</div>
+      <div style="display:flex;gap:10px"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary" id="bSave">Save bot</button></div>
+    </div>
+  </form></div>`;
+  const renderPhotos = () => {
+    $('#botPhotos', ov).innerHTML = photos.map((p, i) => `<figure>
+      <img src="${esc(p.url || photoUrl(p.path))}" alt="">${i === 0 ? '<span class="pill ok">Main</span>' : ''}
+      <div class="tools">${i ? `<button type="button" class="btn small" data-main="${i}" title="Make main photo">★</button>` : ''}<button type="button" class="btn small danger" data-rmp="${i}" title="Remove">✕</button></div>
+    </figure>`).join('') + '<div class="add" id="addPhotos">+ Add photos<br>JPG, PNG or WebP</div>';
+    $('#addPhotos', ov).onclick = () => $('#botFiles', ov).click();
+    ov.querySelectorAll('[data-main]').forEach(el => el.onclick = () => { photos.unshift(...photos.splice(+el.dataset.main, 1)); renderPhotos(); });
+    ov.querySelectorAll('[data-rmp]').forEach(el => el.onclick = () => { photos.splice(+el.dataset.rmp, 1); renderPhotos(); });
+  };
+  renderPhotos();
+  $('#botFiles', ov).onchange = e => {
+    for (const file of e.target.files) {
+      if (file.size > 10 * 1024 * 1024) { toast(`${file.name} is over 10 MB`); continue; }
+      photos.push({ file, url: URL.createObjectURL(file) });
+    }
+    e.target.value = ''; renderPhotos();
+  };
+  const close = () => ov.innerHTML = '';
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  $('#bDelete', ov)?.addEventListener('click', async () => {
+    if (!confirm(`Delete ${b.name || 'this bot'} and its photos?`)) return;
+    const { error } = await sb.rpc('admin_delete_bot', { bot: b.id });
+    if (error) return fail(error);
+    if (b.photos?.length) await sb.storage.from('photos').remove(b.photos);
+    toast('Bot deleted'); close(); loadBots();
+  });
+  $('#botForm', ov).onsubmit = async e => {
+    e.preventDefault();
+    const checked = name => [...ov.querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
+    const height = $('#bHeight', ov).value;
+    const data = { name: $('#bName', ov).value.trim(), birthday: birthdayFor(+$('#bAge', ov).value, b.birthday),
+      gender: $('#bGender', ov).value, interested_in: $('#bWants', ov).value, city: $('#bCity', ov).value.trim(),
+      job: $('#bJob', ov).value.trim(), looking_for: $('#bLooking', ov).value, bio: $('#bBio', ov).value.trim(),
+      prompt_label: $('#bPrompt', ov).value, prompt_answer: $('#bAnswer', ov).value.trim(),
+      height_cm: height ? +height : null, interests: checked('interest'), languages: checked('language') };
+    $('#bSave', ov).disabled = true; $('#bSave', ov).textContent = 'Saving…';
+    try {
+      let { data: id, error } = await sb.rpc('admin_save_bot', { bot: bot?.id ?? null, data });
+      if (error) throw error;
+      const fresh = await uploadBotPhotos(id, photos.filter(p => p.file).map(p => p.file));
+      const paths = photos.map(p => p.path || fresh.shift());
+      ({ error } = await sb.rpc('admin_save_bot', { bot: id, data: { photos: paths } }));
+      if (error) throw error;
+      const dropped = (b.photos || []).filter(p => !paths.includes(p));
+      if (dropped.length) await sb.storage.from('photos').remove(dropped);
+      toast(bot ? 'Bot saved' : 'Bot created'); close(); loadBots();
+    } catch (err) {
+      $('#bErr', ov).textContent = err.message || 'Something went wrong';
+      $('#bSave', ov).disabled = false; $('#bSave', ov).textContent = 'Save bot';
+    }
+  };
+}
+
+$('#bulkBots').onclick = async () => {
+  await ensureOptions();
+  const ov = $('#overlay');
+  ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="bulkForm">
+    <h2>Bulk create bots</h2>
+    <p class="muted" style="margin:6px 0 0">One bot per line: <b>name, age, gender, city, job</b>. Gender is Woman, Man or Non-binary; city and job are optional.</p>
+    <label>Bots</label>
+    <textarea id="bulkLines" rows="8" placeholder="Ananya, 27, Woman, Bengaluru, Product designer&#10;Rohan, 29, Man, Mumbai, Chef"></textarea>
+    <div class="row2">
+      <div><label>Wants to meet (all of them)</label><select id="bulkWants"><option value="">Opposite gender</option>${WANTS.map(w => `<option>${w}</option>`).join('')}</select></div>
+      <div><label>Looking for (all of them)</label><select id="bulkLooking">${LOOKING.map(l => `<option>${l}</option>`).join('')}</select></div>
+    </div>
+    <label>Photos (optional): one per bot, in the same order as the lines. Add more later on each bot.</label>
+    <input type="file" id="bulkFiles" accept="image/jpeg,image/png,image/webp" multiple>
+    <div class="err" id="bulkErr"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+      <button type="button" class="btn" data-close>Cancel</button><button class="btn primary" id="bulkSave">Create bots</button></div>
+  </form></div>`;
+  const close = () => ov.innerHTML = '';
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  $('#bulkForm', ov).onsubmit = async e => {
+    e.preventDefault();
+    const err = $('#bulkErr', ov);
+    const rows = $('#bulkLines', ov).value.split('\n').map(l => l.trim()).filter(Boolean).map(l => l.split(',').map(s => s.trim()));
+    const bad = rows.findIndex(([name, age, gender]) => !name || !(+age >= 18 && +age <= 80) || !GENDERS.includes(gender));
+    if (!rows.length) return err.textContent = 'Add at least one line.';
+    if (bad >= 0) return err.textContent = `Line ${bad + 1}: needs a name, an age from 18 to 80, and Woman, Man or Non-binary.`;
+    const files = [...$('#bulkFiles', ov).files];
+    const btn = $('#bulkSave', ov); btn.disabled = true;
+    let made = 0;
+    try {
+      for (const [i, [name, age, gender, city = '', job = '']] of rows.entries()) {
+        btn.textContent = `Creating ${i + 1} of ${rows.length}…`;
+        const wants = $('#bulkWants', ov).value || { Woman: 'Men', Man: 'Women' }[gender] || 'Everyone';
+        const { data: id, error } = await sb.rpc('admin_save_bot', { bot: null, data: {
+          name, birthday: birthdayFor(+age), gender, interested_in: wants, city, job,
+          looking_for: $('#bulkLooking', ov).value, prompt_label: optionValues('prompt')[0] || '' } });
+        if (error) throw error;
+        made++;
+        if (files[i]) {
+          const paths = await uploadBotPhotos(id, [files[i]]);
+          const { error: e2 } = await sb.rpc('admin_save_bot', { bot: id, data: { photos: paths } });
+          if (e2) throw e2;
+        }
+      }
+      toast(`${made} bot${made > 1 ? 's' : ''} created`); close(); loadBots();
+    } catch (x) {
+      err.textContent = `${made} created, then: ${x.message || 'something went wrong'}`;
+      btn.disabled = false; btn.textContent = 'Create bots'; loadBots();
+    }
+  };
+};
+
 // ---------- Reports ----------
 $('#reportFilter').onchange = () => loadReports();
 async function loadReports() {
@@ -586,7 +842,8 @@ const ACTIONS = { ban: 'Blocked', unban: 'Unblocked', verify: 'Verified', unveri
   warn: 'Warned', suspend: 'Suspended', unsuspend: 'Lifted suspension', set_plan: 'Changed plan',
   mark_test: 'Made test account', unmark_test: 'Made real account', photo_approve: 'Approved photo', verify_reject: 'Rejected selfie',
   photo_reject: 'Rejected photo', report_resolved: 'Resolved report', report_dismissed: 'Dismissed report',
-  report_open: 'Reopened report' };
+  report_open: 'Reopened report', bot_create: 'Created bot', bot_update: 'Edited bot', bot_delete: 'Deleted bot',
+  bots_on: 'Switched bots on', bots_off: 'Switched bots off' };
 async function loadAudit() {
   const { data, error } = await sb.rpc('admin_audit_log', { max_rows: 300 });
   if (error) return fail(error);
@@ -597,6 +854,8 @@ async function loadAudit() {
     if (a.action === 'set_plan') out.push(esc(PLAN_NAMES[d.value] || d.value));
     if (d.report) out.push('Report #' + esc(d.report));
     if (d.note) out.push(esc(d.note));
+    if (a.action.startsWith('bot_') && d.name) out.push(esc(d.name));
+    if (a.action.startsWith('bots_')) out.push(esc(d.count) + ' bots');
     return out.join(' · ');
   };
   $('#audit').innerHTML = data.map(a => `<tr style="cursor:default">
