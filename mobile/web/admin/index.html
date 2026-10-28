@@ -120,14 +120,6 @@
   .report .msg.reporter { align-self: flex-end; }
   .actionbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
   nav .tab .pill { margin-left: 4px; }
-  .bots { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
-  .bot { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; cursor: pointer; }
-  .bot:hover { border-color: var(--purple); }
-  .bot.off { opacity: .5; }
-  .bot .pic { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: grid; place-items: center;
-              background: var(--card2); color: var(--muted); font-size: 12px; }
-  .bot .meta { padding: 10px 12px; }
-  .bot .meta b { color: var(--text); }
   .edit-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin: 8px 0; }
   .edit-photos figure { margin: 0; position: relative; }
   .edit-photos img { width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 12px; display: block; }
@@ -143,6 +135,26 @@
   .pending { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
   .pending button { flex: 1 1 180px; text-align: left; }
   .pending button b { font-size: 22px; color: var(--text); font-family: Poppins, Inter; margin-right: 6px; }
+  .gen { display: grid; gap: 14px; max-width: 760px; }
+  .gen .card { padding: 18px; }
+  .gen h3 { font-size: 15px; margin-bottom: 4px; }
+  input[type=range] { width: 100%; accent-color: var(--purple); margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .seg { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+  .seg button.on, .presets button.on { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  .tags .tag { background: var(--purple); color: #fff; border-radius: 20px; padding: 4px 6px 4px 12px; font-size: 12px; font-weight: 600; }
+  .tags .tag button { background: none; border: 0; color: #fff; cursor: pointer; padding: 0 4px; }
+  .summary { padding: 14px 18px; border: 1px solid rgba(124,58,237,.5); background: rgba(124,58,237,.1); border-radius: 18px; color: var(--text); }
+  .samples { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+  .sample { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .sample img { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; }
+  .sample .meta { padding: 10px 12px; font-size: 12px; }
+  .sample .meta b { color: var(--text); font-size: 14px; }
+  .sample .opts span { display: inline-block; background: var(--card2); border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; margin: 4px 4px 0 0; }
+  .bulkbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
+  .code { font-size: 11px; color: var(--muted); }
+  .pager { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 12px; }
   .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--card2);
            border: 1px solid var(--purple); padding: 10px 18px; border-radius: 12px; z-index: 20; }
   @media (max-width: 800px) {
@@ -205,6 +217,7 @@
     <div class="muted" style="padding:0 12px 14px;font-size:12px">Admin</div>
     <button class="tab active" data-view="overview">Overview</button>
     <button class="tab" data-view="leads">Leads &amp; members</button>
+    <button class="tab" data-view="gen">Generate bots</button>
     <button class="tab" data-view="bots">Bots</button>
     <button class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
     <button class="tab" data-view="photos">Photo queue <span class="pill warn hidden" id="photoBadge"></span></button>
@@ -259,8 +272,34 @@
       <div class="head"><div><h1>Bots</h1>
         <p class="muted" style="margin:4px 0 0">Profiles you make and add photos to by hand, for testing, demos and store screenshots. Bots are test accounts: only test accounts see them, real members never do. They can’t sign in.</p></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="botsLive"></button><button class="btn" id="bulkBots">Bulk create</button><button class="btn primary" id="newBot">New bot</button></div></div>
-      <div class="bots" id="bots"></div>
+      <div class="toolbar">
+        <input type="text" id="botSearch" placeholder="Search name, city or BOT number…">
+        <select id="botGender"><option value="">All genders</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
+        <select id="botCity"><option value="">All cities</option></select>
+        <select id="botStatus"><option value="">Any status</option><option value="live">Live</option><option value="paused">Paused</option><option value="off">Switched off</option><option value="nophoto">Needs a real photo</option></select>
+        <select id="botBatch"><option value="">All batches</option></select>
+      </div>
+      <div class="bulkbar">
+        <button class="btn small" id="botSelAll"></button><button class="btn small" id="botSelClear">Clear</button>
+        <span class="muted" id="botSelCount" style="margin-right:8px"></span>
+        <button class="btn small" data-bulk="activate">Activate</button><button class="btn small" data-bulk="pause">Pause</button>
+        <button class="btn small" data-bulk="bios">New bios</button><button class="btn small" data-bulk="city">Move city</button>
+        <button class="btn small danger" data-bulk="delete">Delete</button>
+        <button class="btn small" id="botJson">Copy JSON</button><button class="btn small" id="botCsv">Copy CSV</button>
+      </div>
+      <div class="card scroll"><table>
+        <thead><tr><th></th><th>Name</th><th>Age</th><th>Gender → wants</th><th>City</th><th>Batch</th><th>Status</th><th>Photo</th></tr></thead>
+        <tbody id="bots"></tbody>
+      </table></div>
+      <input type="file" id="botQuickFile" accept="image/jpeg,image/png,image/webp" class="hidden">
+      <div class="pager" id="botPager"></div>
       <p class="muted" id="botCount" style="margin-top:10px"></p>
+    </div>
+
+    <div id="view-gen" class="hidden">
+      <div class="head"><div><h1>Generate bots</h1>
+        <p class="muted" style="margin:4px 0 0">Make test bots in bulk. Every bot is a test account, so only test accounts see them; real members never do. To type bots in by hand, use “New bot” or “Bulk create” on the Bots page.</p></div></div>
+      <form class="gen" id="genForm"></form>
     </div>
 
     <div id="view-reports" class="hidden">
@@ -367,7 +406,7 @@ const ROLE_INFO = {
   finance: 'Plans, free premium and boosts, plus the overview and members list.',
   analyst: 'The overview and members list, read-only.' };
 // Which permission opens each section.
-const VIEW_PERM = { overview: 'stats', leads: 'members', bots: 'bots', reports: 'moderate', photos: 'moderate',
+const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', reports: 'moderate', photos: 'moderate',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team' };
 let perms = [];
 const can = p => perms.includes(p);
@@ -443,7 +482,7 @@ function show(view) {
   current = view;
   document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== view);
-  ({ overview: loadStats, leads: loadMembers, bots: loadBots, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
+  return ({ overview: loadStats, leads: loadMembers, gen: loadGenerator, bots: loadBots, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
      audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam })[view]();
 }
 function badge(sel, n) { const b = $(sel); b.textContent = n; b.classList.toggle('hidden', !n); }
@@ -804,24 +843,151 @@ async function uploadBotPhotos(botId, files) {
   return paths;
 }
 
+let botPage = 0, botSel = new Set(), photoFor = null;
+const BOT_PAGE = 50;
+const botCode = b => b.bot_code ? 'BOT-' + String(b.bot_code).padStart(5, '0') : '';
+// Generated bots get a drawn photo named avatar-…; a real upload replaces it.
+const isPlaceholder = p => /\/avatar-[^/]*$/.test(p);
+const hasRealPhoto = b => (b.photos || []).some(p => !isPlaceholder(p));
+const botStatus = b => !b.blocked ? 'live' : b.blocked_reason === 'Paused' ? 'paused' : 'off';
+const STATUS_PILL = { live: '<span class="pill ok">Live</span>', paused: '<span class="pill warn">Paused</span>',
+  off: '<span class="pill bad">Off</span>' };
+const removePhotos = async paths => {
+  for (let i = 0; i < paths.length; i += 500) await sb.storage.from('photos').remove(paths.slice(i, i + 500));
+};
+
 async function loadBots() {
   const { data, error } = await sb.rpc('admin_bots');
   if (error) return fail(error);
   bots = data;
+  botSel = new Set([...botSel].filter(id => bots.some(b => b.id === id)));
   const off = bots.filter(b => b.blocked).length;
   const live = bots.length && off < bots.length;
   $('#botsLive').textContent = live ? 'Switch all bots off' : 'Switch all bots on';
   $('#botsLive').className = 'btn' + (live ? ' danger' : '');
   $('#botsLive').disabled = !bots.length;
-  $('#bots').innerHTML = bots.map(b => `<div class="bot ${b.blocked ? 'off' : ''}" data-bot="${esc(b.id)}">
-    ${b.photos?.length ? `<img class="pic" src="${esc(photoUrl(b.photos[0]))}" alt="" loading="lazy">` : '<div class="pic">No photos yet</div>'}
-    <div class="meta"><b>${esc(b.name || 'Unnamed')}</b>${ageOf(b) ? ', ' + ageOf(b) : ''}
-      <div class="muted" style="font-size:12px">${esc(b.city || 'No city')} · ${b.photos?.length || 0} photo${b.photos?.length === 1 ? '' : 's'}</div>
-      ${b.blocked ? '<span class="pill bad">Off</span>' : ''}</div>
-  </div>`).join('') || '<p class="muted">No bots yet. Use “New bot” or “Bulk create”.</p>';
-  $('#botCount').textContent = bots.length ? `${bots.length} bot${bots.length > 1 ? 's' : ''}${off ? ` · ${off} switched off` : ''}` : '';
-  document.querySelectorAll('[data-bot]').forEach(el => el.onclick = () => editProfile(bots.find(b => b.id === el.dataset.bot)));
+  const fill = (sel, first, values) => {
+    const v = $(sel).value;
+    $(sel).innerHTML = `<option value="">${first}</option>` + values.map(x => `<option>${esc(x)}</option>`).join('');
+    $(sel).value = values.includes(v) ? v : '';
+  };
+  fill('#botCity', 'All cities', [...new Set(bots.map(b => b.city).filter(Boolean))].sort());
+  fill('#botBatch', 'All batches', [...new Set(bots.map(b => b.bot_batch).filter(Boolean))].sort().reverse());
+  $('#botCount').textContent = bots.length ? `${bots.length} bot${bots.length > 1 ? 's' : ''}${off ? ` · ${off} paused or switched off` : ''}` : '';
+  renderBots();
 }
+function filteredBots() {
+  const q = $('#botSearch').value.trim().toLowerCase(), g = $('#botGender').value, c = $('#botCity').value,
+    st = $('#botStatus').value, bt = $('#botBatch').value;
+  return bots.filter(b => (!q || [b.name, b.city, botCode(b)].some(v => (v || '').toLowerCase().includes(q)))
+    && (!g || b.gender === g) && (!c || b.city === c) && (!bt || b.bot_batch === bt)
+    && (!st || (st === 'nophoto' ? !hasRealPhoto(b) : botStatus(b) === st)));
+}
+function renderBots() {
+  const list = filteredBots();
+  const pages = Math.max(1, Math.ceil(list.length / BOT_PAGE));
+  botPage = Math.min(botPage, pages - 1);
+  $('#bots').innerHTML = list.slice(botPage * BOT_PAGE, (botPage + 1) * BOT_PAGE).map(b => `<tr data-bot="${esc(b.id)}">
+    <td><input type="checkbox" data-sel="${esc(b.id)}" ${botSel.has(b.id) ? 'checked' : ''} aria-label="Select ${esc(b.name)}"></td>
+    <td style="white-space:nowrap">${b.photos?.length ? `<img class="avatar" src="${esc(photoUrl(b.photos[0]))}" alt="" loading="lazy">` : `<span class="avatar">${esc((b.name || '?')[0])}</span>`}
+      <span style="display:inline-block;vertical-align:middle;margin-left:8px"><b style="color:var(--text)">${esc(b.name || 'Unnamed')}</b><br><span class="code">${botCode(b)}</span></span></td>
+    <td>${ageOf(b) || '—'}</td><td>${esc(b.gender || '—')} → ${esc(b.interested_in || '—')}</td><td>${esc(b.city || '—')}</td>
+    <td>${esc(b.bot_batch || 'By hand')}</td><td>${STATUS_PILL[botStatus(b)]}</td>
+    <td><button class="btn small" data-photo="${esc(b.id)}">${hasRealPhoto(b) ? 'Add photo' : 'Upload photo'}</button></td>
+  </tr>`).join('') || `<tr><td colspan="8" class="muted">${bots.length ? 'No bots match.' : 'No bots yet. Use Generate bots, “New bot” or “Bulk create”.'}</td></tr>`;
+  $('#botPager').innerHTML = pages > 1 ? `<button class="btn small" id="botPrev" ${botPage ? '' : 'disabled'}>Previous</button>
+    <span class="muted">Page ${botPage + 1} of ${pages}</span><button class="btn small" id="botNext" ${botPage < pages - 1 ? '' : 'disabled'}>Next</button>` : '';
+  $('#botPrev')?.addEventListener('click', () => { botPage--; renderBots(); });
+  $('#botNext')?.addEventListener('click', () => { botPage++; renderBots(); });
+  $('#botSelAll').textContent = `Select all ${list.length}`;
+  $('#botSelCount').textContent = `${botSel.size} selected`;
+}
+['#botSearch', '#botGender', '#botCity', '#botStatus', '#botBatch'].forEach(sel =>
+  $(sel).addEventListener('input', () => { botPage = 0; renderBots(); }));
+$('#botSelAll').onclick = () => { filteredBots().forEach(b => botSel.add(b.id)); renderBots(); };
+$('#botSelClear').onclick = () => { botSel.clear(); renderBots(); };
+$('#bots').onclick = e => {
+  const sel = e.target.closest('[data-sel]'), photo = e.target.closest('[data-photo]'), row = e.target.closest('[data-bot]');
+  if (sel) { sel.checked ? botSel.add(sel.dataset.sel) : botSel.delete(sel.dataset.sel); $('#botSelCount').textContent = `${botSel.size} selected`; }
+  else if (photo) { photoFor = photo.dataset.photo; $('#botQuickFile').click(); }
+  else if (row) editProfile(bots.find(b => b.id === row.dataset.bot));
+};
+// Upload photo: the new photo becomes the main one and replaces a drawn placeholder.
+$('#botQuickFile').onchange = async e => {
+  const file = e.target.files[0], b = bots.find(x => x.id === photoFor);
+  e.target.value = '';
+  if (!file || !b) return;
+  if (file.size > 10 * 1024 * 1024) return toast(`${file.name} is over 10 MB`);
+  try {
+    const [path] = await uploadBotPhotos(b.id, [file]);
+    const old = b.photos || [];
+    const { error } = await sb.rpc('admin_save_bot', { bot: b.id, data: { photos: [path, ...old.filter(p => !isPlaceholder(p))] } });
+    if (error) throw error;
+    await removePhotos(old.filter(isPlaceholder));
+    toast(`Photo added to ${b.name}`); loadBots();
+  } catch (x) { fail(x); }
+};
+
+const selectedBots = () => bots.filter(b => botSel.has(b.id));
+async function botsAction(ids, action, value = {}) {
+  const { data, error } = await sb.rpc('admin_bots_action', { ids, action, value });
+  if (error) throw error;
+  return data;
+}
+async function deleteBots(ids) {
+  const r = await botsAction(ids, 'delete');
+  await removePhotos(r.photos || []);
+  ids.forEach(id => botSel.delete(id));
+}
+document.querySelectorAll('[data-bulk]').forEach(btn => btn.onclick = async () => {
+  const list = selectedBots(), ids = list.map(b => b.id), act = btn.dataset.bulk;
+  if (!list.length) return toast('Select some bots first');
+  if (act === 'city') return moveBots(ids);
+  if (act === 'delete' && !confirm(`Delete ${list.length} bot${list.length > 1 ? 's' : ''} and their photos?`)) return;
+  try {
+    if (act === 'delete') await deleteBots(ids);
+    else if (act === 'bios') await botsAction(ids, 'fields', Object.fromEntries(list.map(b => [b.id, { bio: makeBio(b, 'Mixed') }])));
+    else await botsAction(ids, act);
+    toast({ activate: 'Activated', pause: 'Paused', bios: 'New bios written for', delete: 'Deleted' }[act] + ` ${list.length} bot${list.length > 1 ? 's' : ''}`);
+    loadBots();
+  } catch (x) { fail(x); }
+});
+function moveBots(ids) {
+  const ov = $('#overlay');
+  ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="moveForm" style="width:min(420px,100%)">
+    <h2>Move ${ids.length} bot${ids.length > 1 ? 's' : ''}</h2>
+    <label for="moveCity">City</label>
+    <input type="text" id="moveCity" list="cityList" required placeholder="e.g. Pune">
+    <datalist id="cityList">${CITIES.map(c => `<option value="${esc(c.name)}">`).join('')}</datalist>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
+      <button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Move</button></div>
+  </form></div>`;
+  const close = () => ov.innerHTML = '';
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  $('#moveCity', ov).focus();
+  $('#moveForm', ov).onsubmit = async e => {
+    e.preventDefault();
+    try {
+      const city = $('#moveCity', ov).value.trim();
+      await botsAction(ids, 'city', city);
+      toast(`Moved ${ids.length} bot${ids.length > 1 ? 's' : ''} to ${city}`); close(); loadBots();
+    } catch (x) { fail(x); }
+  };
+}
+// Copies the selected bots, or every bot shown when none are selected.
+async function copyBots(asCsv) {
+  const list = botSel.size ? selectedBots() : filteredBots();
+  const rows = list.map(b => ({ number: botCode(b), name: b.name, age: ageOf(b), gender: b.gender, wants: b.interested_in,
+    city: b.city, job: b.job, looking_for: b.looking_for, batch: b.bot_batch, status: botStatus(b), bio: b.bio,
+    interests: b.interests, languages: b.languages, photos: (b.photos || []).map(photoUrl) }));
+  const cell = v => `"${String(Array.isArray(v) ? v.join('; ') : v ?? '').replace(/"/g, '""')}"`;
+  const text = asCsv ? [Object.keys(rows[0] || { number: 0 }).join(','), ...rows.map(r => Object.values(r).map(cell).join(','))].join('\n')
+    : JSON.stringify(rows, null, 2);
+  try { await navigator.clipboard.writeText(text); toast(`Copied ${rows.length} bot${rows.length === 1 ? '' : 's'} as ${asCsv ? 'CSV' : 'JSON'}`); }
+  catch { toast('Couldn’t copy: the browser blocked the clipboard'); }
+}
+$('#botJson').onclick = () => copyBots(false);
+$('#botCsv').onclick = () => copyBots(true);
 $('#newBot').onclick = () => editProfile(null);
 $('#botsLive').onclick = async () => {
   const live = $('#botsLive').textContent.includes('on');
@@ -988,6 +1154,332 @@ $('#bulkBots').onclick = async () => {
   };
 };
 
+// ---------- Generate bots ----------
+// Names follow the region of each bot's city; cities not listed here use North Indian names.
+const REGIONS = {
+  north: { lang: 'Hindi',
+    women: ['Aanya', 'Ishita', 'Kavya', 'Riya', 'Neha', 'Pooja', 'Sakshi', 'Tanya', 'Shreya', 'Aditi', 'Mehak', 'Simran', 'Nidhi', 'Anjali', 'Kritika', 'Divya'],
+    men: ['Aarav', 'Rohan', 'Kabir', 'Arjun', 'Vivek', 'Rahul', 'Karan', 'Siddharth', 'Aditya', 'Nikhil', 'Varun', 'Manish', 'Harsh', 'Gaurav', 'Ankit', 'Yash'],
+    surnames: ['Sharma', 'Verma', 'Gupta', 'Singh', 'Agarwal', 'Malhotra', 'Kapoor', 'Saxena', 'Chauhan', 'Mishra', 'Srivastava', 'Bansal', 'Tiwari', 'Khanna'] },
+  punjab: { lang: 'Punjabi',
+    women: ['Simran', 'Harleen', 'Jasleen', 'Navneet', 'Gurleen', 'Manpreet', 'Amrit', 'Kirat', 'Mehar', 'Noor'],
+    men: ['Gurpreet', 'Harjot', 'Jaskaran', 'Manveer', 'Arshdeep', 'Kanwar', 'Rajveer', 'Sahib', 'Angad', 'Navjot'],
+    surnames: ['Gill', 'Sandhu', 'Dhillon', 'Sidhu', 'Grewal', 'Bains', 'Kaur', 'Singh', 'Bajwa', 'Randhawa'] },
+  marathi: { lang: 'Marathi',
+    women: ['Sayali', 'Gauri', 'Mrunal', 'Ketaki', 'Rutuja', 'Apurva', 'Shruti', 'Pallavi', 'Tejaswini', 'Manasi'],
+    men: ['Aniket', 'Omkar', 'Tejas', 'Sagar', 'Pratik', 'Shubham', 'Rohit', 'Chinmay', 'Nikhil', 'Saurabh'],
+    surnames: ['Patil', 'Deshmukh', 'Joshi', 'Kulkarni', 'Pawar', 'Shinde', 'Gokhale', 'Jadhav', 'Bhosale', 'Deshpande'] },
+  gujarati: { lang: 'Gujarati',
+    women: ['Krupa', 'Hetal', 'Dhruvi', 'Riddhi', 'Khushi', 'Nisha', 'Jinal', 'Prachi', 'Foram', 'Mansi'],
+    men: ['Dhruv', 'Parth', 'Harsh', 'Jay', 'Kunal', 'Meet', 'Chirag', 'Hardik', 'Nirav', 'Rushabh'],
+    surnames: ['Patel', 'Shah', 'Mehta', 'Desai', 'Joshi', 'Parikh', 'Trivedi', 'Modi', 'Thakkar', 'Vora'] },
+  bengali: { lang: 'Bengali',
+    women: ['Ankita', 'Moumita', 'Tuli', 'Ipsita', 'Priyanka', 'Debjani', 'Mousumi', 'Sreeja', 'Rituparna', 'Payel'],
+    men: ['Subhajit', 'Biswajit', 'Arnab', 'Sayan', 'Debashish', 'Sourav', 'Ritam', 'Anirban', 'Abhishek', 'Kaushik'],
+    surnames: ['Bhattacharya', 'Chakraborty', 'Sen', 'Ghosh', 'Bose', 'Dutta', 'Mukherjee', 'Banerjee', 'Das', 'Chatterjee'] },
+  kannada: { lang: 'Kannada',
+    women: ['Bhavana', 'Sahana', 'Pavithra', 'Spoorthi', 'Deepika', 'Rashmi', 'Shwetha', 'Anusha', 'Keerthana', 'Megha'],
+    men: ['Naveen', 'Ganesh', 'Praveen', 'Darshan', 'Kiran', 'Sudeep', 'Prajwal', 'Rakshith', 'Chethan', 'Manoj'],
+    surnames: ['Bhat', 'Rao', 'Hegde', 'Shetty', 'Gowda', 'Murthy', 'Kamath', 'Shenoy', 'Acharya', 'Prabhu'] },
+  tamil: { lang: 'Tamil',
+    women: ['Aishwarya', 'Divya', 'Keerthi', 'Nandhini', 'Priya', 'Sowmya', 'Swetha', 'Janani', 'Harini', 'Lavanya'],
+    men: ['Karthik', 'Sai', 'Arun', 'Vignesh', 'Ganesh', 'Prakash', 'Ashwin', 'Dinesh', 'Hari', 'Surya'],
+    surnames: ['Krishnan', 'Subramanian', 'Iyer', 'Raman', 'Natarajan', 'Venkatesh', 'Balaji', 'Sundaram', 'Rajan', 'Iyengar'] },
+  telugu: { lang: 'Telugu',
+    women: ['Sravani', 'Bhavya', 'Harika', 'Lasya', 'Sindhu', 'Tejaswi', 'Mounika', 'Sahithi', 'Pranavi', 'Keerthi'],
+    men: ['Bharath', 'Sai', 'Charan', 'Vamsi', 'Naveen', 'Pavan', 'Rakesh', 'Srikanth', 'Teja', 'Akhil'],
+    surnames: ['Naidu', 'Reddy', 'Rao', 'Varma', 'Chowdary', 'Raju', 'Goud', 'Yadav', 'Sastry', 'Murthy'] },
+  malayalam: { lang: 'Malayalam',
+    women: ['Anjana', 'Gopika', 'Aparna', 'Nimisha', 'Sreelakshmi', 'Athira', 'Meera', 'Amritha', 'Devika', 'Nayana'],
+    men: ['Abhijith', 'Arjun', 'Vishnu', 'Akhil', 'Midhun', 'Rahul', 'Sreejith', 'Nikhil', 'Anand', 'Jithin'],
+    surnames: ['Nair', 'Menon', 'Pillai', 'Kurian', 'Varghese', 'Thomas', 'Nambiar', 'Kurup', 'Panicker', 'George'] },
+  odia: { lang: 'Odia',
+    women: ['Smruti', 'Subhashree', 'Lipsa', 'Ipsita', 'Sonali', 'Pragyan', 'Swagatika', 'Ananya'],
+    men: ['Sambit', 'Debasis', 'Sourav', 'Biswajit', 'Ashutosh', 'Satyajit', 'Prateek', 'Abinash'],
+    surnames: ['Mohanty', 'Panda', 'Das', 'Mishra', 'Patnaik', 'Sahoo', 'Rath', 'Nayak'] },
+  northeast: { lang: 'Assamese',
+    women: ['Prasenjita', 'Bornali', 'Jyotishmita', 'Nilakshi', 'Rimjhim', 'Deepshikha', 'Kangkana', 'Monalisa'],
+    men: ['Prasenjit', 'Bhaskar', 'Hiranya', 'Partha', 'Rupam', 'Dhruba', 'Manash', 'Kaushik'],
+    surnames: ['Hazarika', 'Baruah', 'Borah', 'Gogoi', 'Saikia', 'Kalita', 'Deka', 'Sarma'] },
+  goa: { lang: 'Konkani',
+    women: ['Ashley', 'Sonia', 'Tanvi', 'Fiona', 'Rhea', 'Gayatri', 'Shweta', 'Natasha'],
+    men: ['Ryan', 'Clinton', 'Rohan', 'Joel', 'Akshay', 'Neil', 'Glen', 'Sahil'],
+    surnames: ['Fernandes', 'D’Souza', 'Naik', 'Gomes', 'Kamat', 'Rodrigues', 'Sawant', 'Pereira'] } };
+const NEUTRAL = ['Kiran', 'Ashu', 'Noor', 'Arya', 'Sam', 'Rumi', 'Jas', 'Kabir', 'Sky', 'Tara', 'Alex', 'Rishi'];
+// Weight sets how often a city comes up in "Random across India": metros more often.
+const CITIES = [['Mumbai', 10, 'marathi'], ['Delhi', 10, 'north'], ['Bengaluru', 9, 'kannada'], ['Hyderabad', 7, 'telugu'],
+  ['Chennai', 7, 'tamil'], ['Kolkata', 6, 'bengali'], ['Pune', 6, 'marathi'], ['Gurugram', 4, 'north'], ['Ahmedabad', 4, 'gujarati'],
+  ['Noida', 3, 'north'], ['Jaipur', 3, 'north'], ['Lucknow', 3, 'north'], ['Chandigarh', 2, 'punjab'], ['Kochi', 2, 'malayalam'],
+  ['Indore', 2, 'north'], ['Surat', 2, 'gujarati'], ['Nagpur', 2, 'marathi'], ['Bhopal', 2, 'north'], ['Coimbatore', 2, 'tamil'],
+  ['Visakhapatnam', 2, 'telugu'], ['Thiruvananthapuram', 1, 'malayalam'], ['Mysuru', 1, 'kannada'], ['Mangaluru', 1, 'kannada'],
+  ['Vadodara', 1, 'gujarati'], ['Bhubaneswar', 1, 'odia'], ['Guwahati', 1, 'northeast'], ['Dehradun', 1, 'north'],
+  ['Goa', 1, 'goa'], ['Patna', 1, 'north'], ['Amritsar', 1, 'punjab'], ['Ludhiana', 1, 'punjab']]
+  .map(([name, weight, region]) => ({ name, weight, region }));
+const QUICK_CITIES = ['Bengaluru', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Pune', 'Kolkata'];
+const JOBS = ['Product designer', 'Software engineer', 'Doctor', 'Lawyer', 'Teacher', 'Architect', 'Chartered accountant',
+  'Marketing manager', 'Data analyst', 'Journalist', 'Chef', 'Photographer', 'Consultant', 'HR manager', 'Startup founder',
+  'Dentist', 'UX researcher', 'Content writer', 'Investment banker', 'Physiotherapist', 'Civil engineer', 'Fashion stylist'];
+const FALLBACK_INTERESTS = ['Coffee', 'Travel', 'Music', 'Fitness', 'Cooking', 'Photography', 'Books', 'Art', 'Foodie', 'Road trips', 'Movies', 'Volunteering'];
+const ANSWERS = ['Filter coffee, a long walk and zero plans.', 'Someone who texts back and means it.', 'Trying every momo place in the city.',
+  'A weekend trip with a good playlist.', 'Cooking for friends and pretending it was easy.', 'Honest conversations over chai.',
+  'Getting lost in a bookshop.', 'Morning runs, then a very big breakfast.', 'Planning trips I may or may not take.'];
+const HAPPY = ['out on a long drive', 'on long phone calls with friends', 'at a quiet café with a book', 'cooking something new',
+  'planning the next trip', 'at a live gig', 'by the sea', 'on a Sunday with no plans'];
+const SOMEONE = ['kind and curious', 'who laughs easily', 'who is honest from day one', 'who loves good food', 'up for small adventures',
+  'who can hold a conversation', 'ready for something real'];
+const SNACK = ['chai order', 'playlist', 'momos order', 'biryani opinions', 'coffee order', 'travel photos'];
+const GOAL_WEIGHTS = [['Long term', 50], ['Short term', 15], ['Casual', 15], ['Chit chat', 20]];
+
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+const chance = pct => Math.random() * 100 < pct;
+const between = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+const weighted = pairs => { let t = Math.random() * pairs.reduce((s, p) => s + p[1], 0);
+  for (const [v, w] of pairs) if ((t -= w) < 0) return v; return pairs[0][0]; };
+const some = (list, n) => [...list].sort(() => Math.random() - .5).slice(0, n);
+const cityInfo = name => CITIES.find(c => c.name.toLowerCase() === name.toLowerCase()) || { name, region: 'north' };
+
+// A bio in one of four styles, built from the bot's own interests, job and city.
+function makeBio(b, style) {
+  const ints = (b.interests?.length ? b.interests : some(FALLBACK_INTERESTS, 3)).map(i => i.toLowerCase());
+  const [i1, i2 = 'good food'] = some(ints, 2);
+  if (style === 'Mixed') style = rnd(['Short', 'Playful', 'Thoughtful']);
+  if (style === 'Short') return rnd([`Simple person, big on ${i1}. Fan of ${i2}.`, `${i1[0].toUpperCase() + i1.slice(1)}, ${i2} and slow Sundays.`,
+    `Here for ${i1} and good conversations.`]);
+  if (style === 'Playful') return rnd([`Will judge you by your ${rnd(SNACK)}. Big on ${i1}.`,
+    `Fluent in sarcasm and ${i1}. Looking for someone to argue about ${i2} with.`,
+    `Professional overthinker, amateur ${i1} enthusiast. Swipe right for ${i2} recommendations.`]);
+  return `${b.job ? b.job + (b.city ? ' in ' + b.city : '') + '. ' : ''}Happiest ${rnd(HAPPY)}, or with ${i1}. Looking for someone ${rnd(SOMEONE)}.`;
+}
+
+// Who a bot wants to meet. Realistic: most women look for men and most men for women.
+function wantsFor(gender, mode) {
+  if (mode === 'Random') return rnd(WANTS);
+  if (mode !== 'Realistic') return mode;
+  if (gender === 'Woman') return weighted([['Men', 88], ['Everyone', 10], ['Women', 2]]);
+  if (gender === 'Man') return weighted([['Women', 90], ['Everyone', 8], ['Men', 2]]);
+  return weighted([['Everyone', 70], ['Men', 15], ['Women', 15]]);
+}
+
+// Splits [n] by the three weights, rounding so the parts add up to n.
+function splitCount(n, weights) {
+  const total = weights.reduce((a, b) => a + b, 0);
+  if (!total) return weights.map((_, i) => i ? 0 : n);
+  const raw = weights.map(w => w * n / total), out = raw.map(Math.floor);
+  raw.map((v, i) => [v - out[i], i]).sort((a, b) => b[0] - a[0])
+    .slice(0, n - out.reduce((a, b) => a + b, 0)).forEach(([, i]) => out[i]++);
+  return out;
+}
+
+// A flat illustrated portrait, so the bot shows in Discover until a real photo is uploaded.
+function drawAvatar(gender) {
+  const c = document.createElement('canvas'); c.width = 480; c.height = 600;
+  const x = c.getContext('2d'), hue = between(0, 359);
+  const bg = x.createLinearGradient(0, 0, 480, 600);
+  bg.addColorStop(0, `hsl(${hue} 55% 72%)`); bg.addColorStop(1, `hsl(${(hue + 40) % 360} 50% 52%)`);
+  x.fillStyle = bg; x.fillRect(0, 0, 480, 600);
+  const skin = rnd(['#8D5524', '#A0662F', '#B97A45', '#C68642', '#D29B6C', '#E0AC69']);
+  const hair = rnd(['#1B1B1B', '#2C1B10', '#3B2416', '#4A2E1A']);
+  const longHair = gender === 'Woman' || (gender !== 'Man' && chance(50));
+  if (longHair) { x.fillStyle = hair; x.beginPath(); x.ellipse(240, 300, 112, 160, 0, 0, Math.PI * 2); x.fill(); }
+  x.fillStyle = `hsl(${(hue + 180) % 360} 45% 38%)`;
+  x.beginPath(); x.ellipse(240, 640, 200, 190, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = skin; x.fillRect(208, 330, 64, 90);
+  x.beginPath(); x.ellipse(240, 260, 86, 104, 0, 0, Math.PI * 2); x.fill();
+  x.fillStyle = hair; x.beginPath(); x.ellipse(240, 196, 92, longHair ? 62 : 52, 0, Math.PI, Math.PI * 2); x.fill();
+  x.fillRect(148, 190, 184, longHair ? 26 : 16);
+  return c;
+}
+const canvasBlob = c => new Promise(r => c.toBlob(r, 'image/webp', .85));
+
+const gen = { count: 50, women: 55, men: 40, nb: 5, wants: 'Realistic', goal: 'Mixed', ageMin: 22, ageMax: 36,
+  bio: 'Mixed', likes: 20, where: 'random', cities: [], photos: true };
+
+function makeGenBot(gender, city) {
+  const info = cityInfo(city), R = REGIONS[info.region];
+  const first = gender === 'Woman' ? rnd(R.women) : gender === 'Man' ? rnd(R.men) : rnd(NEUTRAL);
+  const interests = some(optionValues('interest').length ? optionValues('interest') : FALLBACK_INTERESTS, between(3, 5));
+  const langOptions = optionValues('language');
+  const languages = [...new Set(['English', 'Hindi', R.lang])].filter(l => !langOptions.length || langOptions.includes(l));
+  const lo = Math.min(gen.ageMin, gen.ageMax), hi = Math.max(gen.ageMin, gen.ageMax);
+  const b = { name: `${first} ${rnd(R.surnames)}`, birthday: birthdayFor(between(lo, hi)), gender,
+    interested_in: wantsFor(gender, gen.wants), city: info.name, job: rnd(JOBS),
+    looking_for: gen.goal === 'Mixed' ? weighted(GOAL_WEIGHTS) : gen.goal, interests, languages,
+    prompt_label: rnd(optionValues('prompt').length ? optionValues('prompt') : ['My ideal Sunday is']), prompt_answer: rnd(ANSWERS),
+    height_cm: gender === 'Woman' ? between(152, 172) : gender === 'Man' ? between(165, 188) : between(155, 182),
+    likes_test: chance(gen.likes) };
+  b.bio = makeBio(b, gen.bio);
+  return b;
+}
+function genBots(n) {
+  const [w, m, x] = splitCount(n, [gen.women, gen.men, gen.nb]);
+  const genders = [...Array(w).fill('Woman'), ...Array(m).fill('Man'), ...Array(x).fill('Non-binary')].sort(() => Math.random() - .5);
+  // Specific cities are split evenly; otherwise cities are picked by weight.
+  return genders.map((g, i) => makeGenBot(g, gen.where === 'cities' ? gen.cities[i % gen.cities.length]
+    : weighted(CITIES.map(c => [c.name, c.weight]))));
+}
+
+async function loadGenerator() {
+  await ensureOptions();
+  if (!$('#genForm').innerHTML) renderGenerator();
+}
+function renderGenerator() {
+  const f = $('#genForm');
+  f.innerHTML = `<div class="card"><h3>1. How many bots?</h3>
+      <input type="number" id="gCount" min="1" max="500" style="max-width:140px">
+      <div class="presets">${[10, 25, 50, 100, 250, 500].map(n => `<button type="button" class="btn small" data-count="${n}">${n}</button>`).join('')}</div>
+      <input type="range" id="gCountR" min="1" max="500" aria-label="How many bots"></div>
+    <div class="card"><h3>2. Gender mix</h3>
+      <label for="gW">Women: <b id="gWv"></b></label><input type="range" id="gW" min="0" max="100">
+      <label for="gM">Men: <b id="gMv"></b></label><input type="range" id="gM" min="0" max="100">
+      <label for="gN">Non-binary / other: <b id="gNv"></b></label><input type="range" id="gN" min="0" max="100">
+      <p class="muted" style="font-size:12px;margin:4px 0 0">Shares are relative: they don’t need to add up to 100.</p>
+      <div class="row2">
+        <div><label for="gWants">Wants to meet</label><select id="gWants">${['Realistic', 'Everyone', 'Men', 'Women', 'Random'].map(v => `<option>${v}</option>`).join('')}</select></div>
+        <div><label for="gGoal">Looking for</label><select id="gGoal"><option>Mixed</option>${LOOKING.map(v => `<option>${v}</option>`).join('')}</select></div>
+      </div>
+      <p class="muted" style="font-size:12px;margin:6px 0 0" id="gWantsHint"></p></div>
+    <div class="card"><h3>3. Age and bios</h3>
+      <div class="row2"><div><label for="gMin">Min age</label><input type="number" id="gMin" min="18" max="80"></div>
+        <div><label for="gMax">Max age</label><input type="number" id="gMax" min="18" max="80"></div></div>
+      <label for="gBio">Bio style</label><select id="gBio">${['Mixed', 'Short', 'Playful', 'Thoughtful'].map(v => `<option>${v}</option>`).join('')}</select>
+      <label for="gLikes">Chance a bot has already liked a test account: <b id="gLikesV"></b></label><input type="range" id="gLikes" min="0" max="100">
+      <p class="muted" style="font-size:12px;margin:4px 0 0">Bots are only seen by test accounts, so their likes go to a random test account, never a real member.</p></div>
+    <div class="card"><h3>4. Location</h3>
+      <div class="seg"><button type="button" class="btn small" data-where="random">Random across India</button><button type="button" class="btn small" data-where="cities">Specific cities</button></div>
+      <p class="muted" id="gRandomHint" style="font-size:12px;margin:10px 0 0">Cities are chosen at random across ${CITIES.length} Indian cities, weighted by size (metros get more bots). Names match the region of each city.</p>
+      <div id="gCitiesBox">
+        <label for="gCityIn">Type a city or choose from the list</label>
+        <div style="display:flex;gap:8px"><input type="text" id="gCityIn" list="gCityList" placeholder="For example Bengaluru, Mysuru"><button type="button" class="btn" id="gCityAdd">Add</button></div>
+        <datalist id="gCityList">${CITIES.map(c => `<option value="${esc(c.name)}">`).join('')}</datalist>
+        <div class="tags" id="gTags"></div>
+        <label>Quick add</label>
+        <div class="presets" style="margin-top:0">${QUICK_CITIES.map(c => `<button type="button" class="btn small" data-quick="${c}">+ ${c}</button>`).join('')}</div>
+        <p class="muted" style="font-size:12px;margin:10px 0 0">Bots are split evenly across your cities. Cities not on the list use North Indian names.</p>
+      </div></div>
+    <div class="card"><h3>5. Photos</h3>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--body);margin:6px 0 0"><input type="checkbox" id="gPhotos" style="width:auto"> Give each bot a drawn placeholder photo</label>
+      <p class="muted" style="font-size:12px;margin:6px 0 0">Bots need a photo to show in Discover. Replace placeholders with real photos any time from the Bots page (“Upload photo”, or open a bot).</p></div>
+    <div class="summary" id="gSummary"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" class="btn" id="gPreview">Preview 6 samples</button><button class="btn primary" id="gCreate">Create bots</button></div>
+    <div id="gResult"></div>
+    <div id="gSamples"></div>`;
+  // Fill the controls from [gen].
+  $('#gCount').value = $('#gCountR').value = gen.count;
+  $('#gW').value = gen.women; $('#gM').value = gen.men; $('#gN').value = gen.nb;
+  $('#gWants').value = gen.wants; $('#gGoal').value = gen.goal; $('#gMin').value = gen.ageMin; $('#gMax').value = gen.ageMax;
+  $('#gBio').value = gen.bio; $('#gLikes').value = gen.likes; $('#gPhotos').checked = gen.photos;
+  f.addEventListener('input', e => {
+    if (e.target.id === 'gCityIn') return;
+    if (e.target.id === 'gCountR') $('#gCount').value = e.target.value;
+    if (e.target.id === 'gCount') $('#gCountR').value = e.target.value;
+    Object.assign(gen, { count: Math.max(1, Math.min(500, +$('#gCount').value || 1)), women: +$('#gW').value, men: +$('#gM').value,
+      nb: +$('#gN').value, wants: $('#gWants').value, goal: $('#gGoal').value, ageMin: +$('#gMin').value, ageMax: +$('#gMax').value,
+      bio: $('#gBio').value, likes: +$('#gLikes').value, photos: $('#gPhotos').checked });
+    updateGenerator();
+  });
+  f.querySelectorAll('[data-count]').forEach(b => b.onclick = () => { $('#gCount').value = b.dataset.count; f.dispatchEvent(new Event('input')); });
+  f.querySelectorAll('[data-where]').forEach(b => b.onclick = () => { gen.where = b.dataset.where; updateGenerator(); });
+  const addCity = name => {
+    name = name.trim(); if (!name) return;
+    name = cityInfo(name).name;
+    if (gen.cities.some(c => c.toLowerCase() === name.toLowerCase())) return toast('Already added');
+    gen.cities.push(name); $('#gCityIn').value = ''; updateGenerator();
+  };
+  $('#gCityAdd').onclick = () => addCity($('#gCityIn').value);
+  $('#gCityIn').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); addCity(e.target.value); } };
+  f.querySelectorAll('[data-quick]').forEach(b => b.onclick = () => addCity(b.dataset.quick));
+  $('#gTags').onclick = e => { const b = e.target.closest('[data-untag]'); if (b) { gen.cities.splice(+b.dataset.untag, 1); updateGenerator(); } };
+  $('#gPreview').onclick = previewBots;
+  f.onsubmit = e => { e.preventDefault(); createBots(); };
+  updateGenerator();
+}
+function updateGenerator() {
+  const [w, m, x] = splitCount(gen.count, [gen.women, gen.men, gen.nb]);
+  const share = v => Math.round(100 * v / ((gen.women + gen.men + gen.nb) || 1)) + '%';
+  $('#gWv').textContent = share(gen.women); $('#gMv').textContent = share(gen.men); $('#gNv').textContent = share(gen.nb);
+  $('#gLikesV').textContent = gen.likes + '%';
+  document.querySelectorAll('[data-count]').forEach(b => b.classList.toggle('on', +b.dataset.count === gen.count));
+  document.querySelectorAll('[data-where]').forEach(b => b.classList.toggle('on', b.dataset.where === gen.where));
+  $('#gRandomHint').classList.toggle('hidden', gen.where !== 'random');
+  $('#gCitiesBox').classList.toggle('hidden', gen.where !== 'cities');
+  $('#gTags').innerHTML = gen.cities.map((c, i) => `<span class="tag">${esc(c)}<button type="button" data-untag="${i}" aria-label="Remove ${esc(c)}">✕</button></span>`).join('');
+  $('#gWantsHint').textContent = { Realistic: 'Realistic: most women look for men and most men for women, with a small mix of other preferences.',
+    Random: 'Random: each bot gets Men, Women or Everyone at random.' }[gen.wants] || `Every bot wants to meet: ${gen.wants}.`;
+  const where = gen.where === 'random' ? `${CITIES.length} cities (random)` : gen.cities.length
+    ? `${gen.cities.length === 1 ? gen.cities[0] : gen.cities.length + ' selected cities'}` : 'add at least one city';
+  const lo = Math.min(gen.ageMin, gen.ageMax), hi = Math.max(gen.ageMin, gen.ageMax);
+  $('#gSummary').textContent = `Will create ${gen.count} bot${gen.count > 1 ? 's' : ''}: ~${w} women, ${m} men, ${x} non-binary. `
+    + `Wants to meet: ${gen.wants}. Looking for: ${gen.goal}. Ages ${lo} to ${hi}. Location: ${where}.`
+    + (gen.photos ? ' Each gets a drawn placeholder photo.' : ' No photos: they won’t show in Discover until you add one.');
+}
+function genReady() {
+  if (gen.where === 'cities' && !gen.cities.length) { toast('Add at least one city'); return false; }
+  if (Math.min(gen.ageMin, gen.ageMax) < 18 || Math.max(gen.ageMin, gen.ageMax) > 80) { toast('Ages must be from 18 to 80'); return false; }
+  return true;
+}
+function previewBots() {
+  if (!genReady()) return;
+  const samples = genBots(6);
+  $('#gSamples').innerHTML = `<h3 style="margin:6px 0 10px">Sample profiles (not saved)</h3><div class="samples">${samples.map(b => `<div class="sample">
+    ${gen.photos ? `<img src="${drawAvatar(b.gender).toDataURL()}" alt="">` : ''}
+    <div class="meta"><b>${esc(b.name)}, ${ageOf(b)}</b><div class="muted">${esc(b.city)} · ${esc(b.job)}</div>
+      <div class="muted">${esc(b.gender)} · wants ${esc(b.interested_in)} · ${esc(b.looking_for)}</div>
+      <p style="margin:8px 0 0">${esc(b.bio)}</p>
+      <div class="opts">${b.interests.map(i => `<span>${esc(i)}</span>`).join('')}</div>
+      ${b.likes_test ? '<div class="muted" style="margin-top:6px">Has liked a test account</div>' : ''}</div>
+  </div>`).join('')}</div>`;
+}
+async function createBots() {
+  if (!genReady()) return;
+  const btn = $('#gCreate'), out = $('#gResult');
+  const rows = genBots(gen.count);
+  btn.disabled = true; btn.textContent = `Creating ${rows.length} bots…`; out.innerHTML = '';
+  let made = null;
+  try {
+    const { data, error } = await sb.rpc('admin_generate_bots', { rows });
+    if (error) throw error;
+    made = data;
+    if (gen.photos) {
+      const fields = {};
+      let done = 0;
+      // A few uploads at a time.
+      const queue = made.bots.map((b, i) => ({ id: b.id, gender: rows[i].gender }));
+      await Promise.all(Array.from({ length: 6 }, async () => {
+        for (let job; (job = queue.shift());) {
+          const blob = await canvasBlob(drawAvatar(job.gender));
+          const ext = blob.type === 'image/webp' ? 'webp' : 'png';
+          const path = `${job.id}/avatar-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+          const { error: e } = await sb.storage.from('photos').upload(path, blob, { contentType: blob.type });
+          if (e) throw e;
+          fields[job.id] = { photos: [path] };
+          btn.textContent = `Adding photos ${++done} of ${made.bots.length}…`;
+        }
+      }));
+      const ids = Object.keys(fields);
+      for (let i = 0; i < ids.length; i += 100)
+        await botsAction(ids.slice(i, i + 100), 'fields', Object.fromEntries(ids.slice(i, i + 100).map(id => [id, fields[id]])));
+    }
+    out.innerHTML = `<div class="summary" style="border-color:rgba(47,158,117,.6);background:rgba(47,158,117,.1)">
+      <b>Done.</b> ${made.bots.length} bots created in batch <b>${esc(made.batch)}</b>.
+      <div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn small primary" id="gView">View bots</button><button type="button" class="btn small" id="gUndo">Undo this batch</button></div></div>`;
+  } catch (x) {
+    out.innerHTML = `<div class="summary" style="border-color:rgba(248,113,113,.6)">${made
+      ? `Bots created in batch <b>${esc(made.batch)}</b>, but adding photos stopped: ${esc(x.message)}. Upload photos from the Bots page, or undo the batch.`
+      : `Nothing was created: ${esc(x.message || 'something went wrong')}`}
+      ${made ? '<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn small" id="gView">View bots</button><button type="button" class="btn small" id="gUndo">Undo this batch</button></div>' : ''}</div>`;
+  }
+  btn.disabled = false; btn.textContent = 'Create bots';
+  if (!made) return;
+  $('#gView').onclick = async () => { await show('bots'); $('#botBatch').value = made.batch; botPage = 0; renderBots(); };
+  $('#gUndo').onclick = async () => {
+    if (!confirm(`Delete all ${made.bots.length} bots in batch ${made.batch}?`)) return;
+    try {
+      await deleteBots(made.bots.map(b => b.id));
+      out.innerHTML = `<div class="summary">Batch ${esc(made.batch)} undone: its ${made.bots.length} bots were deleted.</div>`;
+    } catch (x) { fail(x); }
+  };
+}
+
 // ---------- Reports ----------
 $('#reportFilter').onchange = () => loadReports();
 async function loadReports() {
@@ -1111,7 +1603,9 @@ const ACTIONS = { ban: 'Blocked', unban: 'Unblocked', verify: 'Verified', unveri
   mark_test: 'Made test account', unmark_test: 'Made real account', photo_approve: 'Approved photo', verify_reject: 'Rejected selfie',
   photo_reject: 'Rejected photo', report_resolved: 'Resolved report', report_dismissed: 'Dismissed report',
   report_open: 'Reopened report', bot_create: 'Created bot', bot_update: 'Edited bot', bot_delete: 'Deleted bot',
-  bots_on: 'Switched bots on', bots_off: 'Switched bots off', edit_profile: 'Edited profile',
+  bots_on: 'Switched bots on', bots_off: 'Switched bots off', bots_generate: 'Generated bots',
+  bots_activate: 'Activated bots', bots_pause: 'Paused bots', bots_city: 'Moved bots', bots_fields: 'Updated bots',
+  bots_delete: 'Deleted bots', edit_profile: 'Edited profile',
   shadow_ban: 'Shadow-banned', unshadow_ban: 'Lifted shadow-ban', boost: 'Boosted', unboost: 'Ended boost',
   delete: 'Deleted account', restore: 'Restored account', purge: 'Deleted permanently', logout: 'Forced logout',
   set_contact: 'Changed sign-in details', view_as: 'Viewed as member', export: 'Exported data',
@@ -1135,6 +1629,8 @@ async function loadAudit() {
     if (d.note) out.push(esc(d.note));
     if (a.action.startsWith('bot_') && d.name) out.push(esc(d.name));
     if (a.action.startsWith('bots_')) out.push(esc(d.count) + ' bots');
+    if (d.batch) out.push('batch ' + esc(d.batch));
+    if (a.action === 'bots_city' && d.city) out.push('to ' + esc(d.city));
     return out.join(' · ');
   };
   $('#audit').innerHTML = data.map(a => `<tr style="cursor:default">
