@@ -1388,10 +1388,13 @@ class PreviewStore extends ChangeNotifier {
     myVoiceSeconds = (row['voice_seconds'] as num?)?.toInt() ?? 0;
     myProfilePosted = row['posted'] as bool? ?? false;
     adminWarning = row['warning'] as String? ?? '';
-    // A plan set by an admin (support / troubleshooting) wins.
+    // A plan set by an admin (support / troubleshooting) wins, until it ends.
     final adminPlan = row['plan'] as String? ?? '';
-    for (final p in Plan.values) {
-      if (p.name == adminPlan) plan = p;
+    final planUntil = DateTime.tryParse(row['plan_until'] as String? ?? '');
+    if (planUntil == null || planUntil.isAfter(DateTime.now())) {
+      for (final p in Plan.values) {
+        if (p.name == adminPlan) plan = p;
+      }
     }
     myVerified = row['verified'] as bool? ?? false;
     if (!myVerified) _loadVerification(b).ignore();

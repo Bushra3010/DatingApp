@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Reset password · Everlane</title>
+<link rel="icon" type="image/png" href="../favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Caveat:wght@700&family=Poppins:wght@600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root { --bg: #0D0B12; --card: #191621; --card2: #211D2B; --line: #2A2436; --text: #FFFFFF;
+          --body: #E4E4E7; --muted: #A1A1AA; --purple: #7C3AED; --red: #F87171; --green: #5DD3A6; }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; color: var(--body);
+         font: 15px/1.5 Inter, system-ui, sans-serif;
+         background: radial-gradient(600px 400px at 20% 0%, rgba(124,58,237,.25), transparent), var(--bg); }
+  .card { width: min(400px, 100%); background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 32px; }
+  .logo { font-family: Caveat, cursive; font-size: 40px; line-height: 1;
+          background: linear-gradient(135deg, #A78BFA, #F472B6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h1 { font-family: Poppins, Inter, sans-serif; color: var(--text); font-size: 22px; margin: 14px 0 6px; font-weight: 600; }
+  p { color: var(--muted); margin: 0 0 8px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 14px 0 6px; }
+  input { width: 100%; background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px;
+          color: inherit; font: inherit; outline: none; }
+  input:focus { border-color: var(--purple); }
+  button { width: 100%; margin-top: 18px; border: 0; border-radius: 12px; padding: 12px; font: inherit; font-weight: 600;
+           color: #fff; background: linear-gradient(135deg, #7C3AED, #EC4899); cursor: pointer; }
+  button:disabled { opacity: .6; cursor: default; }
+  .msg { font-size: 13px; margin-top: 12px; min-height: 18px; }
+  .err { color: var(--red); } .ok { color: var(--green); }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="logo">Everlane</div>
+  <div id="waiting"><h1>Reset your password</h1><p>Checking your link…</p></div>
+  <form id="form" class="hidden">
+    <h1>Choose a new password</h1>
+    <p>Use at least 8 characters.</p>
+    <label for="pw">New password</label>
+    <input id="pw" type="password" autocomplete="new-password" minlength="8" required>
+    <label for="pw2">Type it again</label>
+    <input id="pw2" type="password" autocomplete="new-password" minlength="8" required>
+    <button id="save">Save password</button>
+    <div class="msg err" id="err"></div>
+  </form>
+  <div id="done" class="hidden"><h1>Password updated</h1><p class="ok">Open the Everlane app and log in with your new password.</p></div>
+  <div id="expired" class="hidden"><h1>This link has expired</h1><p>Reset links work once and only for a short time. Ask the Everlane team for a new one.</p></div>
+</main>
+<script>
+const sb = supabase.createClient('https://fqtcazstfcusheakyown.supabase.co', 'sb_publishable_5XApbVFvpBBZ8hNQWEoZPA_4cRhdJp1');
+const $ = id => document.getElementById(id);
+const showOnly = id => ['waiting', 'form', 'done', 'expired'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+
+// The link signs the member in for recovery; the session arrives in the URL.
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'PASSWORD_RECOVERY' || (session && $('form').classList.contains('hidden') && $('done').classList.contains('hidden'))) showOnly('form');
+});
+setTimeout(async () => {
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session && !$('waiting').classList.contains('hidden')) showOnly('expired');
+}, 2500);
+if (/error=/.test(location.hash + location.search)) showOnly('expired');
+
+$('form').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('err').textContent = '';
+  if ($('pw').value !== $('pw2').value) return $('err').textContent = 'The two passwords don’t match.';
+  $('save').disabled = true;
+  const { error } = await sb.auth.updateUser({ password: $('pw').value });
+  $('save').disabled = false;
+  if (error) return $('err').textContent = error.message;
+  await sb.auth.signOut();
+  showOnly('done');
+});
+</script>
+</body>
+</html>

@@ -213,8 +213,17 @@
           <option value="suspended">Suspended</option>
           <option value="reported">Reported</option>
           <option value="paid">Paid plan</option>
+          <option value="boosted">Boosted</option>
+          <option value="shadow">Shadow-banned</option>
+          <option value="deleted">Deleted</option>
+          <option value="verified">Verified</option>
           <option value="test">Test accounts</option>
         </select>
+        <select id="fGender"><option value="">Any gender</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
+        <select id="fCity"><option value="">Any city</option></select>
+        <input type="number" id="fAgeMin" placeholder="Age from" min="18" max="99" style="max-width:110px">
+        <input type="number" id="fAgeMax" placeholder="to" min="18" max="99" style="max-width:90px">
+        <button class="btn small" id="fClear" style="align-self:center">Clear</button>
       </div>
       <div class="card scroll"><table>
         <thead><tr><th></th><th>Name</th><th>Contact</th><th>Age</th><th>Gender → wants</th><th>City</th><th>Looking for</th><th>Joined</th><th>Status</th></tr></thead>
@@ -377,32 +386,48 @@ async function loadStats() {
 async function loadMembers() {
   const { data, error } = await sb.rpc('admin_members');
   if (error) return fail(error);
-  members = data; renderMembers();
+  members = data;
+  const city = $('#fCity').value, cities = [...new Set(members.map(m => m.city).filter(Boolean))].sort();
+  $('#fCity').innerHTML = '<option value="">Any city</option>' + cities.map(c => `<option ${c === city ? 'selected' : ''}>${esc(c)}</option>`).join('');
+  renderMembers();
 }
 function filtered() {
   const q = $('#search').value.trim().toLowerCase(), f = $('#filter').value;
+  const gender = $('#fGender').value, city = $('#fCity').value;
+  const ageMin = +$('#fAgeMin').value || 0, ageMax = +$('#fAgeMax').value || 999;
   return members.filter(m => {
     if (f === 'onboarded' && !m.onboarded) return false;
     if (f === 'incomplete' && m.onboarded) return false;
-    if (f === 'blocked' && !m.blocked) return false;
+    if (f === 'blocked' && !(m.blocked && !m.deleted_at)) return false;
     if (f === 'suspended' && !isSuspended(m)) return false;
     if (f === 'reported' && !m.reports_against) return false;
     if (f === 'paid' && !['plus', 'gold', 'platinum'].includes(m.plan)) return false;
+    if (f === 'boosted' && !isBoosted(m)) return false;
+    if (f === 'shadow' && !m.shadow_banned) return false;
+    if (f === 'deleted' && !m.deleted_at) return false;
+    if (f === 'verified' && !m.verified) return false;
     if (f === 'test' && !m.is_test) return false;
+    if (gender && m.gender !== gender) return false;
+    if (city && m.city !== city) return false;
+    if ((ageMin || ageMax < 999) && !(m.age >= ageMin && m.age <= ageMax)) return false;
     if (!q) return true;
-    return [m.id, m.name, m.email, m.phone, m.city].some(v => (v || '').toLowerCase().includes(q));
+    return [m.id, m.name, m.email, m.phone, m.city, m.job].some(v => (v || '').toLowerCase().includes(q));
   });
 }
 const isSuspended = m => m.suspended_until && new Date(m.suspended_until) > new Date();
+const isBoosted = m => m.boosted_until && new Date(m.boosted_until) > new Date();
 const PLAN_NAMES = { '': 'Their own choice', free: 'Free', plus: 'Plus', gold: 'Gold', platinum: 'Platinum' };
 function statusPills(m) {
   const out = [];
-  if (m.blocked) out.push('<span class="pill bad">Blocked</span>');
+  if (m.deleted_at) out.push(`<span class="pill bad">Deleted ${fmtDate(m.deleted_at)}</span>`);
+  else if (m.blocked) out.push('<span class="pill bad">Blocked</span>');
   else if (isSuspended(m)) out.push(`<span class="pill bad">Suspended to ${fmtDate(m.suspended_until)}</span>`);
   else if (m.onboarded) out.push('<span class="pill ok">Active</span>');
   else out.push('<span class="pill warn">Incomplete</span>');
+  if (m.shadow_banned) out.push('<span class="pill bad">Shadow-banned</span>');
   if (m.verified) out.push('<span class="pill ok">Verified</span>');
-  if (m.plan && m.plan !== 'free') out.push(`<span class="pill ok">${esc(PLAN_NAMES[m.plan])}</span>`);
+  if (isBoosted(m)) out.push(`<span class="pill ok">Boosted to ${fmtDate(m.boosted_until)}</span>`);
+  if (m.plan && m.plan !== 'free') out.push(`<span class="pill ok">${esc(PLAN_NAMES[m.plan])}${m.plan_until ? ' to ' + fmtDate(m.plan_until) : ''}</span>`);
   if (m.is_test) out.push('<span class="pill warn">Test</span>');
   if (m.reports_against) out.push(`<span class="pill bad">${m.reports_against} report${m.reports_against > 1 ? 's' : ''}</span>`);
   if (m.warnings) out.push(`<span class="pill warn">${m.warnings} warning${m.warnings > 1 ? 's' : ''}</span>`);
@@ -425,86 +450,226 @@ function renderMembers() {
   $('#memberCount').textContent = `${rows.length} of ${members.length} shown`;
   document.querySelectorAll('#members tr[data-id]').forEach(tr => tr.onclick = () => openMember(tr.dataset.id));
 }
-$('#search').oninput = renderMembers; $('#filter').onchange = renderMembers;
+$('#search').oninput = renderMembers;
+['#filter', '#fGender', '#fCity'].forEach(s => $(s).onchange = renderMembers);
+['#fAgeMin', '#fAgeMax'].forEach(s => $(s).oninput = renderMembers);
+$('#fClear').onclick = () => {
+  $('#search').value = $('#fAgeMin').value = $('#fAgeMax').value = '';
+  $('#filter').value = 'all'; $('#fGender').value = $('#fCity').value = '';
+  renderMembers();
+};
+
+const PLAN_DAYS = { 0: 'No end date', 7: '7 days', 30: '30 days', 90: '90 days', 365: '1 year' };
+// "Chrome · iOS" from a user agent; the app itself reports as Dart.
+function device(ua) {
+  if (!ua) return 'Unknown device';
+  const os = /iPhone|iPad|iOS/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android' : /Mac OS X|Macintosh/.test(ua) ? 'Mac'
+    : /Windows/.test(ua) ? 'Windows' : /Linux/.test(ua) ? 'Linux' : '';
+  const app = /Dart|dart:io/.test(ua) ? 'Everlane app' : /Edg/.test(ua) ? 'Edge' : /CriOS|Chrome/.test(ua) ? 'Chrome'
+    : /FxiOS|Firefox/.test(ua) ? 'Firefox' : /Safari/.test(ua) ? 'Safari' : ua.split(/[ /]/)[0];
+  return [app, os].filter(Boolean).join(' · ');
+}
+const fmtTime = d => d ? new Date(d).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
 
 function openMember(id) {
   const m = members.find(x => x.id === id); if (!m) return;
   const ov = $('#overlay');
-  ov.innerHTML = `<div class="backdrop"></div><aside class="drawer">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      <h2>${esc(m.name || 'Unnamed')}${m.age ? ', ' + m.age : ''}</h2><button class="btn small" data-close>Close</button></div>
+  const canReset = m.email && m.provider === 'email';
+  ov.innerHTML = `<div class="backdrop"></div><aside class="drawer" style="width:min(560px,100%)">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+      <h2>${esc(m.name || 'Unnamed')}${m.age ? ', ' + m.age : ''}</h2>
+      <div style="display:flex;gap:6px"><button class="btn small" data-edit-profile>Edit profile</button><button class="btn small" data-close>Close</button></div></div>
     <p class="muted" style="margin:4px 0 0">${statusPills(m)}${m.blocked && m.blocked_reason ? ' ' + esc(m.blocked_reason) : ''}</p>
     <div class="photos">${(m.photos || []).map(p => `<img src="${esc(photoUrl(p))}" alt="">`).join('') || '<span class="muted">No photos</span>'}</div>
     <dl>
-      <dt>Email</dt><dd>${esc(m.email || '—')}</dd>
-      <dt>Phone</dt><dd>${esc(m.phone || '—')}</dd>
-      <dt>Signed up with</dt><dd>${esc(m.provider || '—')}</dd>
-      <dt>Joined</dt><dd>${fmtDate(m.joined_at)}</dd>
-      <dt>Last sign-in</dt><dd>${fmtDate(m.last_sign_in_at)}</dd>
-      <dt>Gender</dt><dd>${esc(m.gender || '—')}</dd>
-      <dt>Wants to meet</dt><dd>${esc(m.interested_in || '—')}</dd>
+      <dt>Gender</dt><dd>${esc(m.gender || '—')} → ${esc(m.interested_in || '—')}</dd>
       <dt>Looking for</dt><dd>${esc(m.looking_for || '—')}</dd>
+      <dt>Birthday</dt><dd>${m.birthday ? fmtDate(m.birthday) : '—'}</dd>
       <dt>Height</dt><dd>${m.height_cm ? esc(m.height_cm) + ' cm' : '—'}</dd>
-      <dt>Languages</dt><dd>${esc((m.languages || []).join(', ') || '—')}</dd>
       <dt>City</dt><dd>${esc(m.city || '—')}</dd>
       <dt>Job</dt><dd>${esc(m.job || '—')}</dd>
+      <dt>Languages</dt><dd>${esc((m.languages || []).join(', ') || '—')}</dd>
       <dt>Interests</dt><dd>${esc((m.interests || []).join(', ') || '—')}</dd>
       <dt>Bio</dt><dd>${esc(m.bio || '—')}</dd>
+      <dt>${esc(m.prompt_label || 'Prompt')}</dt><dd>${esc(m.prompt_answer || '—')}</dd>
       <dt>Likes sent / got</dt><dd>${m.likes_sent} / ${m.likes_received}</dd>
       <dt>Matches</dt><dd>${m.matches}</dd>
+      <dt>Joined</dt><dd>${fmtDate(m.joined_at)}</dd>
+      <dt>Last sign-in</dt><dd>${fmtTime(m.last_sign_in_at)}</dd>
+      <dt>Signed up with</dt><dd>${esc(m.provider || '—')}</dd>
       <dt>Member ID</dt><dd style="font-size:12px">${esc(m.id)}</dd>
     </dl>
 
-    <h3 style="margin-top:24px">Actions</h3>
+    <h3 style="margin-top:24px">Sign-in details</h3>
+    <div class="row2">
+      <div><label for="cEmail">Email</label><input type="email" id="cEmail" value="${esc(m.email || '')}"></div>
+      <div><label for="cPhone">Phone (with country code)</label><input type="text" id="cPhone" value="${esc(m.phone ? '+' + m.phone : '')}"></div>
+    </div>
+    <div class="actionbar">
+      <button class="btn small" data-contact>Save email and phone</button>
+      ${canReset ? '<button class="btn small" data-reset>Send password reset email</button>' : ''}
+      <button class="btn small" data-act-confirm="logout">Force logout</button>
+    </div>
+    <p class="muted" style="font-size:12px;margin:6px 0 0">Force logout ends every session. The app may keep working for up to an hour, until its current sign-in token expires.</p>
+
+    <h3 style="margin-top:24px">Badges, plan and boosts</h3>
     <div class="actionbar">
       <button class="btn small" data-act="${m.verified ? 'unverify' : 'verify'}">${m.verified ? 'Remove verified badge' : 'Verify profile'}</button>
-      ${isSuspended(m)
-        ? '<button class="btn small" data-act="unsuspend">Lift suspension</button>'
-        : '<button class="btn small danger" data-suspend="1">Suspend 24 hours</button><button class="btn small danger" data-suspend="7">Suspend 7 days</button>'}
-      <button class="btn small" data-act="${m.is_test ? 'unmark_test' : 'mark_test'}">${m.is_test ? 'Make a real account' : 'Make a test account'}</button>
+      ${isBoosted(m) ? '<button class="btn small" data-act="unboost">End boost</button>' : ''}
+      <button class="btn small" data-boost="1">Boost 24 hours</button><button class="btn small" data-boost="7">Boost 7 days</button>
     </div>
+    <label for="planSel">Plan (free premium for support or promotions; no payment is taken or refunded)</label>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <select id="planSel" style="flex:1">${Object.entries(PLAN_NAMES).map(([k, v]) => `<option value="${k}" ${m.plan === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
+      <select id="planDays" style="flex:1">${Object.entries(PLAN_DAYS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
+      <button class="btn small" data-plan>Set plan</button></div>
+    <p class="muted" style="font-size:12px;margin:6px 0 0">Boosted profiles show first in Discover. Plans with an end date need app version 0.3.7 or later to end on time.</p>
+
+    <h3 style="margin-top:24px">Moderation</h3>
     <label for="warnText">Warn (the member sees this message in the app)</label>
     <div style="display:flex;gap:8px"><input type="text" id="warnText" placeholder="e.g. Please keep messages respectful."><button class="btn small" data-warn>Send warning</button></div>
-    <label for="planSel">Plan (for support and troubleshooting; no payment is taken or refunded)</label>
-    <div style="display:flex;gap:8px"><select id="planSel">${Object.entries(PLAN_NAMES).map(([k, v]) => `<option value="${k}" ${m.plan === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select><button class="btn small" data-plan>Set plan</button></div>
-    <p class="muted" style="font-size:12px;margin:8px 0 0">Test accounts only see, and are seen by, other test accounts.</p>
-
-    <div style="margin-top:22px">${m.blocked
+    <div class="actionbar" style="margin-top:12px">
+      ${isSuspended(m)
+        ? '<button class="btn small" data-act="unsuspend">Lift suspension</button>'
+        : '<button class="btn small danger" data-suspend="1">Suspend 24 hours</button><button class="btn small danger" data-suspend="7">Suspend 7 days</button><button class="btn small danger" data-suspend="30">Suspend 30 days</button>'}
+      ${m.shadow_banned
+        ? '<button class="btn small" data-act="unshadow_ban">Lift shadow-ban</button>'
+        : '<button class="btn small danger" data-act-confirm="shadow_ban">Shadow-ban</button>'}
+      <button class="btn small" data-act="${m.is_test ? 'unmark_test' : 'mark_test'}">${m.is_test ? 'Make a real account' : 'Make a test account'}</button>
+    </div>
+    <p class="muted" style="font-size:12px;margin:6px 0 0">Shadow-banned members can still use the app, but nobody else sees them, their likes or their messages. Test accounts only see, and are seen by, other test accounts.</p>
+    ${m.deleted_at ? '' : `<div style="margin-top:14px">${m.blocked
       ? '<button class="btn primary" data-unblock>Unblock member</button>'
-      : '<label for="reason">Reason (only admins see this)</label><input type="text" id="reason" placeholder="e.g. Fake profile, harassment"><button class="btn danger" style="margin-top:10px" data-block>Block member</button>'}</div>
+      : '<label for="reason">Reason (only admins see this)</label><input type="text" id="reason" placeholder="e.g. Fake profile, harassment"><button class="btn danger" style="margin-top:10px" data-block>Block member</button>'}</div>`}
+
+    <h3 style="margin-top:24px">View as member</h3>
+    <p class="muted" style="font-size:12px;margin:4px 0 0">Their matches and who likes them, read-only. Opening this is recorded in the audit log.</p>
+    <div id="viewAs"><button class="btn small" style="margin-top:8px" data-view-as>Show what they see</button></div>
+
+    <h3 style="margin-top:24px">Sign-ins and devices</h3>
+    <div id="security"><span class="muted">Loading…</span></div>
+
+    <h3 style="margin-top:24px">Data and deletion</h3>
+    <div class="actionbar">
+      <button class="btn small" data-export>Export their data (JSON)</button>
+      ${m.deleted_at
+        ? '<button class="btn small primary" data-act="restore">Restore account</button><button class="btn small danger" data-purge>Delete permanently</button>'
+        : '<button class="btn small danger" data-delete>Delete account</button>'}
+    </div>
+    <p class="muted" style="font-size:12px;margin:6px 0 24px">${m.deleted_at
+      ? 'Deleted accounts are hidden and signed out, and can be restored. Deleting permanently removes the account, profile, photos, likes, matches and messages, and can’t be undone.'
+      : 'Deleting hides the account and signs them out; you can restore it until you delete it permanently. Use the export for data access requests.'}</p>
   </aside>`;
   const close = () => ov.innerHTML = '';
+  const reload = async () => { await loadMembers(); openMember(id); };
   $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
-  const setBlocked = async (block) => {
-    const reason = block ? ($('#reason', ov)?.value || '') : '';
-    if (block && !confirm(`Block ${m.name || 'this member'}? They’ll be signed out of the app and hidden from everyone.`)) return;
-    const { error } = await sb.rpc('admin_set_blocked', { member: m.id, block, reason });
-    if (error) return fail(error);
-    toast(block ? 'Member blocked' : 'Member unblocked'); close(); loadMembers();
-  };
   const act = async (action, extra = {}, done = 'Saved') => {
     const { error } = await sb.rpc('admin_moderate', { member: m.id, action, ...extra });
     if (error) return fail(error);
-    toast(done); close(); loadMembers();
+    toast(done); reload();
   };
+  const CONFIRM = { logout: `Sign ${m.name || 'this member'} out on every device?`,
+    shadow_ban: `Shadow-ban ${m.name || 'this member'}? Nobody else will see them, and they won’t be told.` };
   ov.querySelectorAll('[data-act]').forEach(b => b.onclick = () => act(b.dataset.act));
+  ov.querySelectorAll('[data-act-confirm]').forEach(b => b.onclick = () => {
+    if (confirm(CONFIRM[b.dataset.actConfirm])) act(b.dataset.actConfirm);
+  });
   ov.querySelectorAll('[data-suspend]').forEach(b => b.onclick = () => {
     const days = +b.dataset.suspend;
     if (confirm(`Suspend ${m.name || 'this member'} for ${days === 1 ? '24 hours' : days + ' days'}? They’re signed out and hidden until it ends.`))
       act('suspend', { days }, 'Member suspended');
   });
+  ov.querySelectorAll('[data-boost]').forEach(b => b.onclick = () => act('boost', { days: +b.dataset.boost }, 'Boosted'));
   $('[data-warn]', ov).onclick = () => {
     const reason = $('#warnText', ov).value.trim();
     if (!reason) return toast('Write the warning first');
     act('warn', { reason }, 'Warning sent');
   };
-  $('[data-plan]', ov).onclick = () => act('set_plan', { value: $('#planSel', ov).value }, 'Plan updated');
+  $('[data-plan]', ov).onclick = () => act('set_plan', { value: $('#planSel', ov).value, days: +$('#planDays', ov).value }, 'Plan updated');
+  const setBlocked = async (block) => {
+    const reason = block ? ($('#reason', ov)?.value || '') : '';
+    if (block && !confirm(`Block ${m.name || 'this member'}? They’ll be signed out of the app and hidden from everyone.`)) return;
+    const { error } = await sb.rpc('admin_set_blocked', { member: m.id, block, reason });
+    if (error) return fail(error);
+    toast(block ? 'Member blocked' : 'Member unblocked'); reload();
+  };
   $('[data-block]', ov)?.addEventListener('click', () => setBlocked(true));
   $('[data-unblock]', ov)?.addEventListener('click', () => setBlocked(false));
+  $('[data-edit-profile]', ov).onclick = () => editProfile(m, true);
+
+  $('[data-contact]', ov).onclick = async () => {
+    const email = $('#cEmail', ov).value.trim(), phone = $('#cPhone', ov).value.trim();
+    if (!confirm('Change their sign-in details? They’ll need to use the new email or phone to log in.')) return;
+    const { error } = await sb.rpc('admin_set_contact', { member: m.id, new_email: email, new_phone: phone });
+    if (error) return fail(error);
+    toast('Sign-in details updated'); reload();
+  };
+  $('[data-reset]', ov)?.addEventListener('click', async () => {
+    if (!confirm(`Email ${m.email} a link to set a new password?`)) return;
+    const { error } = await sb.auth.resetPasswordForEmail(m.email, { redirectTo: location.origin + '/reset/' });
+    if (error) return fail(error);
+    toast('Password reset email sent');
+  });
+
+  $('[data-view-as]', ov).onclick = async () => {
+    const { data, error } = await sb.rpc('admin_view_as', { member: m.id });
+    if (error) return fail(error);
+    const person = p => `${p.photo ? `<img class="avatar" src="${esc(photoUrl(p.photo))}" alt="">` : `<span class="avatar">${esc((p.name || '?')[0])}</span>`} <b style="color:var(--text)">${esc(p.name || 'Unnamed')}</b>`;
+    $('#viewAs', ov).innerHTML = `
+      <p class="muted" style="font-size:12px;margin:8px 0">${data.likes_sent} likes sent · ${data.passes} passes</p>
+      <h4 style="margin:10px 0 6px;color:var(--text)">Matches (${data.matches.length})</h4>
+      ${data.matches.map(x => `<div style="padding:8px 0;border-bottom:1px solid var(--line)">${person(x)}
+        <span class="muted" style="font-size:12px"> · matched ${fmtDate(x.matched_at)} · ${x.messages} messages</span>
+        ${x.last_message ? `<div class="muted" style="font-size:12px;margin:4px 0 0 42px">Last: ${esc(x.last_message)}</div>` : ''}</div>`).join('') || '<p class="muted" style="font-size:12px">No matches yet.</p>'}
+      <h4 style="margin:14px 0 6px;color:var(--text)">Likes them (${data.likes_received.length})</h4>
+      ${data.likes_received.map(x => `<div style="padding:6px 0">${person(x)} <span class="muted" style="font-size:12px">· ${fmtDate(x.created_at)}</span></div>`).join('') || '<p class="muted" style="font-size:12px">Nobody waiting.</p>'}`;
+  };
+
+  $('[data-export]', ov).onclick = async () => {
+    const { data, error } = await sb.rpc('admin_export_member', { member: m.id });
+    if (error) return fail(error);
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    a.download = `everlane-member-${m.id.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+    toast('Export downloaded');
+  };
+  $('[data-delete]', ov)?.addEventListener('click', () => {
+    const reason = prompt(`Delete ${m.name || 'this member'}’s account? They’re signed out and hidden; you can restore it later.\n\nReason (only admins see this):`, '');
+    if (reason !== null) act('delete', { reason: reason.trim() }, 'Account deleted');
+  });
+  $('[data-purge]', ov)?.addEventListener('click', async () => {
+    const typed = prompt(`This permanently removes ${m.name || 'this member'}’s account and everything in it. It can’t be undone.\n\nType DELETE to confirm:`, '');
+    if (typed !== 'DELETE') return typed === null || toast('Not deleted');
+    const { data: files, error } = await sb.rpc('admin_purge_member', { member: m.id });
+    if (error) return fail(error);
+    await Promise.all([
+      files.photos?.length && sb.storage.from('photos').remove(files.photos),
+      files.voice?.length && sb.storage.from('voice').remove(files.voice),
+      files.verifications?.length && sb.storage.from('verifications').remove(files.verifications)]);
+    toast('Deleted permanently'); close(); loadMembers();
+  });
+
+  sb.rpc('admin_member_security', { member: m.id }).then(({ data, error }) => {
+    const box = $('#security', ov); if (!box) return;
+    if (error) return box.innerHTML = `<span class="muted">${esc(error.message)}</span>`;
+    const devices = [...new Set(data.logins.map(l => device(l.user_agent)))];
+    box.innerHTML = `
+      <p class="muted" style="font-size:12px;margin:4px 0 8px">${data.open_sessions} open session${data.open_sessions === 1 ? '' : 's'} · Devices: ${esc(devices.join(', ') || 'none yet')}</p>
+      ${data.shared.length ? `<div class="card" style="padding:12px 14px;border-color:rgba(242,169,59,.5);margin-bottom:10px">
+        <b style="color:#F2A93B">Possible multiple accounts</b>
+        <p class="muted" style="font-size:12px;margin:4px 0 6px">These accounts signed in from the same IP address. Shared Wi-Fi or mobile networks can cause this too.</p>
+        ${data.shared.map(s => `<div style="padding:4px 0"><a href="#" data-other="${esc(s.id)}" style="color:var(--lavender)">${esc(s.name || s.contact || s.id.slice(0, 8))}</a>
+          <span class="muted" style="font-size:12px">${esc(s.contact)} · ${esc(s.ips.join(', '))}</span>${s.blocked ? ' <span class="pill bad">Blocked</span>' : ''}</div>`).join('')}</div>` : ''}
+      <div class="card" style="overflow:auto;max-height:260px"><table>
+        <thead><tr><th>When</th><th>IP address</th><th>Device</th></tr></thead>
+        <tbody>${data.logins.map(l => `<tr style="cursor:default"><td>${fmtTime(l.created_at)}</td><td>${esc(l.ip || '—')}</td><td title="${esc(l.user_agent)}">${esc(device(l.user_agent))}</td></tr>`).join('')
+          || '<tr><td colspan="3" class="muted">No sign-ins recorded yet.</td></tr>'}</tbody></table></div>`;
+    box.querySelectorAll('[data-other]').forEach(a => a.onclick = e => { e.preventDefault(); openMember(a.dataset.other); });
+  });
 }
 
 $('#exportCsv').onclick = () => {
-  const cols = ['name','email','phone','age','gender','interested_in','city','looking_for','height_cm','languages','job','joined_at','last_sign_in_at','onboarded','verified','blocked','suspended_until','warnings','plan','is_test','reports_against','likes_sent','likes_received','matches'];
+  const cols = ['name','email','phone','age','gender','interested_in','city','looking_for','height_cm','languages','job','joined_at','last_sign_in_at','onboarded','verified','blocked','suspended_until','warnings','plan','plan_until','boosted_until','shadow_banned','deleted_at','is_test','reports_against','likes_sent','likes_received','matches'];
   const cell = v => `"${String(Array.isArray(v) ? v.join('; ') : v ?? '').replace(/"/g, '""')}"`;
   const csv = [cols.join(','), ...filtered().map(m => cols.map(c => cell(m[c])).join(','))].join('\n');
   const a = document.createElement('a');
@@ -558,9 +723,9 @@ async function loadBots() {
       ${b.blocked ? '<span class="pill bad">Off</span>' : ''}</div>
   </div>`).join('') || '<p class="muted">No bots yet. Use “New bot” or “Bulk create”.</p>';
   $('#botCount').textContent = bots.length ? `${bots.length} bot${bots.length > 1 ? 's' : ''}${off ? ` · ${off} switched off` : ''}` : '';
-  document.querySelectorAll('[data-bot]').forEach(el => el.onclick = () => editBot(bots.find(b => b.id === el.dataset.bot)));
+  document.querySelectorAll('[data-bot]').forEach(el => el.onclick = () => editProfile(bots.find(b => b.id === el.dataset.bot)));
 }
-$('#newBot').onclick = () => editBot(null);
+$('#newBot').onclick = () => editProfile(null);
 $('#botsLive').onclick = async () => {
   const live = $('#botsLive').textContent.includes('on');
   if (!live && !confirm('Switch every bot off? They disappear from the app until you switch them back on.')) return;
@@ -569,19 +734,21 @@ $('#botsLive').onclick = async () => {
   toast(live ? 'Bots switched on' : 'Bots switched off'); loadBots();
 };
 
-async function editBot(bot) {
+// Edits a bot ([bot] null makes a new one), or a member's profile when [member] is set.
+async function editProfile(bot, member = false) {
   await ensureOptions();
   const b = bot || { name: '', gender: 'Woman', interested_in: 'Men', city: '', job: '', bio: '',
     looking_for: 'Long term', interests: [], languages: [], prompt_label: optionValues('prompt')[0] || '',
     prompt_answer: '', height_cm: null, photos: [] };
   // Each photo is either saved ({path}) or picked but not uploaded yet ({file, url}).
   let photos = (b.photos || []).map(path => ({ path }));
-  const select = (id, list, value) => `<select id="${id}">${list.map(v => `<option ${v === value ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+  const select = (id, list, value) => `<select id="${id}">${(list.includes(value) ? list : [value, ...list]).map(v =>
+    `<option value="${esc(v)}" ${v === value ? 'selected' : ''}>${esc(v || '—')}</option>`).join('')}</select>`;
   const pick = (name, list, chosen) => `<div class="pick">${list.map(v =>
     `<label><input type="checkbox" name="${name}" value="${esc(v)}" ${chosen.includes(v) ? 'checked' : ''}>${esc(v)}</label>`).join('') || '<span class="muted">None set up in Options.</span>'}</div>`;
   const ov = $('#overlay');
   ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="botForm">
-    <h2>${bot ? 'Edit bot' : 'New bot'}</h2>
+    <h2>${member ? 'Edit ' + esc(b.name || 'profile') : bot ? 'Edit bot' : 'New bot'}</h2>
     <label>Photos (the first is the main photo)</label>
     <div class="edit-photos" id="botPhotos"></div>
     <input type="file" id="botFiles" accept="image/jpeg,image/png,image/webp" multiple class="hidden">
@@ -610,8 +777,8 @@ async function editBot(bot) {
     <label>Languages</label>${pick('language', optionValues('language'), b.languages || [])}
     <div class="err" id="bErr"></div>
     <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px;flex-wrap:wrap">
-      <div>${bot ? '<button type="button" class="btn danger" id="bDelete">Delete bot</button>' : ''}</div>
-      <div style="display:flex;gap:10px"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary" id="bSave">Save bot</button></div>
+      <div>${bot && !member ? '<button type="button" class="btn danger" id="bDelete">Delete bot</button>' : ''}</div>
+      <div style="display:flex;gap:10px"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary" id="bSave">${member ? 'Save profile' : 'Save bot'}</button></div>
     </div>
   </form></div>`;
   const renderPhotos = () => {
@@ -631,7 +798,7 @@ async function editBot(bot) {
     }
     e.target.value = ''; renderPhotos();
   };
-  const close = () => ov.innerHTML = '';
+  const close = () => member ? openMember(b.id) : ov.innerHTML = '';
   $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
   $('#bDelete', ov)?.addEventListener('click', async () => {
     if (!confirm(`Delete ${b.name || 'this bot'} and its photos?`)) return;
@@ -651,18 +818,22 @@ async function editBot(bot) {
       height_cm: height ? +height : null, interests: checked('interest'), languages: checked('language') };
     $('#bSave', ov).disabled = true; $('#bSave', ov).textContent = 'Saving…';
     try {
-      let { data: id, error } = await sb.rpc('admin_save_bot', { bot: bot?.id ?? null, data });
+      const save = (id, fields) => member
+        ? sb.rpc('admin_edit_profile', { member: id, data: fields }).then(r => ({ ...r, data: id }))
+        : sb.rpc('admin_save_bot', { bot: id, data: fields });
+      let { data: id, error } = await save(bot?.id ?? null, data);
       if (error) throw error;
       const fresh = await uploadBotPhotos(id, photos.filter(p => p.file).map(p => p.file));
       const paths = photos.map(p => p.path || fresh.shift());
-      ({ error } = await sb.rpc('admin_save_bot', { bot: id, data: { photos: paths } }));
+      ({ error } = await save(id, { photos: paths }));
       if (error) throw error;
       const dropped = (b.photos || []).filter(p => !paths.includes(p));
       if (dropped.length) await sb.storage.from('photos').remove(dropped);
-      toast(bot ? 'Bot saved' : 'Bot created'); close(); loadBots();
+      if (member) { toast('Profile saved'); await loadMembers(); openMember(id); }
+      else { toast(bot ? 'Bot saved' : 'Bot created'); close(); loadBots(); }
     } catch (err) {
       $('#bErr', ov).textContent = err.message || 'Something went wrong';
-      $('#bSave', ov).disabled = false; $('#bSave', ov).textContent = 'Save bot';
+      $('#bSave', ov).disabled = false; $('#bSave', ov).textContent = member ? 'Save profile' : 'Save bot';
     }
   };
 }
@@ -843,7 +1014,10 @@ const ACTIONS = { ban: 'Blocked', unban: 'Unblocked', verify: 'Verified', unveri
   mark_test: 'Made test account', unmark_test: 'Made real account', photo_approve: 'Approved photo', verify_reject: 'Rejected selfie',
   photo_reject: 'Rejected photo', report_resolved: 'Resolved report', report_dismissed: 'Dismissed report',
   report_open: 'Reopened report', bot_create: 'Created bot', bot_update: 'Edited bot', bot_delete: 'Deleted bot',
-  bots_on: 'Switched bots on', bots_off: 'Switched bots off' };
+  bots_on: 'Switched bots on', bots_off: 'Switched bots off', edit_profile: 'Edited profile',
+  shadow_ban: 'Shadow-banned', unshadow_ban: 'Lifted shadow-ban', boost: 'Boosted', unboost: 'Ended boost',
+  delete: 'Deleted account', restore: 'Restored account', purge: 'Deleted permanently', logout: 'Forced logout',
+  set_contact: 'Changed sign-in details', view_as: 'Viewed as member', export: 'Exported data' };
 async function loadAudit() {
   const { data, error } = await sb.rpc('admin_audit_log', { max_rows: 300 });
   if (error) return fail(error);
@@ -851,7 +1025,12 @@ async function loadAudit() {
     const d = a.details || {}, out = [];
     if (d.reason) out.push(esc(d.reason));
     if (a.action === 'suspend' && d.days) out.push(d.days === 1 ? '24 hours' : d.days + ' days');
-    if (a.action === 'set_plan') out.push(esc(PLAN_NAMES[d.value] || d.value));
+    if (a.action === 'set_plan') out.push(esc(PLAN_NAMES[d.value] || d.value) + (d.days ? ` for ${d.days} days` : ''));
+    if (a.action === 'boost' && d.days) out.push(d.days === 1 ? '24 hours' : d.days + ' days');
+    if (a.action === 'edit_profile' && d.fields?.length) out.push(esc(d.fields.join(', ')));
+    if (a.action === 'set_contact') for (const k of ['email', 'phone'])
+      if (d[k] && d[k].from !== d[k].to) out.push(`${k}: ${esc(d[k].from || '—')} → ${esc(d[k].to || '—')}`);
+    if (a.action === 'purge' && d.name) out.push(esc(d.name));
     if (d.report) out.push('Report #' + esc(d.report));
     if (d.note) out.push(esc(d.note));
     if (a.action.startsWith('bot_') && d.name) out.push(esc(d.name));
