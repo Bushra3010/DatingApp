@@ -132,7 +132,7 @@ class DiscoverScreen extends StatelessWidget {
                       onUndo: store.canUndo ? () => undoPass(context) : null,
                       onPrompt: (target) {
                         HapticFeedback.selectionClick();
-                        showLikeComposer(context, store, person, target);
+                        showCommentComposer(context, store, person, target);
                       })))),
       Padding(
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
@@ -338,7 +338,7 @@ class _PersonCard extends StatelessWidget {
   /// Null when there is no pass to undo.
   final VoidCallback? onUndo;
 
-  /// Opens the like composer aimed at a photo detail ('photo', 'soundtrack').
+  /// Opens a message box about a photo detail ('photo', 'soundtrack').
   final ValueChanged<String> onPrompt;
 
   static const _goldGradient = LinearGradient(
@@ -723,6 +723,54 @@ Future<void> showLikeComposer(BuildContext context, PreviewStore store,
       person.remote
           ? 'Like sent to ${person.name}.'
           : 'Like sent to ${person.name} in this preview.');
+}
+
+/// Asks about a photo: opens a message box and sends what you write along
+/// with a like on that photo. Nothing is sent until you tap Send.
+void showCommentComposer(BuildContext context, PreviewStore store,
+    Person person, String target) {
+  if (store.outOfLikes) {
+    showOutOfLikes(context, store);
+    return;
+  }
+  final comment = TextEditingController();
+  showEverlaneSheet(
+      context,
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Message ${person.name}',
+            style: Theme.of(context).textTheme.headlineMedium),
+        const SizedBox(height: 10),
+        Text(
+            'Ask about their photo. Your message goes with a like, so it uses one of your daily likes.',
+            style: TextStyle(color: EverlaneColors.muted, height: 1.6)),
+        const SizedBox(height: 16),
+        TextField(
+            controller: comment,
+            autofocus: true,
+            maxLength: 150,
+            minLines: 1,
+            maxLines: 4,
+            textCapitalization: TextCapitalization.sentences,
+            decoration:
+                const InputDecoration(hintText: 'Write a message')),
+        const SizedBox(height: 12),
+        Builder(
+            builder: (sheet) => ValueListenableBuilder<TextEditingValue>(
+                valueListenable: comment,
+                builder: (_, value, __) => FilledButton(
+                    onPressed: value.text.trim().isEmpty
+                        ? null
+                        : () {
+                            HapticFeedback.mediumImpact();
+                            store.like(person,
+                                target: target, comment: value.text);
+                            Navigator.pop(sheet);
+                            showNotice(context,
+                                'Message sent to ${person.name} with your like.');
+                          },
+                    child: const Text('Send')))),
+        const SizedBox(height: 8),
+      ]));
 }
 
 Future<void> showFilters(BuildContext context, PreviewStore store) async {

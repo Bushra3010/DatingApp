@@ -323,7 +323,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Photo likes send at once; Invisible mode is free',
+  testWidgets('Asking about a photo opens a message box; Invisible mode is free',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -334,8 +334,18 @@ void main() {
     expect(find.text('Bengaluru'), findsOneWidget);
     await tester.tap(find.byTooltip('Ask about this photo'));
     await tester.pumpAndSettle();
-    // A like is sent straight away, with no message box.
-    expect(find.text('Like sent to Ananya in this preview.'), findsOneWidget);
+    // Nothing is sent until there's a message and Send is tapped.
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.textContaining('sent to Ananya'), findsNothing);
+    expect(
+        tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Send'))
+            .onPressed,
+        isNull);
+    await tester.enterText(find.byType(TextField), 'Where was this taken?');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Send'));
+    await tester.pumpAndSettle();
+    expect(find.text('Message sent to Ananya with your like.'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
     // The Discover card shows neither the soundtrack nor the bio.
     expect(find.textContaining('Ananya’s soundtrack'), findsNothing);
@@ -368,11 +378,15 @@ void main() {
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Ask about this photo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Where was this taken?');
+    await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Send'));
     for (var i = 0; i < 20; i++) {
       await tester.pump(const Duration(milliseconds: 60));
     }
     await tester.pumpAndSettle();
-    expect(find.text('Like sent to Ananya in this preview.'), findsOneWidget);
+    expect(find.text('Message sent to Ananya with your like.'), findsOneWidget);
     await tester.tap(find.byTooltip('You'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Edit profile'));
