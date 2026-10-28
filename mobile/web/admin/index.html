@@ -177,6 +177,28 @@
   </form>
 </section>
 
+<section id="mfa" class="hidden" style="min-height:100vh;display:grid;place-items:center;padding:20px">
+  <form class="login-card" id="mfaForm">
+    <div class="logo"><img src="../icons/Icon-192.png" alt="" width="40" height="40" style="vertical-align:middle;margin-right:8px">Everlane</div>
+    <div id="mfaEnroll" class="hidden">
+      <h2 style="margin-top:14px">Set up two-step sign-in</h2>
+      <p class="muted" style="margin:6px 0 4px">Admin accounts need an authenticator app. Scan this code with Google Authenticator, Microsoft Authenticator, 1Password or Authy.</p>
+      <div style="background:#fff;border-radius:14px;padding:10px;width:200px;margin:14px auto"><img id="mfaQr" alt="QR code for your authenticator app" width="180" height="180" style="display:block"></div>
+      <p class="muted" style="font-size:12px;text-align:center;margin:0">Can’t scan? Enter this key instead:<br><code id="mfaSecret" style="color:var(--lavender);word-break:break-all;user-select:all"></code></p>
+    </div>
+    <div id="mfaVerify" class="hidden">
+      <h2 style="margin-top:14px">Enter your code</h2>
+      <p class="muted" style="margin:6px 0 4px">Open your authenticator app and enter the 6-digit code for Everlane.</p>
+    </div>
+    <label for="mfaCode">6-digit code</label>
+    <input id="mfaCode" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required style="letter-spacing:6px;font-size:20px;text-align:center">
+    <div class="err" id="mfaErr"></div>
+    <button class="btn primary" style="width:100%;margin-top:8px" id="mfaBtn">Verify</button>
+    <button type="button" class="btn small" style="width:100%;margin-top:10px" id="mfaCancel">Use a different account</button>
+    <p class="muted" style="font-size:12px;margin:14px 0 0">Lost your phone? Another super admin can reset your two-step sign-in from the Team page.</p>
+  </form>
+</section>
+
 <section id="app" class="hidden">
   <nav>
     <div class="logo" style="padding:4px 12px 2px"><img src="../icons/Icon-192.png" alt="" width="28" height="28" style="vertical-align:middle;margin-right:6px">Everlane</div>
@@ -191,6 +213,7 @@
     <button class="tab" data-view="audit">Audit log</button>
     <button class="tab" data-view="questions">Questions</button>
     <button class="tab" data-view="options">Options</button>
+    <button class="tab" data-view="team">Team</button>
     <div class="who"><span id="who"></span><br><button class="btn small" id="logout" style="margin-top:8px">Sign out</button></div>
   </nav>
   <main>
@@ -292,6 +315,26 @@
         <p class="muted" style="margin:4px 0 0">The lists members pick from in the app.</p></div></div>
       <div id="optionGroups"></div>
     </div>
+
+    <div id="view-team" class="hidden">
+      <div class="head"><div><h1>Team</h1>
+        <p class="muted" style="margin:4px 0 0">Who can use this panel, and what each role can do. Everyone signs in with a password and an authenticator app.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="card" style="padding:18px;margin-bottom:16px">
+        <h3>Add an admin</h3>
+        <p class="muted" style="font-size:12px;margin:4px 0 0">They need an Everlane account first: they can sign up in the app or on this page’s sign-in screen.</p>
+        <form id="addAdmin" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <input type="email" id="adminEmail" placeholder="Their email" required style="flex:2;min-width:200px">
+          <select id="adminRole" style="flex:1;min-width:150px"></select>
+          <button class="btn primary">Add</button>
+        </form>
+      </div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Admin</th><th>Role</th><th>2FA</th><th>Added</th><th>Last sign-in</th><th></th></tr></thead>
+        <tbody id="team"></tbody>
+      </table></div>
+      <div class="card" style="padding:18px;margin-top:16px" id="roleGuide"></div>
+    </div>
   </main>
 </section>
 
@@ -300,7 +343,7 @@
 <script>
 const SUPABASE_URL = 'https://fqtcazstfcusheakyown.supabase.co';
 // Publishable key: safe in a browser; every table and function is guarded by
-// row-level security and the is_admin() check.
+// row-level security and a role check that also needs two-step sign-in.
 const SUPABASE_KEY = 'sb_publishable_5XApbVFvpBBZ8hNQWEoZPA_4cRhdJp1';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -316,24 +359,71 @@ const DIMENSIONS = {intentions:'Relationship intentions', valuesBoundaries:'Valu
 let members = [], questions = [], options = [];
 
 // ---------- Auth ----------
+const ROLES = { super_admin: 'Super Admin', moderator: 'Moderator', support: 'Support', finance: 'Finance', analyst: 'Analyst' };
+const ROLE_INFO = {
+  super_admin: 'Everything, including the team, bots, content, permanent deletes and data exports.',
+  moderator: 'Reports, photo and selfie review, banned words, blocks, suspensions, shadow-bans, deletes, profile edits and the audit log.',
+  support: 'Members’ profiles and sign-in details: edits, password resets, forced logouts, warnings, verification and data exports.',
+  finance: 'Plans, free premium and boosts, plus the overview and members list.',
+  analyst: 'The overview and members list, read-only.' };
+// Which permission opens each section.
+const VIEW_PERM = { overview: 'stats', leads: 'members', bots: 'bots', reports: 'moderate', photos: 'moderate',
+  verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team' };
+let perms = [];
+const can = p => perms.includes(p);
+const screen = id => ['login', 'mfa', 'app'].forEach(s => $('#' + s).classList.toggle('hidden', s !== id));
+
 async function start() {
   const { data: { session } } = await sb.auth.getSession();
   if (!session) return showLogin();
-  const { data: admin, error } = await sb.rpc('is_admin');
-  if (error || !admin) {
+  const { data: st, error } = await sb.rpc('admin_status');
+  if (error || !st?.admin) {
     await sb.auth.signOut();
     return showLogin('This account doesn’t have admin access.');
   }
-  $('#who').textContent = session.user.email || session.user.phone || '';
-  $('#login').classList.add('hidden');
-  $('#app').classList.remove('hidden');
-  show('overview');
+  if (!st.mfa) return startMfa();
+  perms = st.permissions;
+  $('#who').textContent = `${session.user.email || session.user.phone || ''} · ${ROLES[st.role] || st.role}`;
+  document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('hidden', !can(VIEW_PERM[b.dataset.view])));
+  screen('app');
+  show(Object.keys(VIEW_PERM).find(v => can(VIEW_PERM[v])) || 'overview');
 }
 function showLogin(msg = '') {
-  $('#app').classList.add('hidden');
-  $('#login').classList.remove('hidden');
+  screen('login');
   $('#loginErr').textContent = msg;
 }
+
+// Two-step sign-in: set up an authenticator the first time, then a code each time.
+let mfaFactor = null;
+async function startMfa() {
+  screen('mfa');
+  $('#mfaErr').textContent = ''; $('#mfaCode').value = '';
+  const { data, error } = await sb.auth.mfa.listFactors();
+  if (error) return showLogin(error.message);
+  const verified = data.all.find(f => f.factor_type === 'totp' && f.status === 'verified');
+  $('#mfaEnroll').classList.toggle('hidden', !!verified);
+  $('#mfaVerify').classList.toggle('hidden', !verified);
+  if (verified) mfaFactor = verified.id;
+  else {
+    // A set-up left half-done would block a new one.
+    for (const f of data.all.filter(f => f.status !== 'verified')) await sb.auth.mfa.unenroll({ factorId: f.id });
+    const { data: en, error: e2 } = await sb.auth.mfa.enroll({ factorType: 'totp', friendlyName: 'Everlane admin ' + Date.now() });
+    if (e2) return showLogin(e2.message);
+    mfaFactor = en.id;
+    $('#mfaQr').src = en.totp.qr_code;
+    $('#mfaSecret').textContent = en.totp.secret;
+  }
+  $('#mfaCode').focus();
+}
+$('#mfaForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  $('#mfaBtn').disabled = true; $('#mfaErr').textContent = '';
+  const { error } = await sb.auth.mfa.challengeAndVerify({ factorId: mfaFactor, code: $('#mfaCode').value.trim() });
+  $('#mfaBtn').disabled = false;
+  if (error) return $('#mfaErr').textContent = /invalid|expired/i.test(error.message) ? 'That code didn’t work. Wait for a fresh one and try again.' : error.message;
+  start();
+});
+$('#mfaCancel').onclick = async () => { await sb.auth.signOut(); showLogin(); };
 $('#loginForm').addEventListener('submit', async e => {
   e.preventDefault();
   $('#loginBtn').disabled = true; $('#loginErr').textContent = '';
@@ -346,7 +436,7 @@ $('#logout').onclick = async () => { await sb.auth.signOut(); showLogin(); };
 
 // ---------- Navigation ----------
 let current = 'overview';
-const VIEWS = ['overview', 'leads', 'bots', 'reports', 'photos', 'verify', 'words', 'audit', 'questions', 'options'];
+const VIEWS = Object.keys(VIEW_PERM);
 document.querySelectorAll('nav .tab').forEach(b => b.onclick = () => show(b.dataset.view));
 document.querySelectorAll('[data-refresh]').forEach(b => b.onclick = () => show(current));
 function show(view) {
@@ -354,19 +444,21 @@ function show(view) {
   document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== view);
   ({ overview: loadStats, leads: loadMembers, bots: loadBots, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
-     audit: loadAudit, questions: loadQuestions, options: loadOptions })[view]();
+     audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam })[view]();
 }
 function badge(sel, n) { const b = $(sel); b.textContent = n; b.classList.toggle('hidden', !n); }
 function fail(error) { console.error(error); toast(error.message || 'Something went wrong'); }
 
 // ---------- Overview ----------
 async function loadStats() {
-  const [{ data, error }, { data: selfies }] = await Promise.all([sb.rpc('admin_stats'), sb.rpc('admin_verification_queue')]);
+  const [{ data, error }, { data: selfies }] = await Promise.all([sb.rpc('admin_stats'),
+    can('moderate') ? sb.rpc('admin_verification_queue') : Promise.resolve({ data: [] })]);
   if (error) return fail(error);
   const waiting = [['photos', data.pending_photos, 'photos to review'], ['reports', data.open_reports, 'open reports'],
     ['verify', selfies?.length || 0, 'selfies to verify']];
-  $('#pending').innerHTML = waiting.map(([view, n, label]) =>
-    `<button class="btn" data-go="${view}"><b>${n}</b>${label}${n ? '' : ' ✓'}</button>`).join('');
+  // The review queues are for moderators; others don't see the shortcuts.
+  $('#pending').innerHTML = can('moderate') ? waiting.map(([view, n, label]) =>
+    `<button class="btn" data-go="${view}"><b>${n}</b>${label}${n ? '' : ' ✓'}</button>`).join('') : '';
   document.querySelectorAll('#pending [data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
   badge('#verifyBadge', selfies?.length || 0);
   const ratio = data.women ? (data.men / data.women).toFixed(2) + ' : 1' : '—';
@@ -478,7 +570,7 @@ function openMember(id) {
   ov.innerHTML = `<div class="backdrop"></div><aside class="drawer" style="width:min(560px,100%)">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
       <h2>${esc(m.name || 'Unnamed')}${m.age ? ', ' + m.age : ''}</h2>
-      <div style="display:flex;gap:6px"><button class="btn small" data-edit-profile>Edit profile</button><button class="btn small" data-close>Close</button></div></div>
+      <div style="display:flex;gap:6px"><button class="btn small ${can('edit') ? '' : 'hidden'}" data-edit-profile>Edit profile</button><button class="btn small" data-close>Close</button></div></div>
     <p class="muted" style="margin:4px 0 0">${statusPills(m)}${m.blocked && m.blocked_reason ? ' ' + esc(m.blocked_reason) : ''}</p>
     <div class="photos">${(m.photos || []).map(p => `<img src="${esc(photoUrl(p))}" alt="">`).join('') || '<span class="muted">No photos</span>'}</div>
     <dl>
@@ -500,6 +592,7 @@ function openMember(id) {
       <dt>Member ID</dt><dd style="font-size:12px">${esc(m.id)}</dd>
     </dl>
 
+    <div class="${can('edit') ? '' : 'hidden'}">
     <h3 style="margin-top:24px">Sign-in details</h3>
     <div class="row2">
       <div><label for="cEmail">Email</label><input type="email" id="cEmail" value="${esc(m.email || '')}"></div>
@@ -511,34 +604,38 @@ function openMember(id) {
       <button class="btn small" data-act-confirm="logout">Force logout</button>
     </div>
     <p class="muted" style="font-size:12px;margin:6px 0 0">Force logout ends every session. The app may keep working for up to an hour, until its current sign-in token expires.</p>
-
-    <h3 style="margin-top:24px">Badges, plan and boosts</h3>
-    <div class="actionbar">
-      <button class="btn small" data-act="${m.verified ? 'unverify' : 'verify'}">${m.verified ? 'Remove verified badge' : 'Verify profile'}</button>
-      ${isBoosted(m) ? '<button class="btn small" data-act="unboost">End boost</button>' : ''}
-      <button class="btn small" data-boost="1">Boost 24 hours</button><button class="btn small" data-boost="7">Boost 7 days</button>
     </div>
+
+    <h3 style="margin-top:24px" class="${can('edit') || can('billing') ? '' : 'hidden'}">Badges, plan and boosts</h3>
+    <div class="actionbar">
+      <button class="btn small ${can('edit') ? '' : 'hidden'}" data-act="${m.verified ? 'unverify' : 'verify'}">${m.verified ? 'Remove verified badge' : 'Verify profile'}</button>
+      <span class="${can('billing') ? '' : 'hidden'}">${isBoosted(m) ? '<button class="btn small" data-act="unboost">End boost</button> ' : ''}<button class="btn small" data-boost="1">Boost 24 hours</button> <button class="btn small" data-boost="7">Boost 7 days</button></span>
+    </div>
+    <div class="${can('billing') ? '' : 'hidden'}">
     <label for="planSel">Plan (free premium for support or promotions; no payment is taken or refunded)</label>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <select id="planSel" style="flex:1">${Object.entries(PLAN_NAMES).map(([k, v]) => `<option value="${k}" ${m.plan === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>
       <select id="planDays" style="flex:1">${Object.entries(PLAN_DAYS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select>
       <button class="btn small" data-plan>Set plan</button></div>
     <p class="muted" style="font-size:12px;margin:6px 0 0">Boosted profiles show first in Discover. Plans with an end date need app version 0.3.7 or later to end on time.</p>
+    </div>
 
-    <h3 style="margin-top:24px">Moderation</h3>
+    <h3 style="margin-top:24px" class="${can('edit') || can('moderate') ? '' : 'hidden'}">Moderation</h3>
+    <div class="${can('edit') ? '' : 'hidden'}">
     <label for="warnText">Warn (the member sees this message in the app)</label>
     <div style="display:flex;gap:8px"><input type="text" id="warnText" placeholder="e.g. Please keep messages respectful."><button class="btn small" data-warn>Send warning</button></div>
+    </div>
     <div class="actionbar" style="margin-top:12px">
-      ${isSuspended(m)
+      <span class="${can('moderate') ? '' : 'hidden'}">${isSuspended(m)
         ? '<button class="btn small" data-act="unsuspend">Lift suspension</button>'
         : '<button class="btn small danger" data-suspend="1">Suspend 24 hours</button><button class="btn small danger" data-suspend="7">Suspend 7 days</button><button class="btn small danger" data-suspend="30">Suspend 30 days</button>'}
       ${m.shadow_banned
         ? '<button class="btn small" data-act="unshadow_ban">Lift shadow-ban</button>'
-        : '<button class="btn small danger" data-act-confirm="shadow_ban">Shadow-ban</button>'}
-      <button class="btn small" data-act="${m.is_test ? 'unmark_test' : 'mark_test'}">${m.is_test ? 'Make a real account' : 'Make a test account'}</button>
+        : '<button class="btn small danger" data-act-confirm="shadow_ban">Shadow-ban</button>'}</span>
+      <button class="btn small ${can('edit') ? '' : 'hidden'}" data-act="${m.is_test ? 'unmark_test' : 'mark_test'}">${m.is_test ? 'Make a real account' : 'Make a test account'}</button>
     </div>
     <p class="muted" style="font-size:12px;margin:6px 0 0">Shadow-banned members can still use the app, but nobody else sees them, their likes or their messages. Test accounts only see, and are seen by, other test accounts.</p>
-    ${m.deleted_at ? '' : `<div style="margin-top:14px">${m.blocked
+    ${m.deleted_at ? '' : `<div style="margin-top:14px" class="${can('moderate') ? '' : 'hidden'}">${m.blocked
       ? '<button class="btn primary" data-unblock>Unblock member</button>'
       : '<label for="reason">Reason (only admins see this)</label><input type="text" id="reason" placeholder="e.g. Fake profile, harassment"><button class="btn danger" style="margin-top:10px" data-block>Block member</button>'}</div>`}
 
@@ -551,10 +648,10 @@ function openMember(id) {
 
     <h3 style="margin-top:24px">Data and deletion</h3>
     <div class="actionbar">
-      <button class="btn small" data-export>Export their data (JSON)</button>
+      <button class="btn small ${can('export') ? '' : 'hidden'}" data-export>Export their data (JSON)</button>
       ${m.deleted_at
-        ? '<button class="btn small primary" data-act="restore">Restore account</button><button class="btn small danger" data-purge>Delete permanently</button>'
-        : '<button class="btn small danger" data-delete>Delete account</button>'}
+        ? `<button class="btn small primary ${can('moderate') ? '' : 'hidden'}" data-act="restore">Restore account</button><button class="btn small danger ${can('purge') ? '' : 'hidden'}" data-purge>Delete permanently</button>`
+        : `<button class="btn small danger ${can('moderate') ? '' : 'hidden'}" data-delete>Delete account</button>`}
     </div>
     <p class="muted" style="font-size:12px;margin:6px 0 24px">${m.deleted_at
       ? 'Deleted accounts are hidden and signed out, and can be restored. Deleting permanently removes the account, profile, photos, likes, matches and messages, and can’t be undone.'
@@ -1017,7 +1114,8 @@ const ACTIONS = { ban: 'Blocked', unban: 'Unblocked', verify: 'Verified', unveri
   bots_on: 'Switched bots on', bots_off: 'Switched bots off', edit_profile: 'Edited profile',
   shadow_ban: 'Shadow-banned', unshadow_ban: 'Lifted shadow-ban', boost: 'Boosted', unboost: 'Ended boost',
   delete: 'Deleted account', restore: 'Restored account', purge: 'Deleted permanently', logout: 'Forced logout',
-  set_contact: 'Changed sign-in details', view_as: 'Viewed as member', export: 'Exported data' };
+  set_contact: 'Changed sign-in details', view_as: 'Viewed as member', export: 'Exported data',
+  admin_add: 'Added admin', admin_role: 'Changed admin role', admin_remove: 'Removed admin', admin_reset_2fa: 'Reset admin 2FA' };
 async function loadAudit() {
   const { data, error } = await sb.rpc('admin_audit_log', { max_rows: 300 });
   if (error) return fail(error);
@@ -1031,6 +1129,8 @@ async function loadAudit() {
     if (a.action === 'set_contact') for (const k of ['email', 'phone'])
       if (d[k] && d[k].from !== d[k].to) out.push(`${k}: ${esc(d[k].from || '—')} → ${esc(d[k].to || '—')}`);
     if (a.action === 'purge' && d.name) out.push(esc(d.name));
+    if (a.action === 'admin_add') out.push(esc(ROLES[d.role] || d.role));
+    if (a.action === 'admin_role') out.push(`${esc(ROLES[d.from] || d.from)} → ${esc(ROLES[d.to] || d.to)}`);
     if (d.report) out.push('Report #' + esc(d.report));
     if (d.note) out.push(esc(d.note));
     if (a.action.startsWith('bot_') && d.name) out.push(esc(d.name));
@@ -1190,6 +1290,47 @@ function renderOptions() {
     if (error) return fail(error); toast('Deleted'); loadOptions();
   });
 }
+
+// ---------- Team ----------
+const roleOptions = selected => Object.entries(ROLES).map(([k, v]) => `<option value="${k}" ${k === selected ? 'selected' : ''}>${v}</option>`).join('');
+$('#adminRole').innerHTML = roleOptions('moderator');
+$('#roleGuide').innerHTML = '<h3>Roles</h3><dl style="margin-top:10px">' +
+  Object.entries(ROLES).map(([k, v]) => `<dt>${v}</dt><dd>${esc(ROLE_INFO[k])}</dd>`).join('') + '</dl>';
+async function loadTeam() {
+  const { data, error } = await sb.rpc('admin_team');
+  if (error) return fail(error);
+  $('#team').innerHTML = data.map(a => `<tr style="cursor:default">
+    <td><b style="color:var(--text)">${esc(a.email)}</b>${a.is_me ? ' <span class="pill ok">You</span>' : ''}</td>
+    <td><select data-role="${esc(a.user_id)}" style="width:auto">${roleOptions(a.role)}</select></td>
+    <td>${a.has_2fa ? '<span class="pill ok">On</span>' : '<span class="pill warn">Set up at next sign-in</span>'}</td>
+    <td>${fmtDate(a.added_at)}</td><td>${fmtTime(a.last_sign_in_at)}</td>
+    <td style="white-space:nowrap">${a.is_me ? '' : `${a.has_2fa ? `<button class="btn small" data-reset2fa="${esc(a.user_id)}">Reset 2FA</button> ` : ''}<button class="btn small danger" data-remove="${esc(a.user_id)}">Remove</button>`}</td>
+  </tr>`).join('');
+  const who = id => data.find(a => a.user_id === id)?.email || 'this admin';
+  document.querySelectorAll('[data-role]').forEach(s => s.onchange = async () => {
+    const { error } = await sb.rpc('admin_set_role', { person: s.dataset.role, new_role: s.value });
+    if (error) { fail(error); return loadTeam(); }
+    toast(`${who(s.dataset.role)} is now ${ROLES[s.value]}`);
+    if (data.find(a => a.user_id === s.dataset.role)?.is_me) start(); else loadTeam();
+  });
+  document.querySelectorAll('[data-remove]').forEach(b => b.onclick = async () => {
+    if (!confirm(`Remove ${who(b.dataset.remove)} from the team? Their Everlane account stays; they just lose panel access.`)) return;
+    const { error } = await sb.rpc('admin_remove_admin', { person: b.dataset.remove });
+    if (error) return fail(error); toast('Removed from the team'); loadTeam();
+  });
+  document.querySelectorAll('[data-reset2fa]').forEach(b => b.onclick = async () => {
+    if (!confirm(`Reset two-step sign-in for ${who(b.dataset.reset2fa)}? They’re signed out and set up a new authenticator next time.`)) return;
+    const { error } = await sb.rpc('admin_reset_2fa', { person: b.dataset.reset2fa });
+    if (error) return fail(error); toast('Two-step sign-in reset'); loadTeam();
+  });
+}
+$('#addAdmin').onsubmit = async e => {
+  e.preventDefault();
+  const email = $('#adminEmail').value.trim(), role = $('#adminRole').value;
+  const { error } = await sb.rpc('admin_add_admin', { person_email: email, new_role: role });
+  if (error) return fail(error);
+  $('#adminEmail').value = ''; toast(`${email} added as ${ROLES[role]}`); loadTeam();
+};
 
 start();
 </script>
