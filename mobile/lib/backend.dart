@@ -80,6 +80,20 @@ class ProfileBackend {
     };
   }
 
+  /// Compatibility quiz answers of the given members, keyed by member id.
+  /// Members who haven't taken the quiz are left out.
+  Future<Map<String, Map<String, List<String>>>> quizAnswersOf(
+      List<String> ids) async {
+    final rows = _rows(await client.rpc('quiz_answers_of', params: {'ids': ids}));
+    return {
+      for (final r in rows)
+        r['id'] as String: {
+          for (final e in (r['quiz_answers'] as Map).entries)
+            e.key as String: List<String>.from(e.value as List)
+        }
+    };
+  }
+
   Future<Map<String, dynamic>?> loadProfile() =>
       client.from('profiles').select().eq('id', user!.id).maybeSingle();
 
