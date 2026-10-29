@@ -626,17 +626,38 @@ class PreviewStore extends ChangeNotifier {
     }
     quizAnsweredVersion = quizVersion;
     notifyListeners();
+    saveProfile();
   }
 
   void deleteQuizAnswers() {
     quizAnswers.clear();
     notifyListeners();
+    saveProfile();
   }
+
+  /// Quiz answers of real members (and sample profiles), by member id.
+  final Map<String, Answers> remoteQuizAnswers = {};
 
   /// Null until you've answered at least one quiz question.
   Chemistry? chemistryWith(Person p) => quizAnswers.isEmpty
       ? null
-      : Chemistry.between(quizAnswers, demoQuizAnswers[p.id] ?? const {});
+      : Chemistry.between(quizAnswers,
+          remoteQuizAnswers[p.id] ?? demoQuizAnswers[p.id] ?? const {});
+
+  /// Fetches quiz answers for every member on screen, for Chemistry.
+  Future<void> _loadQuizAnswers(ProfileBackend b) async {
+    final ids = {
+      for (final p in [...members, ...incoming, for (final c in conversations) c.person])
+        if (p.remote && !remoteQuizAnswers.containsKey(p.id)) p.id
+    };
+    if (ids.isEmpty) return;
+    try {
+      remoteQuizAnswers.addAll(await b.quizAnswersOf(ids.toList()));
+      notifyListeners();
+    } catch (_) {
+      // Chemistry just stays hidden for them.
+    }
+  }
 
   /// The premium dark look is the default; Settings can switch to light.
   bool darkMode = true;
@@ -1147,6 +1168,7 @@ class PreviewStore extends ChangeNotifier {
             .map((r) => Person.fromCard(r, b.photoUrl, voiceUrl: b.voiceUrl))
             .where((p) => !passed.contains(p.id) && !liked.contains(p.id)));
       notifyListeners();
+      _loadQuizAnswers(b).ignore();
     } catch (_) {
       _failed('Couldn’t load people right now. Check your connection.');
     }
@@ -1187,6 +1209,7 @@ class PreviewStore extends ChangeNotifier {
     }
     _listen(b, me);
     notifyListeners();
+    _loadQuizAnswers(b).ignore();
   }
 
   void _listen(ProfileBackend b, String me) {
@@ -1227,6 +1250,7 @@ class PreviewStore extends ChangeNotifier {
 
   void _clearCommunity() {
     _seenMessages.clear();
+    remoteQuizAnswers.clear();
     members.clear();
     incoming.clear();
     conversations.clear();
@@ -1327,6 +1351,7 @@ class PreviewStore extends ChangeNotifier {
             if (_photoPaths[b] != null) _photoPaths[b]
         ],
         'onboarding_answers': onboardingAnswers,
+        'quiz_answers': quizAnswers,
         'onboarded': onboarded,
         'posted': myProfilePosted,
         'verified': myVerified,
@@ -1463,6 +1488,8 @@ class PreviewStore extends ChangeNotifier {
     if (!myVerified) _loadVerification(b).ignore();
     (row['onboarding_answers'] as Map? ?? {}).forEach((k, v) =>
         onboardingAnswers[k as String] = List<String>.from(v as List));
+    (row['quiz_answers'] as Map? ?? {}).forEach((k, v) =>
+        quizAnswers[k as String] = List<String>.from(v as List));
     final paths = List<String>.from(row['photos'] as List? ?? []);
     final photos = await Future.wait([
       for (final path in paths)
