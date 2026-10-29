@@ -132,6 +132,10 @@
   .pick label { margin: 0; display: inline-flex; gap: 5px; align-items: center; background: var(--card2);
                 border: 1px solid var(--line); border-radius: 20px; padding: 4px 10px; color: var(--body); cursor: pointer; }
   .pick input { width: auto; margin: 0; }
+  details.quiz { margin-top: 8px; font-size: 12px; }
+  details.quiz summary { cursor: pointer; color: var(--muted, #9aa); }
+  details.quiz ol { margin: 6px 0 0; padding-left: 18px; max-height: 260px; overflow: auto; }
+  details.quiz li { margin-bottom: 6px; }
   .pending { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
   .pending button { flex: 1 1 180px; text-align: left; }
   .pending button b { font-size: 22px; color: var(--text); font-family: Poppins, Inter; margin-right: 6px; }
@@ -782,6 +786,28 @@ async function ensureOptions() {
   const { data } = await sb.from('app_options').select('*').order('position');
   options = data || [];
 }
+// The active compatibility quiz, for giving bots answers.
+let quizBank = [];
+async function ensureQuiz() {
+  if (quizBank.length) return;
+  const { data } = await sb.from('quiz_questions').select('*').eq('active', true).order('position');
+  quizBank = (data || []).filter(q => (q.options || []).length);
+}
+// A random answer to every quiz question: one option for single-choice
+// questions, 1 to max_choices (1 to 3 when unlimited) for the others.
+function randomQuizAnswers() {
+  return Object.fromEntries(quizBank.map(q => {
+    const most = Math.min(q.max_choices > 0 ? q.max_choices : 3, q.options.length);
+    return [q.id, some(q.options, q.max_choices === 1 ? 1 : between(1, most)).map(o => o.value)];
+  }));
+}
+const randomInterests = () => some(optionValues('interest').length ? optionValues('interest') : FALLBACK_INTERESTS, between(3, 5));
+// The bot's quiz answers as a readable list.
+function quizSummary(answers = {}) {
+  const done = quizBank.filter(q => answers[q.id]?.length);
+  return `<details class="quiz"><summary>Compatibility quiz: ${done.length} of ${quizBank.length} answered</summary><ol>${quizBank.map(q =>
+    `<li><span class="muted">${esc(q.prompt)}</span><br>${esc((answers[q.id] || []).map(v => q.options.find(o => o.value === v)?.label || v).join(', ') || '—')}</li>`).join('')}</ol></details>`;
+}
 // Uploads files into the bot's folder and returns their storage paths.
 async function uploadBotPhotos(botId, files) {
   const paths = [];
@@ -951,9 +977,9 @@ $('#botsLive').onclick = async () => {
 
 // Edits a bot ([bot] null makes a new one), or a member's profile when [member] is set.
 async function editProfile(bot, member = false) {
-  await ensureOptions();
+  await Promise.all([ensureOptions(), ensureQuiz()]);
   const b = bot || { name: '', gender: 'Woman', interested_in: 'Men', city: '', job: '', bio: '',
-    looking_for: 'Long term', interests: [], languages: [], prompt_label: optionValues('prompt')[0] || '',
+    looking_for: 'Long term', interests: randomInterests(), languages: [], quiz_answers: randomQuizAnswers(), prompt_label: optionValues('prompt')[0] || '',
     prompt_answer: '', height_cm: null, photos: [] };
   // Each photo is either saved ({path}) or picked but not uploaded yet ({file, url}).
   let photos = (b.photos || []).map(path => ({ path }));
@@ -990,6 +1016,7 @@ async function editProfile(bot, member = false) {
     </div>
     <label>Interests</label>${pick('interest', optionValues('interest'), b.interests || [])}
     <label>Languages</label>${pick('language', optionValues('language'), b.languages || [])}
+    ${member ? '' : `<label>Compatibility quiz <button type="button" class="btn small" id="bShuffle">Shuffle answers</button></label><div id="bQuiz"></div>`}
     <div class="err" id="bErr"></div>
     <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px;flex-wrap:wrap">
       <div>${bot && !member ? '<button type="button" class="btn danger" id="bDelete">Delete bot</button>' : ''}</div>
@@ -1022,6 +1049,13 @@ async function editProfile(bot, member = false) {
     if (b.photos?.length) await sb.storage.from('photos').remove(b.photos);
     toast('Bot deleted'); close(); loadBots();
   });
+  let quiz = { ...(b.quiz_answers || {}) };
+  if (!member) {
+    if (!Object.keys(quiz).length) quiz = randomQuizAnswers();
+    const showQuiz = () => { $('#bQuiz', ov).innerHTML = quizSummary(quiz); };
+    showQuiz();
+    $('#bShuffle', ov).onclick = () => { quiz = randomQuizAnswers(); showQuiz(); $('#bQuiz details', ov).open = true; };
+  }
   $('#botForm', ov).onsubmit = async e => {
     e.preventDefault();
     const checked = name => [...ov.querySelectorAll(`input[name="${name}"]:checked`)].map(i => i.value);
@@ -1030,7 +1064,8 @@ async function editProfile(bot, member = false) {
       gender: $('#bGender', ov).value, interested_in: $('#bWants', ov).value, city: $('#bCity', ov).value.trim(),
       job: $('#bJob', ov).value.trim(), looking_for: $('#bLooking', ov).value, bio: $('#bBio', ov).value.trim(),
       prompt_label: $('#bPrompt', ov).value, prompt_answer: $('#bAnswer', ov).value.trim(),
-      height_cm: height ? +height : null, interests: checked('interest'), languages: checked('language') };
+      height_cm: height ? +height : null, interests: checked('interest'), languages: checked('language'),
+      ...(member ? {} : { quiz_answers: quiz }) };
     $('#bSave', ov).disabled = true; $('#bSave', ov).textContent = 'Saving…';
     try {
       const save = (id, fields) => member
@@ -1249,7 +1284,7 @@ const gen = { count: 50, women: 55, men: 40, nb: 5, wants: 'Realistic', goal: 'M
 function makeGenBot(gender, city) {
   const info = cityInfo(city), R = REGIONS[info.region];
   const first = gender === 'Woman' ? rnd(R.women) : gender === 'Man' ? rnd(R.men) : rnd(NEUTRAL);
-  const interests = some(optionValues('interest').length ? optionValues('interest') : FALLBACK_INTERESTS, between(3, 5));
+  const interests = randomInterests();
   const langOptions = optionValues('language');
   const languages = [...new Set(['English', 'Hindi', R.lang])].filter(l => !langOptions.length || langOptions.includes(l));
   const lo = Math.min(gen.ageMin, gen.ageMax), hi = Math.max(gen.ageMin, gen.ageMax);
@@ -1258,7 +1293,7 @@ function makeGenBot(gender, city) {
     looking_for: gen.goal === 'Mixed' ? weighted(GOAL_WEIGHTS) : gen.goal, interests, languages,
     prompt_label: rnd(optionValues('prompt').length ? optionValues('prompt') : ['My ideal Sunday is']), prompt_answer: rnd(ANSWERS),
     height_cm: gender === 'Woman' ? between(152, 172) : gender === 'Man' ? between(165, 188) : between(155, 182),
-    likes_test: chance(gen.likes) };
+    quiz_answers: randomQuizAnswers(), likes_test: chance(gen.likes) };
   b.bio = makeBio(b, gen.bio);
   return b;
 }
@@ -1271,7 +1306,7 @@ function genBots(n) {
 }
 
 async function loadGenerator() {
-  await ensureOptions();
+  await Promise.all([ensureOptions(), ensureQuiz()]);
   if (!$('#genForm').innerHTML) renderGenerator();
 }
 function renderGenerator() {
@@ -1362,6 +1397,7 @@ function updateGenerator() {
   const lo = Math.min(gen.ageMin, gen.ageMax), hi = Math.max(gen.ageMin, gen.ageMax);
   $('#gSummary').textContent = `Will create ${gen.count} bot${gen.count > 1 ? 's' : ''}: ~${w} women, ${m} men, ${x} non-binary. `
     + `Wants to meet: ${gen.wants}. Looking for: ${gen.goal}. Ages ${lo} to ${hi}. Location: ${where}.`
+    + ` Each gets 3 to 5 interests and answers all ${quizBank.length} compatibility questions.`
     + (gen.photos ? ' Each gets a drawn placeholder photo.' : ' No photos: they won’t show in Discover until you add one.');
 }
 function genReady() {
@@ -1378,6 +1414,7 @@ function previewBots() {
       <div class="muted">${esc(b.gender)} · wants ${esc(b.interested_in)} · ${esc(b.looking_for)}</div>
       <p style="margin:8px 0 0">${esc(b.bio)}</p>
       <div class="opts">${b.interests.map(i => `<span>${esc(i)}</span>`).join('')}</div>
+      ${quizSummary(b.quiz_answers)}
       ${b.likes_test ? '<div class="muted" style="margin-top:6px">Has liked a test account</div>' : ''}</div>
   </div>`).join('')}</div>`;
 }
