@@ -1,0 +1,11 @@
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter/
+mobile/.idea/
+mobile/android/
+mobile/ios/
+backend/
+replica/
+*.pdf
+.DS_Store
+.env.local
