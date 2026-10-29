@@ -400,7 +400,9 @@ class _PersonCard extends StatelessWidget {
                       left: 14,
                       right: 10,
                       child: Row(children: [
-                        if (person.activeNow)
+                        if (person.sample)
+                          const Flexible(child: SampleBadge(onPhoto: true))
+                        else if (person.activeNow)
                           const Flexible(
                               child: _GlassPill(
                                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -596,6 +598,10 @@ class PersonDetailsScreen extends StatelessWidget {
                 child: ListView(
                     padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
                     children: [
+                      if (person.sample) ...[
+                        const SampleNotice(),
+                        const SizedBox(height: 14),
+                      ],
                       AspectRatio(
                           aspectRatio: 1.05,
                           child: ClipRRect(
@@ -1390,8 +1396,16 @@ class MessagesScreen extends StatelessWidget {
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 leading:
                     Portrait(chat.person, height: 62, width: 62, radius: 31),
-                title: Text(chat.person.name,
-                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                title: Row(children: [
+                  Flexible(
+                      child: Text(chat.person.name,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600))),
+                  if (chat.person.sample) ...[
+                    const SizedBox(width: 8),
+                    const Flexible(child: SampleBadge()),
+                  ],
+                ]),
                 subtitle: Text(
                     chat.messages.isEmpty
                         ? 'Start with a little hello'
@@ -1531,7 +1545,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           padding: const EdgeInsets.all(12),
                           color: EverlaneColors.blush,
                           child: Text(
-                              widget.chat.person.remote
+                              widget.chat.person.sample
+                                  ? 'Sample profile · Not a real person, so messages won’t get a reply'
+                                  : widget.chat.person.remote
                                   ? 'You matched · Be kind, be yourself'
                                   : 'Demo conversation · Messages stay on this device',
                               textAlign: TextAlign.center,
@@ -3461,4 +3477,58 @@ String? _likeQuote(PreviewStore store, Person p) {
   return p.remote
       ? null
       : 'I know just the place. Coffee and a bookstore sounds like a pretty perfect start.';
+}
+
+/// The "Sample profile" label on admin-made bot profiles.
+class SampleBadge extends StatelessWidget {
+  const SampleBadge({super.key, this.onPhoto = false});
+
+  /// Over a photo it's a dark glass pill; elsewhere a tinted chip.
+  final bool onPhoto;
+  @override
+  Widget build(BuildContext context) => Tooltip(
+      message: 'A sample profile, not a real person',
+      child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+              color: onPhoto
+                  ? Colors.black.withValues(alpha: .5)
+                  : EverlaneColors.star.withValues(alpha: .16),
+              border: Border.all(
+                  color: EverlaneColors.star.withValues(alpha: onPhoto ? .7 : .4)),
+              borderRadius: BorderRadius.circular(30)),
+          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.info_outline_rounded,
+                size: 14, color: EverlaneColors.star),
+            SizedBox(width: 6),
+            Flexible(
+                child: Text('Sample profile',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: EverlaneColors.star))),
+          ])));
+}
+
+/// Explains a sample profile at the top of its details page.
+class SampleNotice extends StatelessWidget {
+  const SampleNotice({super.key});
+  @override
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+          color: EverlaneColors.star.withValues(alpha: .12),
+          border: Border.all(color: EverlaneColors.star.withValues(alpha: .35)),
+          borderRadius: BorderRadius.circular(16)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.info_outline_rounded,
+            size: 20, color: EverlaneColors.star),
+        const SizedBox(width: 10),
+        Expanded(
+            child: Text(
+                'This is a sample profile, not a real person. It shows how Everlane works while more members join.',
+                style: TextStyle(height: 1.45, color: EverlaneColors.body))),
+      ]));
 }

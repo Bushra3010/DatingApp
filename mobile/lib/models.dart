@@ -109,6 +109,10 @@ class Person {
   /// are saved. Demo people stay local.
   final bool remote;
 
+  /// An admin-made bot shown to everyone so the app isn't empty. Always
+  /// labelled "Sample profile" so nobody takes it for a real person.
+  bool get sample => remote && sampleProfileIds.contains(id);
+
   /// A short line shown over the photo on the Discover card.
   final String bio;
   final List<String> interests;
@@ -1096,12 +1100,23 @@ class PreviewStore extends ChangeNotifier {
     }
   }
 
+  Future<void> _loadSampleIds(ProfileBackend b) async {
+    try {
+      sampleProfileIds
+        ..clear()
+        ..addAll(await b.sampleProfileIds());
+    } catch (_) {
+      // Unlabelled is worse than missing: keep the last known ids.
+    }
+  }
+
   /// Re-fetches people to discover (e.g. after onboarding or on return to
   /// the Discover tab).
   Future<void> refreshMembers() async {
     final b = backend;
     if (b == null || !b.signedIn) return;
     try {
+      await _loadSampleIds(b);
       final rows = await b.discover();
       members
         ..clear()
@@ -1120,6 +1135,7 @@ class PreviewStore extends ChangeNotifier {
     final b = backend;
     if (b == null || !b.signedIn) return;
     final me = b.user!.id;
+    await _loadSampleIds(b);
     final results = await Future.wait(
         [b.discover(), b.likesReceived(), b.myMatches()]);
     Person card(Map<String, dynamic> r) => Person.fromCard(r, b.photoUrl, voiceUrl: b.voiceUrl);
@@ -1450,3 +1466,6 @@ String heightLabel(int cm) {
   final inches = (cm / 2.54).round();
   return '${inches ~/ 12}′${inches % 12}″ · $cm cm';
 }
+
+/// Admin-made bot profiles (see `sample_profile_ids()` in Supabase).
+final Set<String> sampleProfileIds = {};
