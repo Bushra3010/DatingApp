@@ -7,6 +7,9 @@ import 'widgets.dart';
 
 enum AuthResult { signedUp, loggedIn }
 
+/// Phone (SMS code) sign-in is hidden for now; set to true to bring it back.
+const phoneSignIn = false;
+
 /// Sign up or log in with Google, a phone number (SMS code) or email.
 /// Logging in loads the member's saved profile before the sheet closes.
 Future<AuthResult?> showAuthSheet(BuildContext context, PreviewStore store,
@@ -76,8 +79,7 @@ class _AuthFlowState extends State<_AuthFlow> {
         m.contains('unsupported provider') ||
         m.contains('phone provider') ||
         m.contains('sms')) {
-      return 'This sign-in option isn’t switched on yet. Please use email for now.';
-    }
+      return 'This sign-in option isn’t switched on yet. Please use email for now.';    }
     return message;
   }
 
@@ -138,12 +140,14 @@ class _AuthFlowState extends State<_AuthFlow> {
             leading: const _GoogleMark(),
             light: true,
             onTap: busy ? null : () => run(b.google)),
-        const SizedBox(height: 12),
-        _ProviderButton(
-            label: 'Continue with phone number',
-            leading: const Icon(Icons.phone_iphone_rounded,
-                color: Colors.white, size: 22),
-            onTap: busy ? null : () => go(_Step.phone)),
+        if (phoneSignIn) ...[
+          const SizedBox(height: 12),
+          _ProviderButton(
+              label: 'Continue with phone number',
+              leading: const Icon(Icons.phone_iphone_rounded,
+                  color: Colors.white, size: 22),
+              onTap: busy ? null : () => go(_Step.phone)),
+        ],
         _error(),
         const SizedBox(height: 18),
         Row(children: [

@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'supabase_config.dart';
 
 /// Talks to Supabase for the signed-in member's own account, profile row and
 /// photos. Discovery, likes and chat still run on the in-memory demo data.
@@ -38,9 +42,24 @@ class ProfileBackend {
   /// back signed in; in the app it opens the browser and returns through
   /// [appCallback]. Supabase picks the session up either way.
   /// Needs the Google provider (client ID + secret) enabled in Supabase.
-  Future<void> continueWithGoogle() => client.auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: kIsWeb ? Uri.base.origin : appCallback);
+  /// Checked first, so a switched-off provider shows a message in the app
+  /// instead of sending the member to Supabase's error page.
+  Future<void> continueWithGoogle() async {
+    if (!await _providerEnabled('google')) {
+      throw const AuthException('Google provider is not enabled');
+    }
+    await client.auth.signInWithOAuth(OAuthProvider.google,
+        redirectTo: kIsWeb ? Uri.base.origin : appCallback);
+  }
+
+  /// Whether a sign-in provider is switched on in Supabase's Auth settings.
+  Future<bool> _providerEnabled(String provider) async {
+    final res = await http.get(Uri.parse('$supabaseUrl/auth/v1/settings'),
+        headers: {'apikey': supabasePublishableKey});
+    if (res.statusCode != 200) return true; // let Supabase report it
+    final external = (jsonDecode(res.body) as Map)['external'] as Map?;
+    return external?[provider] == true;
+  }
 
   /// Sends a one-time code by SMS to [phone] (E.164, e.g. +919876543210).
   /// Needs the Phone provider and an SMS service set up in Supabase.

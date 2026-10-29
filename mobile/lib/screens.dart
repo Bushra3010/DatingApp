@@ -725,14 +725,10 @@ Future<void> showLikeComposer(BuildContext context, PreviewStore store,
           : 'Like sent to ${person.name} in this preview.');
 }
 
-/// Asks about a photo: opens a message box and sends what you write along
-/// with a like on that photo. Nothing is sent until you tap Send.
+/// Asks about a photo: opens a message box and sends just the message, not
+/// a like. Nothing is sent until you tap Send.
 void showCommentComposer(BuildContext context, PreviewStore store,
     Person person, String target) {
-  if (store.outOfLikes) {
-    showOutOfLikes(context, store);
-    return;
-  }
   final comment = TextEditingController();
   showEverlaneSheet(
       context,
@@ -741,7 +737,7 @@ void showCommentComposer(BuildContext context, PreviewStore store,
             style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 10),
         Text(
-            'Ask about their photo. Your message goes with a like, so it uses one of your daily likes.',
+            'Ask about their photo. If they reply, you’ll match and can keep chatting.',
             style: TextStyle(color: EverlaneColors.muted, height: 1.6)),
         const SizedBox(height: 16),
         TextField(
@@ -762,11 +758,10 @@ void showCommentComposer(BuildContext context, PreviewStore store,
                         ? null
                         : () {
                             HapticFeedback.mediumImpact();
-                            store.like(person,
-                                target: target, comment: value.text);
+                            store.message(person, value.text);
                             Navigator.pop(sheet);
-                            showNotice(context,
-                                'Message sent to ${person.name} with your like.');
+                            showNotice(
+                                context, 'Message sent to ${person.name}.');
                           },
                     child: const Text('Send')))),
         const SizedBox(height: 8),
@@ -3455,6 +3450,7 @@ String _likedWhat(SentLike? note) => switch (note?.target) {
       null => 'Liked your answer to “My ideal Sunday”',
       'photo' || 'profile' => 'Liked your photo',
       'soundtrack' => 'Liked your soundtrack',
+      'message' => 'Sent you a message',
       final t => 'Liked your answer to “$t”',
     };
 

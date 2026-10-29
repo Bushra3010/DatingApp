@@ -69,7 +69,7 @@ class SideMenu extends StatelessWidget {
                   Expanded(
                       child: SingleChildScrollView(
                     padding: EdgeInsets.fromLTRB(
-                        28 * scale, 82 * scale, 32 * scale, 20 * scale),
+                        28 * scale, 44 * scale, 32 * scale, 20 * scale),
                     child: Column(children: [
                       for (var i = 0; i < items.length; i++)
                         Padding(
@@ -187,49 +187,27 @@ class _MenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final likes = item.badge != null;
     final shape = BorderRadius.circular(50 * scale);
-    Widget surface({bool behind = false}) => DecoratedBox(
-            decoration: BoxDecoration(
-                borderRadius: shape,
-                gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: behind
-                        ? [const Color(0xFF302538), const Color(0xFF17131F)]
-                        : [
-                            const Color(0xFF2D2936),
-                            const Color(0xFF201D27),
-                            const Color(0xFF24202E)
-                          ],
-                    stops: behind ? null : [0, .45, 1]),
-                border: Border.all(
-                    color: const Color(0xFFAB8BB9)
-                        .withValues(alpha: behind ? .35 : .6),
-                    width: 1.5 * scale),
-                boxShadow: [
-              BoxShadow(
-                  color: (likes
-                          ? const Color(0xFFE55CC0)
-                          : const Color(0xFFB9A2CC))
+    final surface = DecoratedBox(
+        decoration: BoxDecoration(
+            borderRadius: shape,
+            gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF2D2936), Color(0xFF201D27), Color(0xFF24202E)],
+                stops: [0, .45, 1]),
+            border: Border.all(
+                color: const Color(0xFFAB8BB9).withValues(alpha: .6),
+                width: 1.5 * scale),
+            boxShadow: [
+          BoxShadow(
+              color:
+                  (likes ? const Color(0xFFE55CC0) : const Color(0xFFB9A2CC))
                       .withValues(alpha: .12),
-                  blurRadius: 10 * scale,
-                  spreadRadius: -3 * scale)
-            ]));
+              blurRadius: 10 * scale,
+              spreadRadius: -3 * scale)
+        ]));
     return Stack(clipBehavior: Clip.none, children: [
-      if (likes) ...[
-        for (var depth = 2; depth >= 1; depth--)
-          Positioned(
-              key: ValueKey('stack-card-$depth'),
-              left: 0,
-              right: 0,
-              top: -19 * scale * depth,
-              height: 98 * scale,
-              child: surface(behind: true)),
-        Positioned(
-            left: 18 * scale,
-            top: -47 * scale,
-            child: _Sparkle(size: 28 * scale)),
-      ],
-      Positioned.fill(child: surface()),
+      Positioned.fill(child: surface),
       Material(
           color: Colors.transparent,
           borderRadius: shape,

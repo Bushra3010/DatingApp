@@ -332,6 +332,10 @@ void main() {
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
     expect(find.text('Bengaluru'), findsOneWidget);
+    String likesLeft() => tester
+        .widget<Text>(find.textContaining('likes left today'))
+        .data!;
+    final before = likesLeft();
     await tester.tap(find.byTooltip('Ask about this photo'));
     await tester.pumpAndSettle();
     // Nothing is sent until there's a message and Send is tapped.
@@ -345,8 +349,10 @@ void main() {
     await tester.pump();
     await tester.tap(find.widgetWithText(FilledButton, 'Send'));
     await tester.pumpAndSettle();
-    expect(find.text('Message sent to Ananya with your like.'), findsOneWidget);
+    expect(find.text('Message sent to Ananya.'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
+    // A message isn't a like: the daily likes count stays the same.
+    expect(likesLeft(), before);
     // The Discover card shows neither the soundtrack nor the bio.
     expect(find.textContaining('Ananya’s soundtrack'), findsNothing);
     expect(find.textContaining('Designer by day'), findsNothing);
@@ -386,7 +392,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 60));
     }
     await tester.pumpAndSettle();
-    expect(find.text('Message sent to Ananya with your like.'), findsOneWidget);
+    expect(find.text('Message sent to Ananya.'), findsOneWidget);
     await tester.tap(find.byTooltip('You'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Edit profile'));

@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  Future<int> stackedCards(WidgetTester tester, int likes) async {
+  testWidgets('Likes you is a single row with its badge, no stacked cards',
+      (tester) async {
     await tester.pumpWidget(MaterialApp(
         home: Scaffold(
             body: SideMenu(
@@ -11,23 +12,15 @@ void main() {
                 age: 29,
                 location: 'Bengaluru, India',
                 items: [
-          SideMenuItem(Icons.favorite, 'Likes you · $likes',
+          SideMenuItem(Icons.favorite, 'Likes you · 2',
               const [Colors.pink, Colors.red], () {},
-              badge: likes),
+              badge: 2),
           SideMenuItem(Icons.settings, 'Settings',
               const [Colors.white, Colors.purple], () {}),
         ]))));
     expect(tester.takeException(), isNull);
-    return find.byKey(const ValueKey('stack-card-1')).evaluate().length +
-        find.byKey(const ValueKey('stack-card-2')).evaluate().length;
-  }
-
-  testWidgets('Likes you keeps the two glass layers shown in the reference',
-      (tester) async {
-    expect(await stackedCards(tester, 0), 2);
-    expect(await stackedCards(tester, 1), 2);
-    expect(await stackedCards(tester, 2), 2);
-    expect(await stackedCards(tester, 3), 2);
-    expect(await stackedCards(tester, 9), 2);
+    expect(find.byKey(const ValueKey('stack-card-1')), findsNothing);
+    expect(find.byKey(const ValueKey('stack-card-2')), findsNothing);
+    expect(find.text('2'), findsOneWidget);
   });
 }

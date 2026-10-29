@@ -897,8 +897,9 @@ class PreviewStore extends ChangeNotifier {
   bool get canRewind => plan.atLeast(Plan.plus);
 
   /// Every plan has a daily limit, so actions stay fair-use. Sparks come
-  /// from their own weekly allowance, not the daily likes.
-  int get remaining => plan.dailyLikes - (liked.length - sparked.length);
+  /// from their own weekly allowance, not the daily likes; messages are free.
+  int get remaining =>
+      plan.dailyLikes - (liked.length - sparked.length - messaged.length);
   bool get outOfLikes => remaining <= 0;
   List<Person> get discover => paused
       ? []
@@ -963,6 +964,25 @@ class PreviewStore extends ChangeNotifier {
       // If they'd already liked you, this like makes a match.
       final matchId =
           await b.like(p.id, target: target, comment: comment.trim());
+      if (matchId != null) _addMatch(p, matchId, celebrate: true);
+    });
+  }
+
+  /// Messages sent from the Discover card. They reach the other person in
+  /// their Likes, like a like does, but don't use up a daily like.
+  final Set<String> messaged = {};
+
+  void message(Person p, String text) {
+    if (liked.contains(p.id) || text.trim().isEmpty) return;
+    liked.add(p.id);
+    messaged.add(p.id);
+    sentLikes.add(SentLike(p.id, 'message', text.trim()));
+    notifyListeners();
+    if (!p.remote) return;
+    _remote((b) async {
+      // If they'd already liked you, this makes a match.
+      final matchId =
+          await b.like(p.id, target: 'message', comment: text.trim());
       if (matchId != null) _addMatch(p, matchId, celebrate: true);
     });
   }
@@ -1173,6 +1193,7 @@ class PreviewStore extends ChangeNotifier {
     passHistory.clear();
     liked.clear();
     sparked.clear();
+    messaged.clear();
     sentLikes.clear();
     crossings.clear();
   }
