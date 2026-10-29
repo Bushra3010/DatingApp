@@ -71,6 +71,15 @@ class ProfileBackend {
 
   Future<void> logOut() => client.auth.signOut();
 
+  /// Ids of the admin-made bot profiles, which the app labels as samples.
+  Future<Set<String>> sampleProfileIds() async {
+    final data = await client.rpc('sample_profile_ids');
+    return {
+      for (final x in data as List)
+        (x is Map ? x.values.first : x) as String
+    };
+  }
+
   Future<Map<String, dynamic>?> loadProfile() =>
       client.from('profiles').select().eq('id', user!.id).maybeSingle();
 
