@@ -1,101 +1,125 @@
-import 'dart:ui' as ui;
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 import 'theme.dart';
 
 class SideMenuItem {
-  const SideMenuItem(this.icon, this.title, this.colors, this.onTap,
+  const SideMenuItem(this.icon, this.title, this.subtitle, this.color,
+      this.onTap,
       {this.badge});
-  final IconData icon;
-  final String title;
-  final List<Color> colors;
+
+  /// Drawn inside the round icon disc, in [color].
+  final Widget icon;
+  final String title, subtitle;
+  final Color color;
   final VoidCallback onTap;
+
+  /// A count shown beside the arrow when above zero (new likes).
   final int? badge;
 }
 
-/// Live controls over glass surfaces, with the original reference artwork.
+/// Warm, dark drawer: the member's photo and name on top, a list of
+/// sections with a line of explanation each, and the wordmark below.
 class SideMenu extends StatelessWidget {
   const SideMenu(
       {super.key,
       required this.name,
       required this.age,
       required this.location,
-      required this.items});
+      required this.items,
+      this.photo,
+      this.onEdit});
   final String name;
   final int age;
   final String location;
   final List<SideMenuItem> items;
 
+  /// The member's first photo; their initial shows without one.
+  final ImageProvider? photo;
+  final VoidCallback? onEdit;
+
+  static const gold = Color(0xFFD9A57A);
+  static const cream = Color(0xFFF4EDE7);
+  static const muted = Color(0xFFA79E99);
+  static const line = Color(0xFF2E2828);
+
   @override
   Widget build(BuildContext context) {
-    final width =
-        (MediaQuery.sizeOf(context).width * 535 / 768).clamp(0.0, 310.0);
-    final scale = width / 535;
-    final radius = BorderRadius.only(
-        topRight: Radius.circular(47 * scale),
-        bottomRight: Radius.circular(47 * scale));
+    final width = (MediaQuery.sizeOf(context).width * .85).clamp(0.0, 360.0);
+    final padding = MediaQuery.paddingOf(context);
     return Drawer(
       width: width,
-      backgroundColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: radius),
-      child: ClipRRect(
-        borderRadius: radius,
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-                borderRadius: radius,
-                gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Color(0xFF191224),
-                      Color(0xF20D0C13),
-                      Color(0xF214101D)
-                    ],
-                    stops: [
-                      0,
-                      .55,
-                      1
-                    ]),
-                border: Border.all(
-                    color: const Color(0xFF80508E).withValues(alpha: .7))),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _Header(
-                      name: name, age: age, location: location, scale: scale),
-                  Expanded(
-                      child: SingleChildScrollView(
-                    padding: EdgeInsets.fromLTRB(
-                        28 * scale, 44 * scale, 32 * scale, 20 * scale),
-                    child: Column(children: [
-                      for (var i = 0; i < items.length; i++)
-                        Padding(
-                            padding: EdgeInsets.only(bottom: 16 * scale),
-                            child: _MenuRow(
-                                item: items[i], index: i, scale: scale)),
-                    ]),
-                  )),
-                  Padding(
-                      padding: EdgeInsets.fromLTRB(24 * scale, 10 * scale, 0,
-                          MediaQuery.paddingOf(context).bottom + 30 * scale),
-                      child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Semantics(
-                              label: 'Everlane',
-                              image: true,
-                              child: _Artwork(
-                                  source:
-                                      const Rect.fromLTWH(24, 1248, 270, 104),
-                                  width: 270 * scale,
-                                  height: 104 * scale,
-                                  feather: true)))),
-                ]),
-          ),
-        ),
-      ),
+      backgroundColor: const Color(0xFF151213),
+      shape: const RoundedRectangleBorder(),
+      child: Stack(children: [
+        // A soft warm arc of light in the top corner, and a faint glow below.
+        Positioned(
+            top: -width * .9,
+            right: -width * .55,
+            width: width * 1.4,
+            height: width * 1.4,
+            child: const IgnorePointer(
+                child: DecoratedBox(
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(colors: [
+                          Color(0x00000000),
+                          Color(0x00000000),
+                          Color(0x334A3530),
+                          Color(0x00000000),
+                        ], stops: [
+                          0,
+                          .82,
+                          .97,
+                          1
+                        ]))))),
+        const Positioned.fill(
+            child: IgnorePointer(
+                child: DecoratedBox(
+                    decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                            center: Alignment(.9, -1.05),
+                            radius: .9,
+                            colors: [Color(0x404E3A33), Color(0x00151213)]))))),
+        const Positioned.fill(
+            child: IgnorePointer(
+                child: DecoratedBox(
+                    decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                            center: Alignment(.2, 1.15),
+                            radius: .55,
+                            colors: [Color(0x263D2D29), Color(0x00151213)]))))),
+        Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          _Header(
+              name: name,
+              age: age,
+              location: location,
+              photo: photo,
+              onEdit: onEdit,
+              top: padding.top),
+          const Divider(height: 1, thickness: 1, color: line),
+          Expanded(
+              child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const Divider(
+                      height: 1, thickness: 1, indent: 8, endIndent: 8,
+                      color: line),
+                  itemBuilder: (_, i) => _MenuRow(item: items[i]))),
+          Padding(
+              padding: EdgeInsets.fromLTRB(26, 8, 22, padding.bottom + 26),
+              child: Row(children: [
+                Text('EVERLANE',
+                    style: const TextStyle(
+                        fontFamily: 'Lora',
+                        fontSize: 14,
+                        letterSpacing: 6,
+                        color: gold)),
+                const SizedBox(width: 10),
+                Container(width: 46, height: 1, color: gold.withValues(alpha: .6)),
+                const Spacer(),
+                const Icon(Icons.eco_outlined, size: 24, color: gold),
+              ])),
+        ]),
+      ]),
     );
   }
 }
@@ -105,310 +129,229 @@ class _Header extends StatelessWidget {
       {required this.name,
       required this.age,
       required this.location,
-      required this.scale});
+      required this.photo,
+      required this.onEdit,
+      required this.top});
   final String name;
   final int age;
   final String location;
-  final double scale;
+  final ImageProvider? photo;
+  final VoidCallback? onEdit;
+  final double top;
 
   @override
-  Widget build(BuildContext context) => Container(
-      height: 250 * scale + MediaQuery.paddingOf(context).top,
-      padding: EdgeInsets.fromLTRB(
-          47 * scale,
-          MediaQuery.paddingOf(context).top + 49 * scale,
-          24 * scale,
-          28 * scale),
-      decoration: BoxDecoration(
-          borderRadius:
-              BorderRadius.only(bottomLeft: Radius.circular(46 * scale)),
-          gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF42305E), Color(0xFF30324E), Color(0xFF21172F)],
-              stops: [0, .5, 1]),
-          border: Border(
-              bottom: BorderSide(
-                  color: const Color(0xFFB546AF).withValues(alpha: .65))),
-          boxShadow: [
-            BoxShadow(
-                color: const Color(0xFFE443D7).withValues(alpha: .2),
-                blurRadius: 12 * scale,
-                spreadRadius: -6 * scale,
-                offset: Offset(0, 7 * scale))
-          ]),
-      // The name and city sit beside the avatar, in its top-right corner.
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        _Artwork(
-            source: const Rect.fromLTWH(38, 49, 160, 160),
-            width: 142 * scale,
-            height: 160 * scale,
-            feather: true),
-        SizedBox(width: 14 * scale),
+  Widget build(BuildContext context) => Padding(
+      padding: EdgeInsets.fromLTRB(22, top + 26, 10, 24),
+      child: Row(children: [
+        Container(
+            width: 72,
+            height: 72,
+            padding: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFF0CDAE), Color(0xFFB0805E)]),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withValues(alpha: .5),
+                      blurRadius: 14,
+                      offset: const Offset(0, 6))
+                ]),
+            child: CircleAvatar(
+                backgroundColor: const Color(0xFF2A2324),
+                backgroundImage: photo,
+                child: photo == null
+                    ? Text(name.isEmpty ? '' : name.characters.first,
+                        style: const TextStyle(
+                            fontFamily: 'Lora',
+                            fontSize: 28,
+                            color: SideMenu.cream))
+                    : null)),
+        const SizedBox(width: 18),
         Expanded(
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-              Text('$name, $age',
+              Text(age > 0 ? '$name, $age' : name,
                   maxLines: 1,
-                  textAlign: TextAlign.right,
                   overflow: TextOverflow.ellipsis,
-                  style: EverlaneFonts.inter(
-                      size: 44 * scale, color: const Color(0xFFF8F5FB))),
-              SizedBox(height: 5 * scale),
-              Text(location,
-                  maxLines: 1,
-                  textAlign: TextAlign.right,
-                  overflow: TextOverflow.ellipsis,
-                  style: EverlaneFonts.inter(
-                      size: 26 * scale, color: const Color(0xFFB08BD7))),
+                  style: const TextStyle(
+                      fontFamily: 'Lora', fontSize: 25, color: SideMenu.cream)),
+              const SizedBox(height: 6),
+              Row(children: [
+                const Icon(Icons.location_on, size: 14, color: SideMenu.gold),
+                const SizedBox(width: 6),
+                Flexible(
+                    child: Text(location.toUpperCase(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: EverlaneFonts.inter(
+                            size: 10.5,
+                            letterSpacing: 2.2,
+                            color: const Color(0xFFD7BBA4)))),
+              ]),
             ])),
+        if (onEdit != null)
+          IconButton(
+              tooltip: 'Edit profile',
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit_outlined,
+                  size: 22, color: SideMenu.gold)),
       ]));
 }
 
 class _MenuRow extends StatelessWidget {
-  const _MenuRow(
-      {required this.item, required this.index, required this.scale});
+  const _MenuRow({required this.item});
   final SideMenuItem item;
-  final int index;
-  final double scale;
-
-  static const _art = [
-    Rect.fromLTWH(42, 463, 86, 79),
-    Rect.fromLTWH(42, 575, 86, 80),
-    Rect.fromLTWH(42, 690, 86, 82),
-    Rect.fromLTWH(42, 806, 86, 82),
-    Rect.fromLTWH(42, 921, 86, 84),
-    Rect.fromLTWH(42, 1037, 86, 81),
-  ];
 
   @override
   Widget build(BuildContext context) {
-    final likes = item.badge != null;
-    final shape = BorderRadius.circular(50 * scale);
-    final surface = DecoratedBox(
-        decoration: BoxDecoration(
-            borderRadius: shape,
-            gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF2D2936), Color(0xFF201D27), Color(0xFF24202E)],
-                stops: [0, .45, 1]),
-            border: Border.all(
-                color: const Color(0xFFAB8BB9).withValues(alpha: .6),
-                width: 1.5 * scale),
-            boxShadow: [
-          BoxShadow(
-              color:
-                  (likes ? const Color(0xFFE55CC0) : const Color(0xFFB9A2CC))
-                      .withValues(alpha: .12),
-              blurRadius: 10 * scale,
-              spreadRadius: -3 * scale)
+    final badge = item.badge ?? 0;
+    return InkWell(
+        onTap: item.onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+            padding: const EdgeInsets.fromLTRB(6, 15, 4, 15),
+            child: Row(children: [
+              Container(
+                  width: 42,
+                  height: 42,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                          center: const Alignment(-.3, -.4),
+                          colors: [
+                            Color.lerp(const Color(0xFF2C2627), item.color, .12)!,
+                            const Color(0xFF1A1617),
+                          ]),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: .05)),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withValues(alpha: .45),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4))
+                      ]),
+                  child: IconTheme(
+                      data: IconThemeData(color: item.color, size: 20),
+                      child: item.icon)),
+              const SizedBox(width: 14),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(item.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontFamily: 'Lora',
+                            fontSize: 18,
+                            color: SideMenu.cream)),
+                    const SizedBox(height: 3),
+                    Text(item.subtitle,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: EverlaneFonts.inter(
+                            size: 11.5, height: 1.35, color: SideMenu.muted)),
+                  ])),
+              if (badge > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        color: const Color(0xFFE79AA8).withValues(alpha: .16),
+                        border: Border.all(
+                            color: const Color(0xFFE79AA8)
+                                .withValues(alpha: .5))),
+                    child: Text('$badge',
+                        style: EverlaneFonts.inter(
+                            size: 12,
+                            weight: FontWeight.w600,
+                            color: const Color(0xFFF0B3BE)))),
+              ],
+              const SizedBox(width: 6),
+              const Icon(Icons.chevron_right_rounded,
+                  size: 24, color: Color(0xFFBDB4AF)),
+            ])));
+  }
+}
+
+/// Two overlapping heart outlines, for Connections.
+class TwoHeartsIcon extends StatelessWidget {
+  const TwoHeartsIcon({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final size = IconTheme.of(context).size ?? 22;
+    return SizedBox(
+        width: size * 1.35,
+        height: size,
+        child: Stack(children: [
+          Positioned(
+              left: 0,
+              child: Icon(Icons.favorite_border_rounded, size: size)),
+          Positioned(
+              right: 0,
+              child: Icon(Icons.favorite_border_rounded, size: size)),
         ]));
-    return Stack(clipBehavior: Clip.none, children: [
-      Positioned.fill(child: surface),
-      Material(
-          color: Colors.transparent,
-          borderRadius: shape,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-              onTap: item.onTap,
-              borderRadius: shape,
-              child: ConstrainedBox(
-                  constraints: BoxConstraints(minHeight: 98 * scale),
-                  child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                          14 * scale, 7 * scale, 22 * scale, 7 * scale),
-                      child: Row(children: [
-                        if (index < _art.length)
-                          ExcludeSemantics(
-                              child: _Artwork(
-                                  source: _art[index],
-                                  width: 86 * scale,
-                                  height: 82 * scale,
-                                  feather: true))
-                        else
-                          Icon(item.icon,
-                              color: item.colors.first, size: 70 * scale),
-                        SizedBox(width: 14 * scale),
-                        Expanded(
-                            child: Text(item.title,
-                                style: EverlaneFonts.inter(
-                                    size: 32 * scale,
-                                    color: const Color(0xFFFAF8FC)),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis)),
-                        if (likes) ...[
-                          SizedBox(width: 8 * scale),
-                          Container(
-                              width: 46 * scale,
-                              height: 40 * scale,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                  borderRadius:
-                                      BorderRadius.circular(22 * scale),
-                                  color: const Color(0xFF382033),
-                                  border: Border.all(
-                                      color: const Color(0xFFF15ABD),
-                                      width: 2 * scale),
-                                  boxShadow: [
-                                    BoxShadow(
-                                        color: const Color(0xFFF535A8)
-                                            .withValues(alpha: .65),
-                                        blurRadius: 10 * scale)
-                                  ]),
-                              child: Text('${item.badge}',
-                                  style: EverlaneFonts.inter(
-                                      size: 25 * scale,
-                                      color: const Color(0xFFF45ABA)))),
-                        ],
-                      ]))))),
-      if (likes)
-        Positioned(
-            right: -8 * scale,
-            top: -8 * scale,
-            child: IgnorePointer(child: _Sparkle(size: 38 * scale))),
-      if (index == 4)
-        Positioned(
-            right: 20 * scale,
-            top: -14 * scale,
-            child: IgnorePointer(child: _Sparkle(size: 30 * scale))),
-    ]);
   }
 }
 
-/// Clips the supplied reference at render time, retaining its exact icon art.
-/// A soft edge lets the original glow blend into the live glass surface.
-class _Artwork extends StatefulWidget {
-  const _Artwork(
-      {required this.source,
-      required this.width,
-      required this.height,
-      this.feather = false});
-  final Rect source;
-  final double width;
-  final double height;
-  final bool feather;
+/// A line-drawn crown, for the membership row.
+class CrownIcon extends StatelessWidget {
+  const CrownIcon({super.key});
 
   @override
-  State<_Artwork> createState() => _ArtworkState();
+  Widget build(BuildContext context) {
+    final theme = IconTheme.of(context);
+    final size = theme.size ?? 22;
+    return CustomPaint(
+        size: Size(size * 1.2, size),
+        painter: _CrownPainter(theme.color ?? SideMenu.gold));
+  }
 }
 
-class _ArtworkState extends State<_Artwork> {
-  ImageStream? _stream;
-  ImageInfo? _image;
-  late final _listener = ImageStreamListener((image, _) {
-    final previous = _image;
-    setState(() => _image = image);
-    previous?.dispose();
-  });
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final stream = const AssetImage('assets/images/side_menu_reference.png')
-        .resolve(createLocalImageConfiguration(context));
-    if (stream.key == _stream?.key) return;
-    _stream?.removeListener(_listener);
-    _stream = stream..addListener(_listener);
-  }
-
-  @override
-  void dispose() {
-    _stream?.removeListener(_listener);
-    _image?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => CustomPaint(
-      size: Size(widget.width, widget.height),
-      painter: _ArtworkPainter(_image?.image, widget.source, widget.feather));
-}
-
-/// Paint only the requested source rectangle. Keeping the blend layer bounded
-/// to the icon prevents web compositing from masking the rest of the drawer.
-class _ArtworkPainter extends CustomPainter {
-  const _ArtworkPainter(this.image, this.source, this.feather);
-  final ui.Image? image;
-  final Rect source;
-  final bool feather;
+class _CrownPainter extends CustomPainter {
+  const _CrownPainter(this.color);
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (image == null) return;
-    final bounds = Offset.zero & size;
-    canvas.save();
-    canvas.clipRect(bounds);
-    if (feather) canvas.saveLayer(bounds, Paint());
-    canvas.drawImageRect(
-        image!, source, bounds, Paint()..filterQuality = FilterQuality.high);
-    if (feather) {
-      for (final vertical in [false, true]) {
-        canvas.drawRect(
-            bounds,
-            Paint()
-              ..blendMode = BlendMode.dstIn
-              ..shader = LinearGradient(
-                  begin: vertical ? Alignment.topCenter : Alignment.centerLeft,
-                  end:
-                      vertical ? Alignment.bottomCenter : Alignment.centerRight,
-                  colors: const [
-                    Colors.transparent,
-                    Colors.white,
-                    Colors.white,
-                    Colors.transparent
-                  ],
-                  stops: const [
-                    0,
-                    .16,
-                    .84,
-                    1
-                  ]).createShader(bounds));
-      }
-      canvas.restore();
-    }
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_ArtworkPainter oldDelegate) =>
-      image != oldDelegate.image ||
-      source != oldDelegate.source ||
-      feather != oldDelegate.feather;
-}
-
-class _Sparkle extends StatelessWidget {
-  const _Sparkle({required this.size});
-  final double size;
-
-  @override
-  Widget build(BuildContext context) =>
-      CustomPaint(size: Size.square(size), painter: _SparklePainter());
-}
-
-class _SparklePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final c = size.center(Offset.zero);
-    final r = size.width / 2;
-    final w = r * .18;
-    final path = Path()
-      ..moveTo(c.dx, c.dy - r)
-      ..quadraticBezierTo(c.dx + w, c.dy - w, c.dx + r, c.dy)
-      ..quadraticBezierTo(c.dx + w, c.dy + w, c.dx, c.dy + r)
-      ..quadraticBezierTo(c.dx - w, c.dy + w, c.dx - r, c.dy)
-      ..quadraticBezierTo(c.dx - w, c.dy - w, c.dx, c.dy - r)
+    final w = size.width, h = size.height;
+    final stroke = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.6
+      ..strokeJoin = StrokeJoin.round
+      ..strokeCap = StrokeCap.round;
+    final crown = Path()
+      ..moveTo(w * .1, h * .3)
+      ..lineTo(w * .3, h * .55)
+      ..lineTo(w * .5, h * .18)
+      ..lineTo(w * .7, h * .55)
+      ..lineTo(w * .9, h * .3)
+      ..lineTo(w * .82, h * .75)
+      ..lineTo(w * .18, h * .75)
       ..close();
-    canvas.drawPath(
-        path,
-        Paint()
-          ..color = const Color(0xFFC78CF9)
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5));
-    canvas.drawPath(path, Paint()..color = const Color(0xFFE8CCFF));
+    canvas.drawPath(crown, Paint()..color = color.withValues(alpha: .18));
+    canvas.drawPath(crown, stroke);
+    canvas.drawLine(Offset(w * .18, h * .9), Offset(w * .82, h * .9), stroke);
+    final dot = Paint()..color = color;
+    for (final p in [
+      Offset(w * .1, h * .3),
+      Offset(w * .5, h * .18),
+      Offset(w * .9, h * .3)
+    ]) {
+      canvas.drawCircle(p, 1.8, dot);
+    }
   }
 
   @override
-  bool shouldRepaint(_SparklePainter oldDelegate) => false;
+  bool shouldRepaint(_CrownPainter oldDelegate) => color != oldDelegate.color;
 }

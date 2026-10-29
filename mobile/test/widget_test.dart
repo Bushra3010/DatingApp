@@ -127,7 +127,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Open profile menu'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Matches'));
+    await tester.tap(find.text('Connections'));
     await tester.pumpAndSettle();
     expect(find.text('Tara'), findsOneWidget);
     expect(tester.takeException(), isNull);
