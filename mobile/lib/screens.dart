@@ -1546,7 +1546,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           color: EverlaneColors.blush,
                           child: Text(
                               widget.chat.person.sample
-                                  ? 'Sample profile · Not a real person, so messages won’t get a reply'
+                                  ? 'Sample profile · Replies are automatic, not from a real person'
                                   : widget.chat.person.remote
                                   ? 'You matched · Be kind, be yourself'
                                   : 'Demo conversation · Messages stay on this device',
@@ -3528,7 +3528,7 @@ class SampleNotice extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
             child: Text(
-                'This is a sample profile, not a real person. It shows how Everlane works while more members join.',
+                'This is a sample profile, not a real person. It shows how Everlane works while more members join, and its chat replies are automatic.',
                 style: TextStyle(height: 1.45, color: EverlaneColors.body))),
       ]));
 }
