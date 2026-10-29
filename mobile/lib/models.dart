@@ -1089,7 +1089,30 @@ class PreviewStore extends ChangeNotifier {
     conversations.insert(0, chat);
     notifyListeners();
     if (celebrate) newMatch.value = chat;
+    _loadMessages(chat, matchId);
     return chat;
+  }
+
+  /// Ids of chat messages already shown, so a live update that races the
+  /// first load isn't added twice.
+  final Set<String> _seenMessages = {};
+
+  /// A new match can already have messages (a sample profile says hello,
+  /// or answers the note sent from Discover), written before the app was
+  /// listening for them.
+  void _loadMessages(Conversation chat, String matchId) {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    final me = b.user!.id;
+    b.messages(matchId).then((rows) {
+      var added = false;
+      for (final m in rows) {
+        if (!_seenMessages.add(m['id'] as String)) continue;
+        chat.messages.add(ChatMessage.fromRow(m, mine: m['sender'] == me));
+        added = true;
+      }
+      if (added) notifyListeners();
+    }, onError: (Object _) {});
   }
 
   Future<void> _loadCommunitySafely() async {
@@ -1157,7 +1180,8 @@ class PreviewStore extends ChangeNotifier {
           card(r),
           [
             for (final m in msgs)
-              ChatMessage.fromRow(m, mine: m['sender'] == me)
+              if (_seenMessages.add(m['id'] as String))
+                ChatMessage.fromRow(m, mine: m['sender'] == me)
           ],
           matchId: matchId));
     }
@@ -1169,6 +1193,7 @@ class PreviewStore extends ChangeNotifier {
     if (_channel != null) return;
     _channel = b.listen(onMessage: (m) {
       if (m['sender'] == me) return; // already shown when sent
+      if (m['id'] is String && !_seenMessages.add(m['id'] as String)) return;
       for (final c in conversations) {
         if (c.matchId == m['match_id']) {
           c.messages.add(ChatMessage.fromRow(m));
@@ -1201,6 +1226,7 @@ class PreviewStore extends ChangeNotifier {
   }
 
   void _clearCommunity() {
+    _seenMessages.clear();
     members.clear();
     incoming.clear();
     conversations.clear();
