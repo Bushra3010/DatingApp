@@ -551,6 +551,7 @@ class PreviewStore extends ChangeNotifier {
   /// shows the celebration and clears it.
   final ValueNotifier<Conversation?> newMatch = ValueNotifier(null);
   RealtimeChannel? _channel;
+  Timer? _matchPollTimer;
 
   List<Person> get _pool => live ? members : demoPeople;
   RangeValues ages = const RangeValues(21, 40);
@@ -1213,6 +1214,13 @@ class PreviewStore extends ChangeNotifier {
 
   void _listen(ProfileBackend b, String me) {
     if (_channel != null) return;
+    _matchPollTimer?.cancel();
+    _matchPollTimer = Timer.periodic(const Duration(minutes: 1), (_) async {
+      if (!signedIn || backend == null) return;
+      try {
+        await backend!.myMatches();
+      } catch (_) {}
+    });
     _channel = b.listen(onMessage: (m) {
       if (m['sender'] == me) return; // already shown when sent
       if (m['id'] is String && !_seenMessages.add(m['id'] as String)) return;
@@ -1267,6 +1275,8 @@ class PreviewStore extends ChangeNotifier {
   void _restoreDemo() {
     final channel = _channel;
     _channel = null;
+    _matchPollTimer?.cancel();
+    _matchPollTimer = null;
     if (channel != null) backend?.stopListening(channel).ignore();
     _clearCommunity();
     incoming.addAll(_demoIncoming);
