@@ -109,9 +109,8 @@ class Person {
   /// are saved. Demo people stay local.
   final bool remote;
 
-  /// An admin-made bot shown to everyone so the app isn't empty. Always
-  /// labelled "Sample profile" so nobody takes it for a real person.
-  bool get sample => remote && sampleProfileIds.contains(id);
+  /// Sample profile flag (disabled so bot profiles appear as regular profiles).
+  bool get sample => false;
 
   /// A short line shown over the photo on the Discover card.
   final String bio;

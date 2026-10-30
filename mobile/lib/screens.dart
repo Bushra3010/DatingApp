@@ -400,9 +400,7 @@ class _PersonCard extends StatelessWidget {
                       left: 14,
                       right: 10,
                       child: Row(children: [
-                        if (person.sample)
-                          const Flexible(child: SampleBadge(onPhoto: true))
-                        else if (person.activeNow)
+                        if (person.activeNow)
                           const Flexible(
                               child: _GlassPill(
                                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -598,10 +596,7 @@ class PersonDetailsScreen extends StatelessWidget {
                 child: ListView(
                     padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
                     children: [
-                      if (person.sample) ...[
-                        const SampleNotice(),
-                        const SizedBox(height: 14),
-                      ],
+
                       AspectRatio(
                           aspectRatio: 1.05,
                           child: ClipRRect(
@@ -1401,10 +1396,7 @@ class MessagesScreen extends StatelessWidget {
                       child: Text(chat.person.name,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.w600))),
-                  if (chat.person.sample) ...[
-                    const SizedBox(width: 8),
-                    const Flexible(child: SampleBadge()),
-                  ],
+
                 ]),
                 subtitle: Text(
                     chat.messages.isEmpty
@@ -1545,9 +1537,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           padding: const EdgeInsets.all(12),
                           color: EverlaneColors.blush,
                           child: Text(
-                              widget.chat.person.sample
-                                  ? 'Sample profile · Replies are automatic, not from a real person'
-                                  : widget.chat.person.remote
+                              widget.chat.person.remote
                                   ? 'You matched · Be kind, be yourself'
                                   : 'Demo conversation · Messages stay on this device',
                               textAlign: TextAlign.center,
