@@ -188,6 +188,13 @@ class ProfileBackend {
       .eq('active', true)
       .order('position'));
 
+  /// Monthly plan prices for India, as set in the admin panel.
+  Future<List<Map<String, dynamic>>> planPrices() async => _rows(await client
+      .from('plan_prices')
+      .select('plan, price, symbol')
+      .eq('country', 'India')
+      .eq('active', true));
+
   Future<List<Map<String, dynamic>>> appOptions() async => _rows(await client
       .from('app_options')
       .select('kind, value')
