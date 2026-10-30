@@ -36,10 +36,10 @@ class SideMenu extends StatelessWidget {
   final ImageProvider? photo;
   final VoidCallback? onEdit;
 
-  static const gold = Color(0xFFD9A57A);
-  static const cream = Color(0xFFF4EDE7);
-  static const muted = Color(0xFFA79E99);
-  static const line = Color(0xFF2E2828);
+  static const gold = Color(0xFFC4B5FD);
+  static const cream = Color(0xFFFFFFFF);
+  static const muted = Color(0xFFA1A1AA);
+  static const line = Color(0xFF2A2436);
 
   @override
   Widget build(BuildContext context) {
@@ -47,10 +47,10 @@ class SideMenu extends StatelessWidget {
     final padding = MediaQuery.paddingOf(context);
     return Drawer(
       width: width,
-      backgroundColor: const Color(0xFF151213),
+      backgroundColor: const Color(0xFF0D0B12),
       shape: const RoundedRectangleBorder(),
       child: Stack(children: [
-        // A soft warm arc of light in the top corner, and a faint glow below.
+        // A soft violet arc of light in the top corner, and a faint glow below.
         Positioned(
             top: -width * .9,
             right: -width * .55,
@@ -63,7 +63,7 @@ class SideMenu extends StatelessWidget {
                         gradient: RadialGradient(colors: [
                           Color(0x00000000),
                           Color(0x00000000),
-                          Color(0x334A3530),
+                          Color(0x337C3AED),
                           Color(0x00000000),
                         ], stops: [
                           0,
@@ -78,7 +78,7 @@ class SideMenu extends StatelessWidget {
                         gradient: RadialGradient(
                             center: Alignment(.9, -1.05),
                             radius: .9,
-                            colors: [Color(0x404E3A33), Color(0x00151213)]))))),
+                            colors: [Color(0x407C3AED), Color(0x000D0B12)]))))),
         const Positioned.fill(
             child: IgnorePointer(
                 child: DecoratedBox(
@@ -86,7 +86,7 @@ class SideMenu extends StatelessWidget {
                         gradient: RadialGradient(
                             center: Alignment(.2, 1.15),
                             radius: .55,
-                            colors: [Color(0x263D2D29), Color(0x00151213)]))))),
+                            colors: [Color(0x26EC4899), Color(0x000D0B12)]))))),
         Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           _Header(
               name: name,
@@ -152,7 +152,7 @@ class _Header extends StatelessWidget {
                 gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFF0CDAE), Color(0xFFB0805E)]),
+                    colors: [Color(0xFF7C3AED), Color(0xFFEC4899)]),
                 boxShadow: [
                   BoxShadow(
                       color: Colors.black.withValues(alpha: .5),
@@ -160,7 +160,7 @@ class _Header extends StatelessWidget {
                       offset: const Offset(0, 6))
                 ]),
             child: CircleAvatar(
-                backgroundColor: const Color(0xFF2A2324),
+                backgroundColor: const Color(0xFF261C3B),
                 backgroundImage: photo,
                 child: photo == null
                     ? Text(name.isEmpty ? '' : name.characters.first,
@@ -191,7 +191,7 @@ class _Header extends StatelessWidget {
                         style: EverlaneFonts.inter(
                             size: 10.5,
                             letterSpacing: 2.2,
-                            color: const Color(0xFFD7BBA4)))),
+                            color: const Color(0xFFC4B5FD)))),
               ]),
             ])),
         if (onEdit != null)
@@ -225,8 +225,8 @@ class _MenuRow extends StatelessWidget {
                       gradient: RadialGradient(
                           center: const Alignment(-.3, -.4),
                           colors: [
-                            Color.lerp(const Color(0xFF2C2627), item.color, .12)!,
-                            const Color(0xFF1A1617),
+                            Color.lerp(const Color(0xFF261C3B), item.color, .12)!,
+                            const Color(0xFF191621),
                           ]),
                       border: Border.all(
                           color: Colors.white.withValues(alpha: .05)),
@@ -265,19 +265,19 @@ class _MenuRow extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
-                        color: const Color(0xFFE79AA8).withValues(alpha: .16),
+                        color: const Color(0xFFF472B6).withValues(alpha: .16),
                         border: Border.all(
-                            color: const Color(0xFFE79AA8)
+                            color: const Color(0xFFF472B6)
                                 .withValues(alpha: .5))),
                     child: Text('$badge',
                         style: EverlaneFonts.inter(
                             size: 12,
                             weight: FontWeight.w600,
-                            color: const Color(0xFFF0B3BE)))),
+                            color: const Color(0xFFF9A8D4)))),
               ],
               const SizedBox(width: 6),
               const Icon(Icons.chevron_right_rounded,
-                  size: 24, color: Color(0xFFBDB4AF)),
+                  size: 24, color: Color(0xFFA1A1AA)),
             ])));
   }
 }

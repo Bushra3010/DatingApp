@@ -201,6 +201,7 @@
     <button class="tab" data-view="leads">Leads &amp; members</button>
     <button class="tab" data-view="gen">Generate bots</button>
     <button class="tab" data-view="bots">Bots</button>
+    <button class="tab" data-view="hangouts">Hangouts</button>
     <button class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
     <button class="tab" data-view="photos">Photo queue <span class="pill warn hidden" id="photoBadge"></span></button>
     <button class="tab" data-view="verify">Verifications <span class="pill warn hidden" id="verifyBadge"></span></button>
@@ -282,6 +283,22 @@
       <div class="head"><div><h1>Generate bots</h1>
         <p class="muted" style="margin:4px 0 0">Make test bots in bulk. Every member sees bots, always labelled “Sample profile” in the app. To type bots in by hand, use “New bot” or “Bulk create” on the Bots page.</p></div></div>
       <form class="gen" id="genForm"></form>
+    </div>
+
+    <div id="view-hangouts" class="hidden">
+      <div class="head"><div><h1>Hangouts</h1>
+        <p class="muted" style="margin:4px 0 0">Plans members host (dinner, a movie, coffee…). Members see the area; the exact venue is only shown to guests the host accepts.</p></div>
+        <div style="display:flex;gap:8px"><select id="hgFilter" style="width:auto"><option value="upcoming">Upcoming</option><option value="all">All</option></select><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="bulkbar">
+        <button class="btn small" id="hgSelAll"></button><button class="btn small" id="hgSelClear">Clear</button>
+        <span class="muted" id="hgSelCount" style="margin-right:8px"></span>
+        <button class="btn small danger" id="hgDelete">Delete selected</button>
+      </div>
+      <div class="card scroll"><table>
+        <thead><tr><th></th><th>When</th><th>City · area</th><th>Type</th><th>Title</th><th>Host</th><th>Requests</th><th>Spots</th><th>Status</th></tr></thead>
+        <tbody id="hangouts"></tbody>
+      </table></div>
+      <p class="muted" id="hgCount" style="margin-top:10px"></p>
     </div>
 
     <div id="view-reports" class="hidden">
@@ -388,7 +405,7 @@ const ROLE_INFO = {
   finance: 'Plans, free premium and boosts, plus the overview and members list.',
   analyst: 'The overview and members list, read-only.' };
 // Which permission opens each section.
-const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', reports: 'moderate', photos: 'moderate',
+const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', hangouts: 'bots', reports: 'moderate', photos: 'moderate',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team' };
 let perms = [];
 const can = p => perms.includes(p);
@@ -438,7 +455,7 @@ function show(view) {
   current = view;
   document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
   for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== view);
-  return ({ overview: loadStats, leads: loadMembers, gen: loadGenerator, bots: loadBots, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
+  return ({ overview: loadStats, leads: loadMembers, gen: loadGenerator, bots: loadBots, hangouts: loadHangouts, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
      audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam })[view]();
 }
 function badge(sel, n) { const b = $(sel); b.textContent = n; b.classList.toggle('hidden', !n); }
@@ -1468,6 +1485,59 @@ async function createBots() {
     } catch (x) { fail(x); }
   };
 }
+
+// ---------- Hangouts ----------
+// Plans members host. Members see the area; the exact venue is only shown
+// to guests the host accepts.
+const HG_KINDS = { dinner: 'Dinner', movie: 'Movie', coffee: 'Coffee', drinks: 'Drinks', outdoors: 'Outdoors' };
+let hangouts = [], hgSel = new Set();
+const fmtWhen = d => new Date(d).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short',
+  hour: 'numeric', minute: '2-digit' });
+const hgStatus = h => h.cancelled ? '<span class="pill bad">Cancelled</span>'
+  : new Date(h.starts_at) < Date.now() ? '<span class="pill muted">Past</span>' : '<span class="pill ok">Upcoming</span>';
+async function loadHangouts() {
+  const { data, error } = await sb.rpc('admin_hangouts');
+  if (error) return fail(error);
+  hangouts = data || [];
+  hgSel = new Set([...hgSel].filter(id => hangouts.some(h => h.id === id)));
+  renderHangouts();
+}
+const filteredHangouts = () => $('#hgFilter').value === 'all' ? hangouts
+  : hangouts.filter(h => !h.cancelled && new Date(h.starts_at) >= Date.now());
+function renderHangouts() {
+  const list = [...filteredHangouts()].sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
+  $('#hangouts').innerHTML = list.map(h => `<tr>
+    <td><input type="checkbox" data-hgsel="${esc(h.id)}" ${hgSel.has(h.id) ? 'checked' : ''} aria-label="Select ${esc(h.title)}"></td>
+    <td style="white-space:nowrap">${esc(fmtWhen(h.starts_at))}</td>
+    <td>${esc(h.city || '—')} · ${esc(h.area || '—')}</td><td>${esc(HG_KINDS[h.kind] || h.kind)}</td>
+    <td><b style="color:var(--text)">${esc(h.title)}</b>${h.venue ? `<br><span class="code">${esc(h.venue)}</span>` : ''}</td>
+    <td>${esc(h.host_name || '—')} ${h.host_bot ? '<span class="pill warn">Bot</span>' : ''}</td>
+    <td>${h.requests || 0} · ${h.accepted || 0} in</td><td>${h.spots}</td><td>${hgStatus(h)}</td>
+  </tr>`).join('') || `<tr><td colspan="9" class="muted">${hangouts.length ? 'No upcoming plans. Choose “All” to see past ones.' : 'No plans yet.'}</td></tr>`;
+  const up = hangouts.filter(h => !h.cancelled && new Date(h.starts_at) >= Date.now()).length;
+  $('#hgCount').textContent = hangouts.length ? `${hangouts.length} plan${hangouts.length > 1 ? 's' : ''} · ${up} upcoming` : '';
+  $('#hgSelAll').textContent = `Select all ${list.length}`;
+  $('#hgSelCount').textContent = `${hgSel.size} selected`;
+}
+$('#hgFilter').onchange = renderHangouts;
+$('#hgSelAll').onclick = () => { filteredHangouts().forEach(h => hgSel.add(h.id)); renderHangouts(); };
+$('#hgSelClear').onclick = () => { hgSel.clear(); renderHangouts(); };
+$('#hangouts').onclick = e => {
+  const sel = e.target.closest('[data-hgsel]');
+  if (!sel) return;
+  sel.checked ? hgSel.add(sel.dataset.hgsel) : hgSel.delete(sel.dataset.hgsel);
+  $('#hgSelCount').textContent = `${hgSel.size} selected`;
+};
+$('#hgDelete').onclick = async () => {
+  const ids = [...hgSel];
+  if (!ids.length) return toast('Select some plans first');
+  if (!confirm(`Delete ${ids.length} plan${ids.length > 1 ? 's' : ''}? Their requests and guests go too.`)) return;
+  try {
+    const { data, error } = await sb.rpc('admin_delete_hangouts', { ids });
+    if (error) throw error;
+    hgSel.clear(); toast(`Deleted ${data} plan${data === 1 ? '' : 's'}`); loadHangouts();
+  } catch (x) { fail(x); }
+};
 
 // ---------- Reports ----------
 $('#reportFilter').onchange = () => loadReports();

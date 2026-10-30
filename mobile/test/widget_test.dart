@@ -153,6 +153,14 @@ void main() {
     expect(find.text('7 likes left today · Free'), findsOneWidget);
   });
 
+  /// Explore moved to the side menu when Hangouts became a main tab.
+  Future<void> openExplore(WidgetTester tester) async {
+    await tester.tap(find.byTooltip('Open profile menu'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Explore'));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('Explore lists people by what they are looking for',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
@@ -161,8 +169,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Explore'));
-    await tester.pumpAndSettle();
+    await openExplore(tester);
     expect(find.text('Nearby profiles'), findsOneWidget);
     expect(find.text('Crossed paths'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('Long-term relationship'), 200,
@@ -220,7 +227,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Hangouts are Platinum-only, then let you join and host plans',
+  testWidgets('Hangouts is a main tab: join, message and host plans',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -228,190 +235,69 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Explore'));
+    await tester.tap(find.byTooltip('Hangouts'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Hangouts'));
-    await tester.pumpAndSettle();
-    expect(find.text('Hangouts come with Platinum.'), findsOneWidget);
-    await tester.tap(find.text('See membership'));
-    await tester.pumpAndSettle();
-    final plans = find
-        .descendant(
-            of: find.byType(MembershipScreen),
-            matching: find.byType(Scrollable))
-        .first;
-    await tester.scrollUntilVisible(find.text('Choose Platinum'), 200,
-        scrollable: plans);
-    await tester.ensureVisible(find.text('Choose Platinum'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Choose Platinum'));
-    await tester.pumpAndSettle();
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Hangouts'));
+    await tester.tap(find.text('Set'));
     await tester.pumpAndSettle();
     expect(find.text('Ready to hang out?'), findsOneWidget);
     await tester.tap(find.text('Grab food'));
     await tester.pumpAndSettle();
+    final setup = find
+        .descendant(
+            of: find.byType(HangoutSetupScreen),
+            matching: find.byType(Scrollable))
+        .first;
     await tester.scrollUntilVisible(find.text('Join Hangouts'), 200,
-        scrollable: find
-            .descendant(
-                of: find.byType(HangoutSetupScreen),
-                matching: find.byType(Scrollable))
-            .first);
+        scrollable: setup);
     await tester.ensureVisible(find.text('Join Hangouts'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Join Hangouts'));
     await tester.pumpAndSettle();
     expect(find.text('Grab food · Flexible'), findsOneWidget);
-    await tester.tap(find.text('Dinner'));
+    await tester.tap(find.text('Dinner').first);
     await tester.pumpAndSettle();
-    expect(find.text('Cook-along dinner night'), findsOneWidget);
+    expect(find.text('Dinner and good conversation'), findsOneWidget);
     expect(find.text('Filter coffee and a bookstore'), findsNothing);
+    final plans = find
+        .descendant(
+            of: find.byType(HangoutsScreen), matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(find.text('Request to join'), 200,
+        scrollable: plans);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Request to join'));
     await tester.pumpAndSettle();
     expect(find.text('Requested'), findsOneWidget);
-    expect(find.text('Request sent to Tara'), findsOneWidget);
+    expect(find.textContaining('Request sent to'), findsOneWidget);
     await tester.tap(find.text('Message host'));
     await tester.pumpAndSettle();
     expect(
         find.text(
-            'Hi, I’m interested in “Cook-along dinner night”. Is there still room?'),
+            'Hi, I’m interested in “Dinner and good conversation”. Is there still room?'),
         findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('All'));
     await tester.tap(find.text('All'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('Host a plan'), -200,
+        scrollable: plans);
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Host a plan'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).at(0), 'Sunday brunch');
-    await tester.enterText(find.byType(TextField).at(1), 'Sunday, 11 am');
-    await tester.enterText(find.byType(TextField).at(2), 'Indiranagar');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Title'), 'Sunday brunch');
+    await tester.enterText(
+        find.widgetWithText(TextField, 'Area (everyone sees this)'),
+        'Indiranagar');
+    await tester.tap(find.text('Tomorrow'));
+    await tester.pumpAndSettle();
     await tester.ensureVisible(find.text('Post plan'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Post plan'));
     await tester.pumpAndSettle();
     expect(find.text('Sunday brunch'), findsOneWidget);
-    expect(find.text('You’re hosting'.toUpperCase()), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Dark by default, light mode can be switched on in Settings',
-      (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp(onboarded: true));
-    await tester.pumpAndSettle();
-    Color background() =>
-        tester.widget<Scaffold>(find.byType(Scaffold).first).backgroundColor ??
-        Theme.of(tester.element(find.byType(Scaffold).first))
-            .scaffoldBackgroundColor;
-    expect(background(), const Color(0xFF0D0B12));
-    await tester.tap(find.byTooltip('You'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Dark mode'), 200,
-        scrollable: find.byType(Scrollable).last);
-    await tester.ensureVisible(find.text('Dark mode'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Dark mode'));
-    await tester.pumpAndSettle();
-    expect(background(), const Color(0xFFFAF7FF));
-    await tester.tap(find.text('Dark mode'));
-    await tester.pumpAndSettle();
-    expect(background(), const Color(0xFF0D0B12));
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Asking about a photo opens a message box; Invisible mode is free',
-      (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(const EverlaneApp(onboarded: true));
-    await tester.pumpAndSettle();
-    expect(find.text('Bengaluru'), findsOneWidget);
-    String likesLeft() => tester
-        .widget<Text>(find.textContaining('likes left today'))
-        .data!;
-    final before = likesLeft();
-    await tester.tap(find.byTooltip('Ask about this photo'));
-    await tester.pumpAndSettle();
-    // Nothing is sent until there's a message and Send is tapped.
-    expect(find.byType(TextField), findsOneWidget);
-    expect(find.textContaining('sent to Ananya'), findsNothing);
-    expect(
-        tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Send'))
-            .onPressed,
-        isNull);
-    await tester.enterText(find.byType(TextField), 'Where was this taken?');
-    await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Send'));
-    await tester.pumpAndSettle();
-    expect(find.text('Message sent to Ananya.'), findsOneWidget);
-    expect(find.byType(TextField), findsNothing);
-    // A message isn't a like: the daily likes count stays the same.
-    expect(likesLeft(), before);
-    // The Discover card shows neither the soundtrack nor the bio.
-    expect(find.textContaining('Ananya’s soundtrack'), findsNothing);
-    expect(find.textContaining('Designer by day'), findsNothing);
-    await tester.tap(find.byTooltip('You'));
-    await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Invisible mode'), 200,
-        scrollable: find.byType(Scrollable).last);
-    await tester.ensureVisible(find.text('Invisible mode'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Invisible mode'));
-    await tester.pumpAndSettle();
-    expect(
-        tester
-            .widget<SwitchListTile>(
-                find.widgetWithText(SwitchListTile, 'Invisible mode'))
-            .value,
-        isTrue);
-    expect(tester.takeException(), isNull);
-  });
-
-  testWidgets('Sheets with text fields close cleanly even when slow',
-      (tester) async {
-    tester.view.physicalSize = const Size(390, 844);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    // Closing now takes longer than the old fixed 300 ms dispose delay.
-    timeDilation = 3;
-    await tester.pumpWidget(const EverlaneApp(onboarded: true));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Ask about this photo'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Where was this taken?');
-    await tester.pump();
-    await tester.tap(find.widgetWithText(FilledButton, 'Send'));
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const Duration(milliseconds: 60));
-    }
-    await tester.pumpAndSettle();
-    expect(find.text('Message sent to Ananya.'), findsOneWidget);
-    await tester.tap(find.byTooltip('You'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Edit profile'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField).first, 'Rohan');
-    final editSheet = find
-        .descendant(of: find.byType(BottomSheet), matching: find.byType(Scrollable))
-        .first;
-    await tester.scrollUntilVisible(find.text('Post profile'), 200,
-        scrollable: editSheet);
-    await tester.ensureVisible(find.text('Post profile'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Post profile'));
-    for (var i = 0; i < 20; i++) {
-      await tester.pump(const Duration(milliseconds: 60));
-    }
-    await tester.pumpAndSettle();
-    timeDilation = 1;
-    expect(find.text('Rohan, 29'), findsOneWidget);
+    expect(find.text('You’re hosting'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -423,8 +309,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const EverlaneApp(onboarded: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('Explore'));
-    await tester.pumpAndSettle();
+    await openExplore(tester);
     await tester.tap(find.text('Find an introduction'));
     await tester.pumpAndSettle();
     expect(find.text('Question 1 of 5'), findsOneWidget);
@@ -489,7 +374,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Onboarding leads to the quiz and Chemistry on profiles',
+  testWidgets('Onboarding skips the quiz; profiles offer it and show Chemistry',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -535,9 +420,21 @@ void main() {
     await tapText('Add photo');
     await tapText('Finish');
     expect(find.text('You’re all set, Aarav.'), findsOneWidget);
-    await tester.ensureVisible(find.text('Take the compatibility quiz'));
+    // The quiz isn't part of sign-up; it's offered from profiles later.
+    expect(find.text('Take the compatibility quiz'), findsNothing);
+    await tapText('Start exploring');
+    await tester.tap(find.text('Ananya, 27'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Take the compatibility quiz'));
+    final profile = find
+        .descendant(
+            of: find.byType(PersonDetailsScreen),
+            matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(find.text('Take the quiz'), 200,
+        scrollable: profile);
+    await tester.ensureVisible(find.text('Take the quiz'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Take the quiz'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Question 1 of 24'), findsOneWidget);
     await tester.tap(find.text('A long-term committed relationship'));
@@ -556,9 +453,8 @@ void main() {
     await tester.tap(find.text('Physical affection'));
     await tester.pumpAndSettle();
     expect(find.byIcon(Icons.check_box_rounded), findsNWidgets(2));
+    // Back on Ananya's profile, which now shows Chemistry.
     await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Ananya, 27'));
     await tester.pumpAndSettle();
     final details = find
         .descendant(

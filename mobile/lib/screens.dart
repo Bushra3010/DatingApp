@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'cities.dart';
 import 'crossed_paths.dart';
 import 'match_celebration.dart';
 import 'models.dart';
@@ -13,6 +14,7 @@ import 'voice.dart';
 import 'widgets.dart';
 import 'hangouts.dart';
 import 'introductions.dart';
+import 'legal.dart';
 import 'onboarding.dart';
 
 class DiscoverScreen extends StatelessWidget {
@@ -924,6 +926,7 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                         ..clear()
                         ..addAll(intents);
                       store.update();
+                      store.refreshMembers();
                       Navigator.pop(context);
                     },
                     child: const Text('Show my people')),
@@ -2177,6 +2180,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
               ListTile(
                   contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: const Text('Privacy Policy'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => openPrivacyPolicy(context)),
+              const Divider(height: 1),
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.description_outlined),
+                  title: const Text('Terms & Conditions'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => openTerms(context)),
+              const Divider(height: 1),
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.logout_rounded),
                   title: const Text('Log out'),
                   subtitle: Text(
@@ -2777,9 +2794,7 @@ class _EditProfileFormState extends State<_EditProfileForm> {
                   labelText: 'Profession',
                   hintText: 'For example, Product designer')),
           const SizedBox(height: 12),
-          TextFormField(
-              controller: city,
-              decoration: const InputDecoration(labelText: 'Area or city')),
+          CityField(controller: city, labelText: 'City'),
           const SizedBox(height: 12),
           TextFormField(
               controller: bio,

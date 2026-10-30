@@ -84,7 +84,7 @@ void main() {
     expect(store.detailedChemistry, isFalse);
     store.choosePlan(Plan.gold);
     expect(store.canSeeLikes, isTrue);
-    expect(store.canHangout, isFalse);
+    expect(store.canHangout, isTrue, reason: 'Hangouts are open to everyone');
     store.startBoost();
     expect(store.boosting, isTrue);
     expect(store.boostsLeft, 1);

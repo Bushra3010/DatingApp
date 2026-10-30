@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'legal.dart';
 import 'models.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -164,8 +165,34 @@ class _AuthFlowState extends State<_AuthFlow> {
             icon: const Icon(Icons.mail_outline_rounded, size: 18),
             label: const Text('Use email instead')),
         const SizedBox(height: 6),
-        Text(
-            'By continuing you agree to treat everyone with kindness and respect.',
+        Text.rich(
+            TextSpan(
+                text: 'By continuing you agree to our ',
+                children: [
+                  WidgetSpan(
+                      alignment: PlaceholderAlignment.baseline,
+                      baseline: TextBaseline.alphabetic,
+                      child: GestureDetector(
+                          onTap: () => openTerms(context),
+                          child: const Text('Terms',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: EverlaneColors.lavender,
+                                  decoration: TextDecoration.underline)))),
+                  const TextSpan(text: ' and '),
+                  WidgetSpan(
+                      alignment: PlaceholderAlignment.baseline,
+                      baseline: TextBaseline.alphabetic,
+                      child: GestureDetector(
+                          onTap: () => openPrivacyPolicy(context),
+                          child: const Text('Privacy Policy',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: EverlaneColors.lavender,
+                                  decoration: TextDecoration.underline)))),
+                  const TextSpan(
+                      text: ', and to treat everyone with kindness and respect.'),
+                ]),
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
       ]);
