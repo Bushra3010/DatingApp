@@ -292,6 +292,48 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     .bl { grid-template-columns: 84px 1fr auto; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+  /* Header kill switch and role preview */
+  button.pill { border: 0; cursor: pointer; font-family: Inter, system-ui, sans-serif; padding: 4px 10px; }
+  button.pill:disabled { cursor: default; opacity: .6; }
+  .preview-role { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; font-weight: 500; color: var(--mute); white-space: nowrap; }
+  .preview-role select { width: auto; padding: 5px 8px; font-size: 12.5px; }
+
+  /* Sample (preview) pages ported from the prototype; scoped to .mk so the real views keep their styles. */
+  .mkban { font-size: 13px; font-weight: 600; color: var(--ink); background: rgba(180,83,9,.10); border: 1px solid rgba(180,83,9,.35);
+           border-left: 4px solid var(--warn); border-radius: 10px; padding: 9px 12px; margin: 12px 0 4px; }
+  .mk h2 { margin: 12px 0 2px; } .mk h3 { margin-bottom: 10px; } .mk h4 { margin: 12px 0 6px; }
+  .mk p.sub { margin: 0 0 12px; }
+  .mk .card { padding: 14px; margin-bottom: 12px; min-width: 0; }
+  .mk .card > .chips { padding: 0; } .mk .chips { margin-bottom: 10px; }
+  .mk .btn { border: 0; background: linear-gradient(90deg, var(--acc), var(--acc2)); color: #fff; padding: 9px 15px; }
+  .mk .btn.s { background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
+  .mk .btn.d { background: var(--bad); color: #fff; } .mk .btn.g { background: var(--ok); color: #fff; }
+  .mk .btn.sm { padding: 5px 10px; font-size: 12.5px; }
+  .mk label.l { display: block; font-weight: 600; font-size: 12.5px; margin: 10px 0 5px; }
+  .mk textarea.fld { min-height: 80px; }
+  .mk .kpi i { display: inline; color: var(--ok); margin: 0 0 0 6px; }
+  .mk .bl { grid-template-columns: minmax(70px, 110px) 1fr minmax(50px, auto); }
+  .mk th { position: static; padding: 7px 6px; } .mk td { padding: 8px 6px; }
+  .mk tbody tr { cursor: default; } .mk tbody tr:hover { background: none; }
+  .mk tr.r { cursor: pointer; } .mk tr.r:hover { background: var(--bg); }
+  .mk .nw { white-space: nowrap; }
+  .mk .set { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .mk .set > span:first-child { min-width: 0; }
+  .mk .set span small { display: block; color: var(--mute); font-size: 12px; }
+  .mk .sw { width: 44px; height: 26px; border-radius: 20px; background: var(--line); border: 0; position: relative; cursor: pointer; flex: none; }
+  .mk .sw:after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: left .2s; }
+  .mk .sw.on { background: var(--acc); } .mk .sw.on:after { left: 21px; } .mk .sw[disabled] { opacity: .45; }
+  .md { position: fixed; inset: 0; background: var(--scrim); display: none; align-items: flex-start; justify-content: center; padding: 18px 12px; z-index: 60; overflow: auto; }
+  .md.on { display: flex; }
+  .mb { background: var(--surf); border: 1px solid var(--line); border-radius: 18px; max-width: 720px; width: 100%; padding: 18px; margin: auto 0; box-shadow: var(--sh); }
+  .mk .heat { display: grid; gap: 4px; }
+  .mk .hc { border-radius: 8px; padding: 8px; text-align: center; font-size: 12px; color: #fff; font-weight: 600; }
+  .mk .ph { width: 100%; aspect-ratio: 3/4; border-radius: 12px; display: grid; place-items: center; font: 700 34px Inter, system-ui, sans-serif; color: rgba(255,255,255,.9); }
+  .mk .imp { position: sticky; top: 0; z-index: 40; background: var(--warn); color: #fff; padding: 8px 12px; border-radius: 10px; margin-bottom: 8px;
+             display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .mk .msg { max-width: 80%; padding: 8px 12px; border-radius: 14px; background: var(--bg); margin-bottom: 6px; overflow-wrap: anywhere; }
+  .mk .msg.me { margin-left: auto; background: var(--acc); color: #fff; }
 </style>
 </head>
 <body>
@@ -315,7 +357,10 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   <header class="top">
     <div class="logo">Everlane<small>ADMIN</small></div>
     <div class="row">
-      <span class="pill" id="rolePill"></span>
+      <button type="button" class="pill hidden" id="botsPill"></button>
+      <span class="pill" id="rolePill" title="Your role"></span>
+      <label class="preview-role" title="Only changes which sample pages are read-only. Your real permissions don’t change.">Preview as role
+        <select id="mkRole" aria-label="Preview as role (sample pages only)"></select></label>
       <span class="who" id="who"></span>
       <button type="button" class="iconbtn" data-theme-toggle>Dark mode</button>
       <button type="button" class="btn small" id="logout">Sign out</button>
@@ -326,34 +371,113 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     <button type="button" data-sec="dash">Dashboard</button>
     <button type="button" data-sec="users">Users</button>
     <button type="button" data-sec="mod">Moderation <span class="pill bad hidden" id="modBadge"></span></button>
+    <button type="button" data-sec="match">Matching</button>
     <button type="button" data-sec="bots">Bots and seed</button>
     <button type="button" data-sec="hang">Hangouts</button>
+    <button type="button" data-sec="subs">Revenue</button>
     <button type="button" data-sec="cfg">Content and config</button>
+    <button type="button" data-sec="comm">Communication</button>
+    <button type="button" data-sec="sup">Support</button>
+    <button type="button" data-sec="grow">Growth</button>
     <button type="button" data-sec="sec">Admin and security</button>
+    <button type="button" data-sec="tech">Technical</button>
     <button type="button" data-sec="legal">Legal</button>
   </nav>
-  <div class="nav sb" data-subnav="dash" aria-label="Dashboard pages"><button type="button" class="tab" data-view="overview">Overview</button></div>
-  <div class="nav sb" data-subnav="users" aria-label="Users pages"><button type="button" class="tab" data-view="leads">Directory</button></div>
+  <!-- Tabs with data-mock are sample pages (mock data, drawn by window.EverlaneMock); the rest are real. -->
+  <div class="nav sb" data-subnav="dash" aria-label="Dashboard pages">
+    <button type="button" class="tab" data-view="overview">Overview</button>
+    <button type="button" class="tab" data-view="dash-retention" data-mock>Retention</button>
+    <button type="button" class="tab" data-view="dash-geo" data-mock>Geo</button>
+    <button type="button" class="tab" data-view="dash-reports" data-mock>Reports</button>
+  </div>
+  <div class="nav sb" data-subnav="users" aria-label="Users pages">
+    <button type="button" class="tab" data-view="leads">Directory</button>
+    <button type="button" class="tab" data-view="users-multi" data-mock>Multi-account</button>
+    <button type="button" class="tab" data-view="users-gdpr" data-mock>GDPR tools</button>
+  </div>
   <div class="nav sb" data-subnav="mod" aria-label="Moderation pages">
-    <button type="button" class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
     <button type="button" class="tab" data-view="photos">Photos <span class="pill warn hidden" id="photoBadge"></span></button>
-    <button type="button" class="tab" data-view="verify">Verification <span class="pill warn hidden" id="verifyBadge"></span></button>
     <button type="button" class="tab" data-view="words">Text filter</button>
+    <button type="button" class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
+    <button type="button" class="tab" data-view="mod-chat" data-mock>Chat monitor</button>
+    <button type="button" class="tab" data-view="mod-fake" data-mock>Fake and scams</button>
+    <button type="button" class="tab" data-view="verify">Verification <span class="pill warn hidden" id="verifyBadge"></span></button>
+    <button type="button" class="tab" data-view="mod-bans" data-mock>Bans</button>
+    <button type="button" class="tab" data-view="mod-auto" data-mock>Auto-ban</button>
+    <button type="button" class="tab" data-view="mod-underage" data-mock>Underage</button>
+  </div>
+  <div class="nav sb" data-subnav="match" aria-label="Matching pages">
+    <button type="button" class="tab" data-view="match-algorithm" data-mock>Algorithm</button>
+    <button type="button" class="tab" data-view="match-visibility" data-mock>Visibility</button>
+    <button type="button" class="tab" data-view="match-limits" data-mock>Limits</button>
+    <button type="button" class="tab" data-view="match-locations" data-mock>Locations</button>
+    <button type="button" class="tab" data-view="options">Options</button>
+    <button type="button" class="tab" data-view="match-ab" data-mock>A/B tests</button>
   </div>
   <div class="nav sb" data-subnav="bots" aria-label="Bots pages">
     <button type="button" class="tab" data-view="bots">Profiles</button>
     <button type="button" class="tab" data-view="gen">Create</button>
+    <button type="button" class="tab" data-view="bots-behaviour" data-mock>Behaviour</button>
+    <button type="button" class="tab" data-view="bots-phase-out" data-mock>Phase-out</button>
+    <button type="button" class="tab" data-view="bots-activity" data-mock>Activity</button>
   </div>
   <div class="nav sb" data-subnav="hang" aria-label="Hangouts pages"><button type="button" class="tab" data-view="hangouts">Plans</button></div>
+  <div class="nav sb" data-subnav="subs" aria-label="Revenue pages">
+    <button type="button" class="tab" data-view="subs-plans" data-mock>Plans</button>
+    <button type="button" class="tab" data-view="subs-promos" data-mock>Promos</button>
+    <button type="button" class="tab" data-view="subs-transactions" data-mock>Transactions</button>
+    <button type="button" class="tab" data-view="subs-store-sync" data-mock>Store sync</button>
+    <button type="button" class="tab" data-view="subs-iap" data-mock>In-app purchases</button>
+    <button type="button" class="tab" data-view="subs-reports" data-mock>Reports</button>
+  </div>
   <div class="nav sb" data-subnav="cfg" aria-label="Content pages">
-    <button type="button" class="tab" data-view="questions">Quiz questions</button>
-    <button type="button" class="tab" data-view="options">Options</button>
+    <button type="button" class="tab" data-view="questions">Content</button>
+    <button type="button" class="tab" data-view="cfg-flags" data-mock>Feature flags</button>
+    <button type="button" class="tab" data-view="cfg-languages" data-mock>Languages</button>
+    <button type="button" class="tab" data-view="cfg-onboarding" data-mock>Onboarding</button>
+    <button type="button" class="tab" data-view="cfg-banners" data-mock>Banners</button>
+    <button type="button" class="tab" data-view="cfg-app-control" data-mock>App control</button>
+  </div>
+  <div class="nav sb" data-subnav="comm" aria-label="Communication pages">
+    <button type="button" class="tab" data-view="comm-push" data-mock>Push</button>
+    <button type="button" class="tab" data-view="comm-email" data-mock>Email and SMS</button>
+    <button type="button" class="tab" data-view="comm-broadcast" data-mock>Broadcast</button>
+    <button type="button" class="tab" data-view="comm-lifecycle" data-mock>Lifecycle</button>
+  </div>
+  <div class="nav sb" data-subnav="sup" aria-label="Support pages">
+    <button type="button" class="tab" data-view="sup-tickets" data-mock>Tickets</button>
+    <button type="button" class="tab" data-view="sup-live-chat" data-mock>Live chat</button>
+    <button type="button" class="tab" data-view="sup-help" data-mock>Help center</button>
+    <button type="button" class="tab" data-view="sup-appeals" data-mock>Appeals</button>
+  </div>
+  <div class="nav sb" data-subnav="grow" aria-label="Growth pages">
+    <button type="button" class="tab" data-view="grow-referrals" data-mock>Referrals</button>
+    <button type="button" class="tab" data-view="grow-campaigns" data-mock>Campaigns</button>
+    <button type="button" class="tab" data-view="grow-events" data-mock>Events</button>
+    <button type="button" class="tab" data-view="grow-ambassadors" data-mock>Ambassadors</button>
+    <button type="button" class="tab" data-view="grow-waitlist" data-mock>Waitlist</button>
   </div>
   <div class="nav sb" data-subnav="sec" aria-label="Admin pages">
-    <button type="button" class="tab" data-view="team">Team</button>
+    <button type="button" class="tab" data-view="team">Roles</button>
+    <button type="button" class="tab" data-view="sec-access" data-mock>Access</button>
     <button type="button" class="tab" data-view="audit">Audit log</button>
+    <button type="button" class="tab" data-view="sec-api" data-mock>API and webhooks</button>
+    <button type="button" class="tab" data-view="sec-backups" data-mock>Backups</button>
   </div>
-  <div class="nav sb" data-subnav="legal" aria-label="Legal pages"><button type="button" class="tab" data-view="legal">Documents</button></div>
+  <div class="nav sb" data-subnav="tech" aria-label="Technical pages">
+    <button type="button" class="tab" data-view="tech-logs" data-mock>Logs</button>
+    <button type="button" class="tab" data-view="tech-monitor" data-mock>API monitor</button>
+    <button type="button" class="tab" data-view="tech-integrations" data-mock>Integrations</button>
+    <button type="button" class="tab" data-view="tech-database" data-mock>Database</button>
+    <button type="button" class="tab" data-view="tech-queues" data-mock>Queues</button>
+    <button type="button" class="tab" data-view="tech-rate-limits" data-mock>Rate limits</button>
+  </div>
+  <div class="nav sb" data-subnav="legal" aria-label="Legal pages">
+    <button type="button" class="tab" data-view="legal">Documents</button>
+    <button type="button" class="tab" data-view="legal-consent" data-mock>Consent</button>
+    <button type="button" class="tab" data-view="legal-age" data-mock>Age and regions</button>
+    <button type="button" class="tab" data-view="legal-data-requests" data-mock>Data requests</button>
+  </div>
 
   <main>
     <div id="view-overview">
@@ -428,6 +552,8 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
       <div class="head"><div><h2>Bot profiles</h2>
         <p class="sub">Profiles you make and add photos to by hand, for testing, demos and store screenshots. Bots are shown to every member, always labelled “Sample profile” in the app, so nobody takes them for real people. They can’t sign in.</p></div>
         <div class="row"><button class="btn" id="botsLive"></button><button class="btn" id="bulkBots">Bulk create</button><button class="btn primary" id="newBot">New bot</button></div></div>
+      <div class="card pad" style="margin-bottom:12px"><h3>Policy</h3>
+        <div class="note">Bots must always be labelled to users as “Automated profile”. They must never pretend to be real people, solicit money or personal data, or chat with real users as if human. Auto-like, auto-match and auto-reply run only in Demo or Staging against internal test accounts.</div></div>
       <div class="toolbar">
         <input type="text" id="botSearch" placeholder="Search name, city or BOT number…" aria-label="Search bots">
         <select id="botGender" aria-label="Bot gender"><option value="">All genders</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
@@ -516,7 +642,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 
     <div id="view-questions" class="hidden">
       <div class="head"><div><h2>Quiz questions</h2>
-        <p class="sub">The compatibility quiz. Changes show in the app the next time it opens. Keep answer values stable — saved answers use them.</p></div>
+        <p class="sub">The compatibility quiz. Changes show in the app the next time it opens. Keep answer values stable — saved answers use them. Interests, languages and profile prompts are under Matching → Options.</p></div>
         <button class="btn primary" id="addQuestion">Add question</button></div>
       <div class="card" id="questions"></div>
     </div>
@@ -559,11 +685,252 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
         <p class="note">These are templates with placeholders. Have a lawyer review and complete them before launch.</p>
       </div>
     </div>
+
+    <!-- Sample pages (mock data) are drawn here by window.EverlaneMock. -->
+    <div id="view-mock" class="mk hidden"></div>
   </main>
 </section>
 
 <div id="overlay"></div>
+<div class="md mk" id="mkMd"><div class="mb" id="mkMb" role="dialog" aria-modal="true" aria-label="Sample details"></div></div>
 
+<script>
+// ---------- Sample (preview) pages ----------
+// Ported from the Everlane super-admin prototype. Everything in here is mock data
+// kept inside this closure: nothing calls Supabase, and the only thing exposed is
+// window.EverlaneMock, which the real panel uses to draw these pages.
+(() => {
+'use strict';
+const BANNER = '<div class="note mkban" role="note">Sample data — this page is a preview and isn’t connected to the app yet. Numbers and actions here are not real.</div>';
+const $=s=>document.querySelector(s),H=[];const on=f=>{H.push(f);return `data-mh="${H.length-1}"`};const oi=f=>{H.push(f);return `data-mi="${H.length-1}"`};
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),P=a=>a[Math.floor(Math.random()*a.length)],esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),fmt=n=>Math.round(n).toLocaleString('en-IN'),sum=a=>a.reduce((x,y)=>x+y,0),last=a=>a[a.length-1];
+const ago=d=>new Date(Date.now()-d*864e5).toISOString().slice(0,10),now=()=>new Date().toLocaleString();
+function toast(s){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=s+' (sample only)';document.body.append(t);setTimeout(()=>t.remove(),2300)}
+const pill=(s,c)=>`<span class="pill ${c||({Active:'ok',Verified:'ok',Paid:'ok',Live:'ok',Approved:'ok',Resolved:'ok',Open:'warn',Pending:'warn',Suspended:'warn','Shadow-banned':'warn',Banned:'bad',Failed:'bad',Deleted:'bad',Rejected:'bad',High:'bad',Refunded:'warn',Planned:'',Waitlist:'warn',Medium:'warn'}[s]||'')}">${esc(s)}</span>`;
+// ---------- mock data ----------
+const CITY=['Bengaluru','Mumbai','Delhi','Hyderabad','Chennai','Pune','Kolkata','Gurugram','Ahmedabad','Jaipur','Kochi','Chandigarh'];
+const FN={F:'Ananya Divya Meera Kavya Priya Sneha Anjali Riya Neha Isha Pooja Aditi Diya Tanya Shreya Nisha'.split(' '),M:'Arjun Karthik Rohan Aarav Aditya Rahul Vikram Karan Nikhil Siddharth Varun Harsh Kabir Yash'.split(' '),N:'Kiran Noor Sasha Arya Ojas Mihir'.split(' ')};
+const LN='Sharma Rao Patel Singh Nair Reddy Mehta Gupta Iyer Das Joshi Kapoor Menon Shah Verma'.split(' ');
+const USERS=Array.from({length:300},(_,i)=>{const g=P('FFMMMN'.split('')),fn=P(FN[g]),ln=P(LN);return{id:'U-'+(10001+i),name:fn+' '+ln,email:(fn+'.'+ln+R(1,99)+'@mail.com').toLowerCase(),phone:'+91 9'+R(1000,9999)+' '+R(10000,99999),city:P(CITY),age:R(18,46),gender:g==='F'?'Woman':g==='M'?'Man':'Non-binary',status:P(['Active','Active','Active','Active','Active','Active','Active','Suspended','Banned','Shadow-banned','Deleted']),verified:Math.random()<.55,badges:Math.random()<.1?['Early adopter']:[],plan:P(['Free','Free','Free','Free','Gold','Premium']),joined:ago(R(1,400)),last:ago(R(0,30)),strikes:Math.random()<.85?0:R(1,3),device:'dev-'+R(100,420),ip:'49.'+R(30,250)+'.'+R(1,250)+'.'+R(1,250),src:P(['Organic','Instagram','Referral','Google Ads','Influencer']),bio:'Coffee, travel and long walks.',boosts:0,sl:0,pd:0}});
+for(let i=0;i<9;i++){const a=USERS[R(0,299)],b=USERS[R(0,299)],c=USERS[R(0,299)];b.device=a.device;if(i%2)c.device=a.device;if(i%3==0)b.ip=a.ip}
+const uById=id=>USERS.find(u=>u.id===id);
+const S={role:'Super Admin',sec:'dash',sub:0,range:30,imp:null,bots:true};const CH={};const TS={};let MODAL=null;
+const AUD=[['Super Admin','Updated algorithm weights','distance 28% → 30%'],['Moderator','Rejected photo','P-2210 (NSFW 0.91)'],['Finance','Refunded payment','TX-90412 ₹499'],['Support','Reset password','U-10044']].map((x,i)=>({t:new Date(Date.now()-i*36e5*5).toLocaleString(),u:x[0],a:x[1],d:x[2]}));
+const log=(a,d)=>AUD.unshift({t:now(),u:S.role,a,d:d||''});
+const REPORTS=Array.from({length:36},(_,i)=>({id:'RP-'+(5001+i),reporter:P(USERS).id,target:P(USERS).id,reason:P(['Fake profile','Harassment','Spam or scam','Inappropriate photo','Underage','Offensive bio']),prio:P(['High','Medium','Low','Low']),status:P(['Open','Open','Open','Resolved']),owner:'—',t:ago(R(0,12))}));
+const PHOTOS=Array.from({length:18},(_,i)=>({id:'P-'+(2200+i),user:P(USERS).id,nsfw:+(Math.random()**3).toFixed(2),face:Math.random()<.85,status:'Pending',c:P(['#7C3AED','#EC4899','#3B82F6','#14B8A6','#F59E0B'])}));
+const CHATS=[['Send me your UPI so I can send your prize','Scam'],['You will regret ignoring me','Harassment'],['Contact me on this link to verify your profile','Spam link'],['Send photos or I tell everyone','Harassment'],['I can double your money, DM me','Scam'],['Add me on Telegram for investment tips','Spam link']].map((x,i)=>({id:'CH-'+(300+i),from:P(USERS).id,to:P(USERS).id,text:x[0],why:x[1],status:'Open'}));
+const VER=Array.from({length:10},(_,i)=>({id:'V-'+(700+i),user:P(USERS).id,type:P(['Selfie','Selfie','ID document']),score:R(62,99),status:'Pending'}));
+const TXN=Array.from({length:70},(_,i)=>({id:'TX-'+(90300+i),user:P(USERS).id,item:P(['Gold monthly','Premium monthly','Boost x1','Super Likes x5','Gift: Rose','Gold annual']),amt:P([199,499,999,59,149,29,1999]),store:P(['Apple','Google','Stripe']),status:P(['Paid','Paid','Paid','Paid','Paid','Failed','Refunded']),t:ago(R(0,40))}));
+const TIX=Array.from({length:22},(_,i)=>({id:'T-'+(8100+i),user:P(USERS).id,subj:P(['Cannot log in','Payment failed','Profile not visible','Photo rejected','Delete my data','Refund request','Fake profile report']),prio:P(['High','Medium','Low']),status:P(['Open','Open','Pending','Resolved']),owner:P(['—','Asha','Ravi','Meera']),thread:[]}));
+const BOTS=Array.from({length:30},(_,i)=>{const g=P('FFMMN'.split('')),fn=P(FN[g]);return{id:'BOT-'+String(i+1).padStart(5,'0'),name:fn+' '+P(LN),gender:g==='F'?'Woman':g==='M'?'Man':'Non-binary',city:P(CITY),age:R(21,36),status:'Active',likes:R(0,120),matches:R(0,30),msgs:R(0,200)}});
+const ADM=[['Neha Kapoor','Super Admin',true,'Today'],['Ravi Menon','Moderator',true,'Today'],['Asha Iyer','Support',true,'Yesterday'],['Karan Shah','Finance',false,'3 days ago'],['Diya Rao','Analyst',true,'Today']];
+// ---------- config ----------
+const C={algo:{distance:28,age:12,activity:22,interests:20,goal:12,response:6,decay:14},
+lim:{Free:{likes:8,sl:0,rew:0,boost:0},Gold:{likes:999,sl:5,rew:3,boost:1},Premium:{likes:999,sl:15,rew:99,boost:4}},loc:{min:1,max:100,def:25},
+cities:CITY.map((c,i)=>({n:c,s:i<7?'Live':i<10?'Waitlist':'Planned',w:i<7?0:R(120,2400),th:1500})),
+opts:{genders:['Woman','Man','Non-binary','Prefer to self-describe'],orient:['Straight','Gay','Lesbian','Bisexual','Pansexual','Asexual'],intent:['Long-term partner','Relationship','Friendship first','Something casual','Not sure yet']},
+ab:[{n:'Compatibility ranking v2',v:'A 50% / B 50%',st:'Running',lift:'+4.1%',p:'0.03'},{n:'Likes-you blur for Free',v:'A 70% / B 30%',st:'Running',lift:'+9.8% revenue',p:'0.01'},{n:'3-photo onboarding',v:'A 50% / B 50%',st:'Stopped',lift:'−1.2%',p:'0.41'}],
+vis:[{u:'U-10011',r:'Boost x2',e:'3 days'},{u:'U-10090',r:'Hidden',e:'Permanent'}],
+words:['whatsapp me','send money','crypto','telegram','escort','upi id','nude','only fans'],
+bans:{Device:['dev-199','dev-250'],IP:['49.101.22.7'],Phone:['+91 90000 11111']},
+auto:[{r:'3 verified reports in 24h',a:'Suspend',on:true},{r:'Link or UPI in first 3 messages',a:'Shadow-ban',on:true},{r:'Duplicate photo on 3+ accounts',a:'Ban',on:true},{r:'50+ likes in 1 minute',a:'Rate limit',on:true},{r:'Underage signal (face + DOB)',a:'Suspend + review',on:true},{r:'Banned device re-registers',a:'Ban',on:false}],
+strike:{s1:'Warning',s2:'7-day suspension',s3:'Permanent ban',decay:90},
+under:[{id:'U-10020',claim:19,sig:'ID DOB shows 16'},{id:'U-10155',claim:21,sig:'Face-age estimate 14'},{id:'U-10230',claim:18,sig:'Bio says “Class 10”'}],
+plans:{India:['₹',0,299,599],USA:['$',0,9.99,19.99],UK:['£',0,8.99,17.99],UAE:['AED',0,39,79],Singapore:['S$',0,12.9,24.9]},
+promos:[{c:'WELCOME30',t:'30% off',u:312,max:1000,on:true},{c:'GOLD7',t:'7-day free trial',u:1480,max:5000,on:true},{c:'DIWALI50',t:'₹50 off',u:90,max:500,on:false}],
+iap:[{n:'Boost (30 min)',p:99,on:true},{n:'Super Likes x5',p:149,on:true},{n:'Gift: Rose',p:49,on:true},{n:'Gift: Coffee',p:79,on:false}],
+content:{interests:['Travel','Coffee','Music','Cooking','Fitness','Art','Books','Hiking'],prompts:['My ideal Sunday is','I’m happiest when','Ask me about'],ice:['What’s your ideal weekend?','Dinner or a film first?','Best trip you’ve taken?'],qs:['What are you looking for?','Do you want kids?']},
+flags:[['Likes you tab',1,100],['Hangouts',1,60],['Boost',1,100],['Super like',1,100],['Undo (rewind)',1,100],['Compatibility quiz',1,100],['Video intro',0,10],['Voice notes',0,0],['Incognito mode',1,20],['AI icebreakers',0,5],['Stories',0,0],['Gifts',1,30],['Referral program',1,100],['Selfie verification',1,100]].map(f=>({n:f[0],on:!!f[1],ro:f[2]})),
+lang:{sel:'Hindi',keys:{welcome:['Welcome','स्वागत है'],like:['Like','पसंद'],pass:['Pass','छोड़ें'],match:['It’s a match','यह एक मैच है'],messages:['Messages','संदेश'],profile:['My profile','मेरी प्रोफ़ाइल']}},
+onb:[{n:'First name',r:true},{n:'Email',r:true},{n:'Mobile',r:true},{n:'Birthday',r:true},{n:'Gender',r:true},{n:'City',r:true},{n:'Looking for',r:true},{n:'Photos',r:true},{n:'Interests',r:false},{n:'Bio',r:false}],
+banners:[{k:'Banner',t:'Boost weekend: 2x visibility',a:'All',on:true},{k:'Story',t:'Meet our verified members',a:'New users',on:true},{k:'Announcement',t:'Hangouts now live in Pune',a:'Pune',on:false}],
+ctl:{iosMin:'3.2.0',andMin:'3.1.4',hard:false,maint:false,msg:'We’ll be back shortly.'},
+life:[{n:'Welcome series',d:'Immediately',ch:'Push + Email',on:true},{n:'Complete your profile',d:'After 24h',ch:'Push',on:true},{n:'Abandoned sign-up',d:'After 2h',ch:'SMS',on:true},{n:'Win-back',d:'After 14 days',ch:'Push + Email',on:true},{n:'Premium expiring',d:'3 days before',ch:'Email',on:false}],
+camp:[{n:'Weekend boost promo',ch:'Push',aud:18420,st:'Sent',ctr:'6.2%'},{n:'Win-back May',ch:'Email',aud:9210,st:'Sent',ctr:'3.1%'}],
+faq:[{t:'How do I verify my profile?',c:'Safety'},{t:'How do refunds work?',c:'Billing'},{t:'How do I delete my account?',c:'Account'}],
+canned:['Thanks for reaching out. We’re looking into this now.','Your refund has been processed and will arrive in 5 to 7 days.','Please share a screenshot so we can investigate.'],
+appeals:[{id:'AP-61',u:'U-10033',why:'Banned for spam. I was hacked.',st:'Open'},{id:'AP-62',u:'U-10108',why:'Suspended by mistake.',st:'Open'}],
+ref:{rew:7,newrew:7,cap:20,fraud:true},codes:[{c:'FRIEND7',u:844,o:'Referral'},{c:'LAUNCH',u:210,o:'Campaign'}],
+utm:[['instagram','paid_social','diwali',12400,5100,148],['google','cpc','brand',8800,3900,210],['influencer','video','aanya',6100,2500,96],['organic','—','—',22000,9800,0]],
+events:[{n:'Speed dating night',city:'Bengaluru',d:'2026-11-14',cap:40,rsvp:36,st:'Open'},{n:'Coffee meetup',city:'Pune',d:'2026-11-20',cap:30,rsvp:12,st:'Open'}],
+amb:[{n:'Aanya (creator)',c:'AANYA10',s:410,pay:'₹20,500'},{n:'Rohan Vlogs',c:'ROHAN20',s:260,pay:'₹13,000'}],
+roles:{perms:['View users','Edit users','Moderate content','Manage billing','Edit config','Manage security'],m:{'Super Admin':[1,1,1,1,1,1],Moderator:[1,0,1,0,0,0],Support:[1,1,0,0,0,0],Finance:[0,0,0,1,0,0],Analyst:[1,0,0,0,0,0]}},
+acc:{tfa:true,tfaAll:true,ips:['103.21.44.0/24','49.205.10.12'],sess:30,pw:12},
+keys:[{n:'Mobile app',p:'ek_live_8f3a',sc:'read, write',t:'2026-01-12',l:'Today'},{n:'Analytics export',p:'ek_live_21c9',sc:'read',t:'2026-03-02',l:'Yesterday'}],
+hooks:[{u:'https://api.example.com/hooks/match',ev:'match.created',st:'Active'},{u:'https://crm.example.com/signup',ev:'user.signup',st:'Active'}],
+bk:{freq:'Daily 02:00',keep:30,logs:90,del:30},bks:['2026-10-30 02:00','2026-10-29 02:00','2026-10-28 02:00'],
+logs:Array.from({length:24},(_,i)=>({t:now(),lv:P(['ERROR','ERROR','WARN','WARN','INFO']),svc:P(['api','auth','payments','push','media']),m:P(['Timeout calling Stripe','Invalid token','Upload failed (S3)','FCM quota exceeded','Slow query on swipes','Null profile photo']),n:R(1,420),st:P(['Open','Open','Resolved'])})),
+ints:[{n:'Twilio (SMS and OTP)',on:true,k:'AC••••9f2'},{n:'Firebase (push and analytics)',on:true,k:'AIza••••Q3'},{n:'Stripe (payments)',on:true,k:'sk_live_••••7d'},{n:'AWS (storage and moderation)',on:true,k:'AKIA••••XY'},{n:'OneSignal (campaigns)',on:false,k:'—'}],
+q:[{n:'photo-moderation',w:42,a:5,f:0,on:true},{n:'push-notifications',w:310,a:20,f:3,on:true},{n:'email',w:12,a:2,f:1,on:true},{n:'match-scoring',w:0,a:8,f:0,on:true},{n:'data-exports',w:2,a:1,f:0,on:true}],
+rl:[{n:'Login',v:10,on:true},{n:'OTP requests',v:5,on:true},{n:'Swipes',v:120,on:true},{n:'Messages',v:40,on:true},{n:'Reports',v:10,on:true}],spam:{newcap:5,links:true,captcha:true,cth:60},
+docs:[{n:'Terms of Service',v:'4.2',d:'2026-09-01'},{n:'Privacy Policy',v:'3.7',d:'2026-09-01'},{n:'Community Guidelines',v:'2.1',d:'2026-06-10'},{n:'Cookie Policy',v:'1.4',d:'2026-03-15'}],
+cons:[{n:'Terms and Privacy',req:true,v:'4.2 / 3.7',pct:97},{n:'Location',req:true,v:'1.3',pct:94},{n:'Biometric (selfie verification)',req:false,v:'1.1',pct:58},{n:'Marketing messages',req:false,v:'2.0',pct:41}],
+age:{min:18,m:{India:'Selfie age estimate',EU:'Selfie age estimate + ID on doubt',USA:'Self-declare + selfie',UAE:'ID document'}},
+reg:[{n:'GDPR (EU/UK)',on:true},{n:'CCPA / CPRA (California)',on:true},{n:'DPDP Act 2023 (India)',on:true},{n:'UK Age Appropriate Design Code',on:false}],
+dsar:Array.from({length:7},(_,i)=>({id:'DS-'+(40+i),u:P(USERS).id,k:P(['Data export','Account deletion','Data export']),due:R(2,28),st:'Open'})),
+botc:{env:'Demo',label:true,autoLike:false,autoMatch:false,autoReply:false,ai:false,from:9,to:22,rot:true,share:15,thr:800,persona:'Friendly, short replies. Always disclose being an automated demo profile.'},
+tpl:['Hi! I’m an automated demo profile. Ask me about Everlane.','This is an automated message from Everlane.'],
+bcity:CITY.map(c=>({c,real:R(40,6000),bots:R(0,40)}))};
+// ---------- helpers ----------
+const WR={'Super Admin':'*',Moderator:['mod','users','sup'],Support:['sup','users'],Finance:['subs'],Analyst:[]},VR={'Super Admin':null,Moderator:['dash','users','mod','sup'],Support:['users','sup'],Finance:['dash','subs'],Analyst:['dash','grow','tech']};
+const can=()=>WR[S.role]==='*'||WR[S.role].includes(S.sec);
+const A=(a,d,fn)=>(el,e)=>{if(!can()){toast('Your role is read-only here');return}try{if(fn)fn(el,e)}catch(x){toast('Fill in the form first');return}log(a,typeof d==='function'?d():d);render();toast(a)};
+const btn=(l,f,c)=>`<button class="btn ${c||''}" ${on(f)}>${l}</button>`;
+const card=(t,h)=>`<div class="card">${t?`<h3>${t}</h3>`:''}${h}</div>`;
+const pg=(t,d,h)=>BANNER+`<h2>${t}</h2><p class="sub">${d}</p>${h}`;
+const kpis=a=>`<div class="grid g4" style="margin-bottom:12px">${a.map(k=>`<div class="kpi"><b>${k[1]}</b><span>${k[0]}</span>${k[2]?`<i>${k[2]}</i>`:''}</div>`).join('')}</div>`;
+const g3=(...a)=>`<div class="grid g3">${a.join('')}</div>`;
+const ser=(n,b,v)=>{let x=b;return Array.from({length:n},()=>x=Math.max(1,x+(Math.random()-.45)*v))};
+const line=(arrs,h=150)=>{const W=600,all=arrs.flat(),mx=Math.max(...all),mn=Math.min(...all)*.9,cols=['#7C3AED','#EC4899','#F5A524'];return `<svg viewBox="0 0 ${W} ${h}" class="ch">${arrs.map((a,k)=>`<polyline points="${a.map((v,i)=>`${(i*W/(a.length-1)).toFixed(1)},${(h-8-(v-mn)/(mx-mn||1)*(h-22)).toFixed(1)}`).join(' ')}" fill="none" stroke="${cols[k]}" stroke-width="2.5" stroke-linejoin="round"/>`).join('')}</svg>`};
+const bars=a=>{const m=Math.max(...a.map(i=>i[1]))||1;return a.map(([l,v])=>`<div class="bl"><span>${l}</span><div class="bar"><i style="width:${v/m*100}%"></i></div><b>${fmt(v)}</b></div>`).join('')};
+const strip=s=>String(s).replace(/<[^>]+>/g,'');
+function copy(t){try{navigator.clipboard.writeText(t).then(()=>toast('Copied to clipboard'),()=>fb(t))}catch(e){fb(t)}}
+function fb(t){openM(()=>m(`<h3>Copy this</h3><textarea class="fld" rows="9" id="mk-cpt">${esc(t)}</textarea><div class="row" style="margin-top:10px">${btn('Close',closeM,'s')}</div>`));const x=$('#mk-cpt');if(x)x.select()}
+const csv=(cols,L)=>cols.map(c=>`"${c}"`).join(',')+'\n'+L.map(r=>r.c.map(c=>`"${strip(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+function tbl(id,cols,rows,o={}){const s=TS[id]=TS[id]||{q:'',p:0,f:{}};let L=rows;(o.filters||[]).forEach(([n,i])=>{const v=s.f[n];if(v)L=L.filter(r=>strip(r.c[i])===v)});if(s.q)L=L.filter(r=>strip(r.c.join(' ')).toLowerCase().includes(s.q.toLowerCase()));
+const PG=o.page||12,pages=Math.max(1,Math.ceil(L.length/PG));s.p=Math.min(s.p,pages-1);const Rw=L.slice(s.p*PG,s.p*PG+PG);
+return `<div class="card"><div class="row" style="margin-bottom:8px">${o.search===false?'':`<input class="fld" style="flex:1;min-width:130px" placeholder="Search" aria-label="Search" value="${esc(s.q)}" ${oi(v=>{s.q=v;s.p=0;render()})}>`}${(o.filters||[]).map(([n,i,op])=>`<select class="fld" style="width:auto" aria-label="${n}" ${oi(v=>{s.f[n]=v;s.p=0;render()})}><option value="">${n}</option>${op.map(x=>`<option ${s.f[n]===x?'selected':''}>${x}</option>`).join('')}</select>`).join('')}<button class="btn s sm" ${on(()=>copy(csv(cols,L)))}>Export CSV</button></div><div class="scroll"><table><tr>${cols.map(c=>`<th>${c}</th>`).join('')}${o.acts?'<th></th>':''}</tr>${Rw.length?Rw.map(r=>`<tr class="${o.click?'r':''}" ${o.click?on(()=>o.click(r)):''}>${r.c.map(c=>`<td>${c}</td>`).join('')}${o.acts?`<td class="nw">${o.acts.map(([l,fn,cls,show])=>(show&&!show(r))?'':`<button class="btn sm ${cls||'s'}" ${on((t,e)=>{e.stopPropagation();fn(r)})}>${l}</button>`).join(' ')}</td>`:''}</tr>`).join(''):`<tr><td colspan="12" class="sub">Nothing here.</td></tr>`}</table></div><div class="row" style="justify-content:center;margin-top:8px"><button class="btn s sm" ${on(()=>{s.p--;render()})} ${s.p?'':'disabled'}>Prev</button><span class="sub">${s.p+1} / ${pages} · ${L.length} rows</span><button class="btn s sm" ${on(()=>{s.p++;render()})} ${s.p<pages-1?'':'disabled'}>Next</button></div></div>`}
+function fld(o,k,l,t,op){t=t||'text';const v=o[k];if(t==='toggle')return `<div class="set"><span>${l}${op&&op.h?`<small>${op.h}</small>`:''}</span><button class="sw ${v?'on':''}" role="switch" aria-checked="${!!v}" aria-label="${l}" ${op&&op.lock?'disabled':''} ${on(el=>{o[k]=!o[k];el.classList.toggle('on');el.setAttribute('aria-checked',!!o[k]);if(op&&op.cb)op.cb()})}></button></div>`;
+if(t==='select')return `<label class="l">${l}</label><select class="fld" ${oi(x=>{o[k]=x;if(op.cb)op.cb()})}>${op.o.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('')}</select>`;
+if(t==='range')return `<label class="l">${l}: <b>${v}${op.u||''}</b></label><input type="range" min="${op.min}" max="${op.max}" value="${v}" ${oi((x,el)=>{o[k]=+x;el.previousElementSibling.querySelector('b').textContent=x+(op.u||'')})}>`;
+if(t==='area')return `<label class="l">${l}</label><textarea class="fld" ${oi(x=>o[k]=x)}>${esc(v)}</textarea>`;
+return `<label class="l">${l}</label><input class="fld" type="${t}" value="${esc(v)}" ${oi(x=>o[k]=t==='number'?+x:x)}>`}
+const saveB=(l)=>btn('Save changes',A('Saved',l),'');
+function listEd(arr,label,ph){return `<div class="chips">${arr.map((x,i)=>`<span class="chip on" style="cursor:default">${esc(x)} <b style="cursor:pointer;margin-left:5px" ${on(A('Removed '+label,x,()=>arr.splice(i,1)))}>×</b></span>`).join('')||'<span class="sub">Empty</span>'}</div><div class="row"><input class="fld" style="flex:1" id="mk-ni-${label}" placeholder="${ph||'Add new'}">${btn('Add',A('Added '+label,()=>$('#mk-ni-'+label).value,()=>{const v=$('#mk-ni-'+label).value.trim();if(v)arr.push(v)}),'s')}</div>`}
+function openM(fn){MODAL=fn;fn()}function closeM(){MODAL=null;$('#mkMd').className='md mk'}function m(h){$('#mkMb').innerHTML=h;$('#mkMd').className='md mk on'}
+// ---------- pages: dashboard ----------
+function pRetention(){const rows=Array.from({length:8},(_,i)=>{const b=100;return[`Week ${8-i}`,b,Math.round(R(48,62)),Math.round(R(30,42)),Math.round(R(22,32)),Math.round(R(15,24)),Math.round(R(9,17))]});const col=v=>`rgba(124,58,237,${(v/100*.9+.08).toFixed(2)})`;
+return pg('Retention and cohorts','Share of each signup cohort still active.',card('Cohort retention',`<div class="scroll"><table><tr><th>Cohort</th><th>Day 0</th><th>Day 1</th><th>Day 7</th><th>Day 14</th><th>Day 30</th><th>Day 60</th></tr>${rows.map(r=>`<tr><td>${r[0]}</td>${r.slice(1).map(v=>`<td><div class="hc" style="background:${col(v)}">${v}%</div></td>`).join('')}</tr>`).join('')}</table></div>`)+g3(card('Churn reasons (exit survey)',bars([['Not enough matches',38],['Found someone',24],['Too many fake profiles',14],['Privacy concerns',9],['Pricing',8]])),card('Activation',bars([['Matched in 24h',42],['Matched in 7 days',61],['Sent first message',44]]))))}
+function pGeo(){const rows=C.cities.map(c=>({n:c.n,u:R(4000,60000),f:R(38,58),a:R(24,31)}));const mx=Math.max(...rows.map(r=>r.u));return pg('Geo and demographics','Users, gender ratio and average age per city.',card('Heatmap',`<div class="heat" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))">${rows.map(r=>`<div class="hc" style="background:rgba(236,72,153,${(r.u/mx*.85+.1).toFixed(2)});text-align:left"><b>${r.n}</b><br>${fmt(r.u)} users</div>`).join('')}</div>`)+tbl('geo',['City','Users','Women %','Men %','Avg age'],rows.map(r=>({c:[r.n,fmt(r.u),r.f+'%',100-r.f+'%',r.a]}))))}
+function pReports(){const o=S.rep=S.rep||{metric:'Signups',by:'City',range:'Last 30 days'},base=P([3,5,8]);const rows=(o.by==='City'?CITY:o.by==='Gender'?['Woman','Man','Non-binary']:o.by==='Age band'?['18–24','25–30','31–36','37–45']:Array.from({length:7},(_,i)=>ago(i))).map(k=>({c:[k,fmt(R(200,9000)*base)]}));
+return pg('Custom reports','Build a report and export it as CSV or Excel.',card('Report builder',`<div class="grid g3"><div>${fld(o,'metric','Metric','select',{o:['Signups','Matches','Messages','Revenue','Reports','Bans']})}</div><div>${fld(o,'by','Group by','select',{o:['City','Gender','Age band','Day']})}</div><div>${fld(o,'range','Range','select',{o:['Last 7 days','Last 30 days','Last 90 days']})}</div></div><div style="margin-top:10px">${btn('Run report',()=>render())}</div>`)+tbl('rep',[o.by,o.metric],rows,{search:false})+`<p class="sub">“Export CSV” copies data you can paste straight into Excel or Google Sheets.</p>`)}
+// ---------- users ----------
+function userM(u){const hist=Array.from({length:4},(_,i)=>`<tr><td>${ago(i*2)}</td><td>${u.device}</td><td>${u.ip}</td><td>${i?'Mobile app':'Web'}</td></tr>`).join('');const dup=USERS.filter(x=>x!==u&&(x.device===u.device||x.ip===u.ip));
+const set=(s,l)=>btn(l||s,A(l||s,u.id+' → '+s,()=>{u.status=s}),s==='Banned'||s==='Deleted'?'d':'s');
+m(`<div class="row" style="justify-content:space-between"><h3 style="margin:0">${esc(u.name)} <span class="sub">${u.id}</span></h3>${btn('Close',closeM,'s')}</div><div class="row" style="margin:8px 0">${pill(u.status)} ${u.verified?pill('Verified'):''} ${u.badges.map(b=>pill(b)).join(' ')} ${pill(u.plan)}${u.strikes?pill(u.strikes+' strikes','warn'):''}</div>
+<h4>Profile</h4><div class="grid g2"><div>${fld(u,'name','Name')}</div><div>${fld(u,'age','Age','number')}</div><div>${fld(u,'city','City')}</div><div>${fld(u,'gender','Gender','select',{o:['Woman','Man','Non-binary']})}</div></div>${fld(u,'bio','Bio','area')}<div class="row" style="margin-top:8px">${btn('Save profile',A('Edited profile',u.id))}</div>
+<h4>Photos</h4><div class="grid g2">${[0,1,2,3].map(i=>`<div><div class="ph" style="background:linear-gradient(150deg,#7C3AED,#EC4899);opacity:${1-i*.15}">${esc(u.name[0])}</div><button class="btn s sm" style="margin-top:4px" ${on(A('Removed photo',u.id+' #'+(i+1)))}>Remove</button></div>`).join('')}</div>
+<h4>Account status</h4><div class="row">${set('Active','Restore')}${set('Suspended','Suspend')}${set('Shadow-banned','Shadow-ban')}${set('Banned','Ban')}${set('Deleted','Delete')}</div>
+<h4>Verification and badges</h4><div class="row">${btn(u.verified?'Unverify':'Verify',A(u.verified?'Unverified user':'Verified user',u.id,()=>{u.verified=!u.verified}),'s')}${['Early adopter','Ambassador','Top profile'].map(b=>btn((u.badges.includes(b)?'Remove ':'Grant ')+b,A('Badge '+b,u.id,()=>{u.badges.includes(b)?u.badges.splice(u.badges.indexOf(b),1):u.badges.push(b)}),'s')).join('')}</div>
+<h4>Security</h4><div class="row">${btn('Force logout',A('Forced logout',u.id),'s')}${btn('Reset password',A('Reset password',u.id),'s')}${btn('Change email',()=>{const v=prompt('New email',u.email);if(v)A('Changed email',u.id,()=>{u.email=v})()},'s')}${btn('Change phone',()=>{const v=prompt('New phone',u.phone);if(v)A('Changed phone',u.id,()=>{u.phone=v})()},'s')}</div>
+<h4>Manual grants</h4><div class="row">${btn('Add boost',A('Granted boost',u.id,()=>{u.boosts++}),'s')}${btn('Add 5 super likes',A('Granted 5 super likes',u.id,()=>{u.sl+=5}),'s')}${btn('Free premium +7 days',A('Free premium 7 days',u.id,()=>{u.pd+=7;u.plan='Premium'}),'s')}<span class="sub">Boosts ${u.boosts} · Super likes ${u.sl} · Premium days ${u.pd}</span></div>
+<h4>Devices and login history</h4><div class="scroll"><table><tr><th>Date</th><th>Device</th><th>IP</th><th>Client</th></tr>${hist}</table></div>${dup.length?`<div class="note">Possible multi-account: shares a device or IP with ${dup.map(d=>d.id).join(', ')}.</div>`:'<p class="sub">No linked accounts detected.</p>'}
+<h4>Privacy and support</h4><div class="row">${btn('Export user data (GDPR)',()=>copy(JSON.stringify(u,null,1)),'s')}${btn('Delete user data',A('GDPR deletion',u.id,()=>{u.status='Deleted'}),'d')}${btn('View as user',()=>{const w=prompt('Reason for impersonation (logged)');if(w){S.imp=u.id;log('Impersonation started',u.id+' · '+w);closeM();render()}},'s')}</div>`)}
+function pMulti(){const g={};USERS.forEach(u=>{(g[u.device]=g[u.device]||[]).push(u)});const cl=Object.entries(g).filter(([k,v])=>v.length>1);return pg('Multi-account detection','Accounts sharing a device or IP address.',tbl('multi',['Device','Accounts','Cities','Signal'],cl.map(([k,v])=>({k,v,c:[k,v.map(x=>x.id).join(', '),[...new Set(v.map(x=>x.city))].join(', '),pill(v.length>2?'High':'Medium')]})),{acts:[['Ban device',r=>A('Banned device',r.k,()=>{C.bans.Device.push(r.k)})(),'d'],['Review',r=>openM(()=>userM(r.v[0]))]]}))}
+function pDsar(){return pg('Data requests (GDPR / CCPA / DPDP)','Export and deletion requests with SLA timers.',tbl('dsar',['Request','User','Type','Days left','Status'],C.dsar.map(d=>({d,c:[d.id,d.u,d.k,d.due<7?pill(d.due+' days','bad'):d.due+' days',pill(d.st)]})),{acts:[['Fulfil',r=>A('Fulfilled '+r.d.k,r.d.u,()=>{r.d.st='Resolved'})(),'g',r=>r.d.st==='Open'],['Preview export',r=>copy(JSON.stringify(uById(r.d.u)||{},null,1))]]}))}
+// ---------- moderation ----------
+function pChat(){return pg('Chat monitoring','Conversations flagged by keywords, scam or harassment patterns.',tbl('chat',['ID','From','To','Message','Reason','Status'],CHATS.map(c=>({c0:c,c:[c.id,c.from,c.to,esc(c.text),pill(c.why,'warn'),pill(c.status)]})),{acts:[['Dismiss',x=>A('Dismissed flag',x.c0.id,()=>{x.c0.status='Resolved'})(),'s',x=>x.c0.status==='Open'],['Warn sender',x=>A('Warned sender',x.c0.from,()=>{x.c0.status='Resolved'})(),'s',x=>x.c0.status==='Open'],['Ban sender',x=>A('Banned sender',x.c0.from,()=>{const u=uById(x.c0.from);if(u)u.status='Banned';x.c0.status='Resolved'})(),'d',x=>x.c0.status==='Open']]}))}
+function pFake(){const cl=Array.from({length:6},(_,i)=>({id:'DUP-'+(i+1),n:R(3,9),u:[P(USERS).id,P(USERS).id,P(USERS).id]}));return pg('Fake and scam detection','Duplicate photos and spam patterns.',card('Duplicate photo clusters',tbl('dup',['Cluster','Accounts','Examples'],cl.map(c=>({c0:c,c:[c.id,c.n,c.u.join(', ')]})),{search:false,acts:[['Ban cluster',x=>A('Banned cluster',x.c0.id,()=>x.c0.u.forEach(i=>{const u=uById(i);if(u)u.status='Banned'}))(),'d']]}))+card('Spam patterns',bars([['Links in first message',212],['UPI or bank details',96],['Copy-pasted openers',340],['Mass-liking bots',58]])))}
+function pBans(){return pg('Block lists','Device, IP and phone number bans.',g3(...Object.keys(C.bans).map(k=>card(k+' bans',listEd(C.bans[k],k,'Add '+k.toLowerCase())))))}
+function pAuto(){return pg('Auto-ban rules and strikes','Automatic enforcement.',card('Rules',C.auto.map((r,i)=>fld(r,'on',`${r.r} → <b>${r.a}</b>`,'toggle')).join(''))+card('Strike system',`<div class="grid g3"><div>${fld(C.strike,'s1','Strike 1','select',{o:['Warning','Shadow-ban 3 days','7-day suspension']})}</div><div>${fld(C.strike,'s2','Strike 2','select',{o:['7-day suspension','30-day suspension','Permanent ban']})}</div><div>${fld(C.strike,'s3','Strike 3','select',{o:['Permanent ban','Device ban']})}</div></div>${fld(C.strike,'decay','Strikes expire after (days)','number')}<div style="margin-top:10px">${saveB('Strike system')}</div>`))}
+function pUnder(){return pg('Underage detection','Accounts showing signals of being under 18. Remove immediately.',tbl('under',['User','Claimed age','Signal','Action'],C.under.map(x=>({x,c:[x.id,x.claim,x.sig,'']})),{search:false,acts:[['Remove and notify',r=>A('Removed underage account',r.x.id,()=>{const u=uById(r.x.id);if(u)u.status='Deleted';C.under.splice(C.under.indexOf(r.x),1)})(),'d'],['Request ID',r=>A('Requested ID',r.x.id)(),'s'],['Dismiss',r=>A('Dismissed flag',r.x.id,()=>C.under.splice(C.under.indexOf(r.x),1))(),'s']]}))}
+// ---------- matching ----------
+function pAlgo(){const a=C.algo,keys=['distance','age','activity','interests','goal','response'],tot=sum(keys.map(k=>a[k])),sim=USERS.slice(0,5).map(u=>({n:u.name,s:keys.reduce((s,k)=>s+((u.age*7+k.length*13+u.name.length*3)%100)*a[k],0)/tot}));sim.sort((x,y)=>y.s-x.s);
+return pg('Algorithm weights','Tune how candidates are ranked in Discover.',g3(card('Weights',keys.map(k=>fld(a,k,k[0].toUpperCase()+k.slice(1),'range',{min:0,max:50,u:'%'})).join('')+fld(a,'decay','Activity decay half-life','range',{min:1,max:60,u:' days'})+`<p class="sub" style="margin-top:8px">Total ${tot}% (weights are normalised automatically)</p><div class="row">${btn('Preview ranking',()=>render(),'s')}${saveB('Algorithm weights')}</div>`),card('Preview: sample ranking',sim.map((s,i)=>`<div class="bl"><span>${i+1}. ${esc(s.n)}</span><div class="bar"><i style="width:${s.s}%"></i></div><b>${s.s.toFixed(0)}</b></div>`).join(''))))}
+function pVis(){const v=S.vf=S.vf||{u:'U-10001',r:'Boost x2',e:'3 days'};return pg('Visibility controls','Boost, hide or prioritise specific profiles.',g3(card('Add rule',fld(v,'u','User ID')+fld(v,'r','Rule','select',{o:['Boost x2','Boost x3','Hidden','Priority queue']})+fld(v,'e','Duration','select',{o:['1 day','3 days','7 days','Permanent']})+`<div style="margin-top:10px">${btn('Apply',A('Visibility rule',()=>v.u+' '+v.r,()=>C.vis.push({...v})))}</div>`))+tbl('vis',['User','Rule','Expires'],C.vis.map(x=>({x,c:[x.u,x.r,x.e]})),{search:false,acts:[['Remove',r=>A('Removed rule',r.x.u,()=>C.vis.splice(C.vis.indexOf(r.x),1))(),'d']]}))}
+function pLim(){return pg('Swipe limits','Daily likes, super likes and rewinds per plan.',g3(...Object.keys(C.lim).map(p=>card(p,fld(C.lim[p],'likes','Daily likes','number')+fld(C.lim[p],'sl','Super likes per day','number')+fld(C.lim[p],'rew','Rewinds per day','number')+fld(C.lim[p],'boost','Boosts per month','number'))))+saveB('Swipe limits'))}
+function pLoc(){return pg('Location and city launch','Radius rules and city launch control.',card('Radius rules',`<div class="grid g3">${fld(C.loc,'min','Minimum radius (km)','number')}${fld(C.loc,'max','Maximum radius (km)','number')}${fld(C.loc,'def','Default radius (km)','number')}</div><div style="margin-top:10px">${saveB('Radius rules')}</div>`)+tbl('cities',['City','Status','Waitlist','Auto-launch at'],C.cities.map(c=>({c0:c,c:[c.n,pill(c.s),fmt(c.w),c.th]})),{search:false,acts:[['Launch',r=>A('Launched city',r.c0.n,()=>{r.c0.s='Live'})(),'g',r=>r.c0.s!=='Live'],['Move to waitlist',r=>A('City waitlisted',r.c0.n,()=>{r.c0.s='Waitlist'})(),'s',r=>r.c0.s==='Live']]}))}
+function pAB(){const n=S.nb=S.nb||{n:'New experiment',v:'A 50% / B 50%'};return pg('A/B tests','Experiments on algorithm and product variations.',tbl('ab',['Experiment','Split','Status','Lift','p-value'],C.ab.map(x=>({x,c:[x.n,x.v,pill(x.st,x.st==='Running'?'ok':''),x.lift,x.p]})),{search:false,acts:[['Stop',r=>A('Stopped experiment',r.x.n,()=>{r.x.st='Stopped'})(),'s',r=>r.x.st==='Running'],['Start',r=>A('Started experiment',r.x.n,()=>{r.x.st='Running'})(),'g',r=>r.x.st!=='Running']]})+card('New experiment',fld(n,'n','Name')+fld(n,'v','Traffic split')+`<div style="margin-top:10px">${btn('Create',A('Created experiment',()=>n.n,()=>C.ab.push({n:n.n,v:n.v,st:'Running',lift:'—',p:'—'})))}</div>`))}
+// ---------- bots (with disclosure guardrails) ----------
+const prod=()=>C.botc.env==='Production';
+function pBotBeh(){const b=C.botc,lk=prod();return pg('Behaviour and schedule','Automation for test accounts. Locked off in Production.',card('Environment',`<div class="chips">${['Demo','Staging','Production'].map(e=>`<button class="chip ${b.env===e?'on':''}" ${on(()=>{b.env=e;if(e==='Production'){b.label=true;b.autoLike=b.autoMatch=b.autoReply=b.ai=false}log('Bot environment',e);render()})}>${e}</button>`).join('')}</div>${lk?'<div class="note">Production: automated likes, matches and replies are disabled. Seed profiles may only appear with an “Automated profile” label.</div>':''}`)+card('Behaviour (internal test accounts only)',fld(b,'autoLike','Auto-like test accounts','toggle',{lock:lk})+fld(b,'autoMatch','Auto-match with test accounts','toggle',{lock:lk})+fld(b,'autoReply','Auto-reply with templates','toggle',{lock:lk})+fld(b,'ai','AI-driven replies (test accounts only)','toggle',{lock:lk})+`<div class="grid g3"><div>${fld(b,'from','Active from (hour)','number')}</div><div>${fld(b,'to','Active until (hour)','number')}</div></div>${fld(b,'persona','AI persona prompt','area')}${saveB('Bot behaviour')}`)+card('Conversation templates (each is sent with an “Automated message” tag)',listEd(C.tpl,'template','Add template')))}
+function pBotPh(){const b=C.botc;return pg('Gradual phase-out','Reduce bots as real users grow in each city.',card('Rules',fld(b,'rot','Auto-rotate seed profiles per city','toggle')+fld(b,'share','Maximum bot share of any feed','range',{min:0,max:50,u:'%'})+fld(b,'thr','Hide bots in a city once real active users exceed','number')+saveB('Phase-out rules'))+tbl('ph',['City','Real active users','Bots shown','Status'],C.bcity.map(c=>({c0:c,c:[c.c,fmt(c.real),c.real>b.thr?0:c.bots,c.real>b.thr?pill('Phased out','ok'):pill('Seeding','warn')]})),{search:false})+card('Projected bot share',line([ser(12,30,-3).map(v=>Math.max(2,v))])))}
+function pBotAct(){const top=[...BOTS].sort((a,b)=>b.matches-a.matches).slice(0,8);return pg('Bot activity and performance','Per-bot logs and stats.',kpis([['Active bots',BOTS.filter(b=>b.status==='Active').length],['Likes sent',fmt(sum(BOTS.map(b=>b.likes)))],['Matches',fmt(sum(BOTS.map(b=>b.matches)))],['Messages',fmt(sum(BOTS.map(b=>b.msgs)))]])+card('Top bots by matches',bars(top.map(b=>[b.name.split(' ')[0],b.matches])))+card('Activity log',tbl('bl',['Time','Bot','Event'],Array.from({length:12},(_,i)=>({c:[new Date(Date.now()-i*6e5).toLocaleTimeString(),P(BOTS).id,P(['Profile shown','Liked test account','Sent automated message','Paused by schedule'])]}))).replace('class="card"','class="x"')))}
+// ---------- revenue ----------
+function pPlans(){return pg('Plans and pricing','Monthly price per country.',`<div class="grid g3">${Object.keys(C.plans).map(c=>{const p=C.plans[c];return card(c+' ('+p[0]+')',['Free','Gold','Premium'].map((n,i)=>i?`<label class="l">${n}</label><input class="fld" type="number" step="0.01" value="${p[i+1]}" ${oi(v=>p[i+1]=+v)}>`:'<p class="sub">Free: 0</p>').join(''))}).join('')}</div><div>${saveB('Plan pricing')}</div>`)}
+function pPromo(){const n=S.pn=S.pn||{c:'NEWCODE',t:'20% off',max:1000};return pg('Coupons, promo codes and trials','',tbl('promo',['Code','Offer','Redeemed','Limit','Status'],C.promos.map(p=>({p,c:[p.c,p.t,fmt(p.u),fmt(p.max),pill(p.on?'Active':'Paused',p.on?'ok':'warn')]})),{search:false,acts:[['Enable / disable',r=>A('Toggled promo',r.p.c,()=>{r.p.on=!r.p.on})(),'s']]})+card('New code',`<div class="grid g3"><div>${fld(n,'c','Code')}</div><div>${fld(n,'t','Offer (for example 20% off, 7-day trial)')}</div><div>${fld(n,'max','Redemption limit','number')}</div></div><div style="margin-top:10px">${btn('Create code',A('Created promo',()=>n.c,()=>C.promos.push({c:n.c.toUpperCase(),t:n.t,u:0,max:n.max,on:true})))}</div>`))}
+function pTx(){return pg('Transactions','Payments, refunds and failed payments.',tbl('tx',['ID','User','Item','Amount (₹)','Store','Status','Date'],TXN.map(t=>({t,c:[t.id,t.user,t.item,t.amt,t.store,pill(t.status),t.t]})),{filters:[['Status',5,['Paid','Failed','Refunded']],['Store',4,['Apple','Google','Stripe']]],acts:[['Refund',r=>A('Refunded payment',r.t.id+' ₹'+r.t.amt,()=>{r.t.status='Refunded'})(),'d',r=>r.t.status==='Paid'],['Retry',r=>A('Retried payment',r.t.id,()=>{r.t.status='Paid'})(),'g',r=>r.t.status==='Failed']]}))}
+function pSync(){return pg('Apple and Google subscription sync','Receipts and entitlement checks.',`<div class="grid g3">${['Apple App Store','Google Play'].map((s,i)=>card(s,`<p>${pill('Connected','ok')}</p><p class="sub">Last sync: ${now()}</p><p class="sub">Pending receipts: ${R(0,12)} · Mismatches: ${R(0,4)}</p>${btn('Sync now',A('Synced '+s,'',()=>{}),'')}`)).join('')}</div>`+tbl('mis',['User','Store says','App says','Fix'],Array.from({length:4},()=>({c:[P(USERS).id,'Premium','Free','']})),{search:false,acts:[['Grant entitlement',r=>A('Fixed entitlement',r.c[0],()=>{})(),'g']]}))}
+function pIap(){return pg('In-app purchases','Boosts, super likes and gifts.',card('Catalogue',C.iap.map(i=>`<div class="set"><span>${i.n}</span><span class="row"><input class="fld" type="number" style="width:90px" value="${i.p}" ${oi(v=>i.p=+v)}> ${fld(i,'on','','toggle').replace('set','')}</span></div>`).join('')+saveB('IAP catalogue')))}
+function pRev(){const mrr=ser(12,310,20);return pg('Revenue and LTV','',kpis([['MRR','₹'+fmt(last(mrr)*1000),'+6.2%'],['ARPU','₹'+R(48,70)],['Paying users',fmt(R(12000,16000))],['LTV (12 mo)','₹'+R(900,1500)],['Refund rate',R(2,4)+'%']])+g3(card('MRR trend (₹ thousands)',line([mrr])),card('Revenue by plan',bars([['Gold',182000],['Premium',96000],['Boosts',41000],['Gifts',18000]])),card('Revenue by country',bars([['India',210000],['USA',58000],['UAE',41000],['UK',22000],['Singapore',12000]]))))}
+// ---------- content & config ----------
+function pFlags(){return pg('Feature flags and remote config','Toggle and roll out every feature.',card('',C.flags.map(f=>`<div class="set"><span>${f.n}<small>Rollout ${f.ro}%</small></span><span class="row" style="flex-wrap:nowrap"><input type="range" style="width:110px" min="0" max="100" value="${f.ro}" ${oi((v,el)=>{f.ro=+v;el.closest('.set').querySelector('small').textContent='Rollout '+v+'%'})}>${fld(f,'on','','toggle').replace('class="set"','class="x"')}</span></div>`).join('')+saveB('Feature flags')))}
+function pLang(){const L=C.lang,cols=['Hindi','Kannada','Tamil','Telugu','Bengali','Marathi'];return pg('Languages and translations','',card('Coverage',bars(cols.map(c=>[c,c==='Hindi'?100:R(40,92)])))+card('Edit strings',fld(L,'sel','Language','select',{o:cols,cb:()=>render()})+`<div class="scroll"><table><tr><th>Key</th><th>English</th><th>${L.sel}</th></tr>${Object.entries(L.keys).map(([k,v])=>`<tr><td>${k}</td><td>${v[0]}</td><td><input class="fld" value="${esc(v[1])}" ${oi(x=>v[1]=x)}></td></tr>`).join('')}</table></div><div class="row" style="margin-top:10px">${saveB('Translations')}${btn('Auto-translate missing',A('Auto-translated','missing strings'),'s')}</div>`))}
+function pOnb(){const mv=(i,d)=>{const a=C.onb;[a[i],a[i+d]]=[a[i+d],a[i]]};return pg('Onboarding flow editor','Order and requirement of sign-up questions.',card('',C.onb.map((s,i)=>`<div class="set"><span>${i+1}. ${esc(s.n)}</span><span class="row" style="flex-wrap:nowrap"><button class="btn s sm" ${on(A('Reordered onboarding',s.n,()=>mv(i,-1)))} ${i?'':'disabled'} aria-label="Move up">↑</button><button class="btn s sm" ${on(A('Reordered onboarding',s.n,()=>mv(i,1)))} ${i<C.onb.length-1?'':'disabled'} aria-label="Move down">↓</button>${fld(s,'r','','toggle').replace('class="set"','class="x"')}<span class="sub">${s.r?'Required':'Optional'}</span><button class="btn d sm" ${on(A('Removed step',s.n,()=>C.onb.splice(i,1)))}>×</button></span></div>`).join('')+`<div class="row" style="margin-top:10px"><input class="fld" style="flex:1" id="mk-nstep" placeholder="New step name">${btn('Add step',A('Added step',()=>$('#mk-nstep').value,()=>{const v=$('#mk-nstep').value.trim();if(v)C.onb.push({n:v,r:false})}),'s')}</div>`))}
+function pBan(){const n=S.bn=S.bn||{k:'Banner',t:'',a:'All'};return pg('Banners, stories and announcements','',tbl('ban',['Type','Title','Audience','Status'],C.banners.map(b=>({b,c:[b.k,esc(b.t),b.a,pill(b.on?'Live':'Off',b.on?'ok':'')]})),{search:false,acts:[['Toggle',r=>A('Toggled banner',r.b.t,()=>{r.b.on=!r.b.on})(),'s'],['Delete',r=>A('Deleted banner',r.b.t,()=>C.banners.splice(C.banners.indexOf(r.b),1))(),'d']]})+card('Create',fld(n,'k','Type','select',{o:['Banner','Story','Announcement']})+fld(n,'t','Title')+fld(n,'a','Audience','select',{o:['All','New users','Gold','Premium',...CITY]})+`<div style="margin-top:10px">${btn('Publish',A('Published '+n.k,()=>n.t,()=>{if(n.t)C.banners.push({...n,on:true})}))}</div>`))}
+function pCtl(){const c=C.ctl;return pg('App control','Force update and maintenance mode.',g3(card('Force update',fld(c,'iosMin','Minimum iOS version')+fld(c,'andMin','Minimum Android version')+fld(c,'hard','Block older versions (hard update)','toggle')+saveB('Force update')),card('Maintenance mode',fld(c,'maint','Maintenance mode','toggle',{cb:()=>log('Maintenance mode',C.ctl.maint?'ON':'OFF')})+fld(c,'msg','Message shown to users','area')+saveB('Maintenance'))))}
+// ---------- communication ----------
+function comp(ch){const k='cm'+ch,c=S[k]=S[k]||{title:'',body:'',city:'All',gender:'All',plan:'All',active:'Any',when:'Send now'};const est=USERS.filter(u=>(c.city==='All'||u.city===c.city)&&(c.gender==='All'||u.gender===c.gender)&&(c.plan==='All'||u.plan===c.plan)).length*61;
+return card('Compose '+ch,(ch==='push'||ch==='inapp'||ch==='email')?fld(c,'title',ch==='email'?'Subject':'Title'):'')+card('',fld(c,'body','Message','area')+`<div class="grid g3"><div>${fld(c,'city','City','select',{o:['All',...CITY],cb:()=>render()})}</div><div>${fld(c,'gender','Gender','select',{o:['All','Woman','Man','Non-binary'],cb:()=>render()})}</div><div>${fld(c,'plan','Plan','select',{o:['All','Free','Gold','Premium'],cb:()=>render()})}</div><div>${fld(c,'active','Last active','select',{o:['Any','Last 7 days','Last 30 days','Inactive 30+ days']})}</div><div>${fld(c,'when','Schedule','select',{o:['Send now','Tonight 8 pm','Tomorrow 9 am']})}</div></div><div class="sum" style="margin:12px 0">Estimated audience: <b>${fmt(est)}</b> users</div>${btn(c.when==='Send now'?'Send':'Schedule',A((c.when==='Send now'?'Sent ':'Scheduled ')+ch,()=>c.title+' → '+est+' users',()=>{if(!c.body.trim()&&!c.title.trim()){throw 0}C.camp.unshift({n:c.title||c.body.slice(0,28),ch:ch,aud:est,st:c.when==='Send now'?'Sent':'Scheduled',ctr:'—'})}))}`)}
+function pPush(){return pg('Push notifications','Segmented and scheduled.',comp('push')+tbl('camp',['Campaign','Channel','Audience','Status','CTR'],C.camp.map(c=>({c:[esc(c.n),c.ch,fmt(c.aud),pill(c.st),c.ctr]})),{search:false}))}
+function pMail(){const n=S.tp=S.tp||{ch:'Email'};return pg('Email and SMS','Campaigns and transactional templates.',fld(n,'ch','Channel','select',{o:['Email','SMS'],cb:()=>render()})+comp(n.ch.toLowerCase())+card('Transactional templates',['OTP code','Welcome','Receipt','Password reset','Match notification'].map(t=>`<div class="set"><span>${t}</span>${btn('Edit',()=>toast('Template editor opens here'),'s sm')}</div>`).join('')))}
+function pBroad(){return pg('In-app broadcast','Messages shown inside the app.',comp('inapp'))}
+function pLife(){return pg('Lifecycle automations','Triggered messages.',card('',C.life.map(l=>fld(l,'on',`${l.n}<small>${l.d} · ${l.ch}</small>`,'toggle').replace('<small>','<small>')).join('')+saveB('Lifecycle automations')))}
+// ---------- support ----------
+function pTix(){return pg('Tickets','Assign, reply and close.',tbl('tix',['ID','User','Subject','Priority','Status','Owner'],TIX.map(t=>({t,c:[t.id,t.user,t.subj,pill(t.prio),pill(t.status),t.owner]})),{filters:[['Status',4,['Open','Pending','Resolved']],['Priority',3,['High','Medium','Low']]],click:r=>openM(()=>tixM(r.t))}))}
+function tixM(t){const x=S.rp=S.rp||{r:'',c:C.canned[0]};m(`<div class="row" style="justify-content:space-between"><h3 style="margin:0">${t.id}: ${esc(t.subj)}</h3>${btn('Close',closeM,'s')}</div><p class="sub">${t.user} · ${pill(t.status)} · Owner: ${t.owner}</p><div style="margin:10px 0"><div class="msg">${esc(t.subj)}. Please help.</div>${t.thread.map(r=>`<div class="msg me">${esc(r)}</div>`).join('')}</div>${fld(x,'c','Canned reply','select',{o:C.canned})}<div class="row" style="margin:8px 0">${btn('Use canned reply',A('Replied to ticket',t.id,()=>{t.thread.push(x.c);t.status='Pending'}),'s')}</div>${fld(x,'r','Custom reply','area')}<div class="row" style="margin-top:8px">${btn('Send reply',A('Replied to ticket',t.id,()=>{if(x.r.trim()){t.thread.push(x.r);x.r='';t.status='Pending'}}))}${btn('Assign to me',A('Assigned ticket',t.id,()=>{t.owner=S.role}),'s')}${btn('Resolve',A('Resolved ticket',t.id,()=>{t.status='Resolved'}),'g')}</div>`)}
+function pLive(){const c=S.lc=S.lc||{msgs:[['u','Hi, my photo was rejected but it is my real photo.']],t:'',who:'U-10077'};return pg('Live chat','Chat with a user in real time.',card('Chat with '+c.who,`<div style="min-height:140px">${c.msgs.map(m=>`<div class="msg ${m[0]==='a'?'me':''}">${esc(m[1])}</div>`).join('')}</div><div class="row"><input class="fld" style="flex:1" id="mk-lct" placeholder="Type a reply" value="${esc(c.t)}" ${oi(v=>c.t=v)}>${btn('Send',()=>{if(!can()){toast('Read-only for your role');return}const v=c.t.trim();if(!v)return;c.msgs.push(['a',v]);c.t='';log('Live chat reply',c.who);render();setTimeout(()=>{c.msgs.push(['u',P(['Thank you!','Okay, I will upload again.','That worked, thanks.'])]);render()},900)})}</div>`))}
+function pFaq(){const n=S.fq=S.fq||{t:'',c:'General'};return pg('Help center','FAQ articles.',tbl('faq',['Article','Category'],C.faq.map(f=>({f,c:[esc(f.t),f.c]})),{search:false,acts:[['Delete',r=>A('Deleted FAQ',r.f.t,()=>C.faq.splice(C.faq.indexOf(r.f),1))(),'d']]})+card('New article',fld(n,'t','Title')+fld(n,'c','Category','select',{o:['General','Safety','Billing','Account']})+`<div style="margin-top:10px">${btn('Publish',A('Published FAQ',()=>n.t,()=>{if(n.t)C.faq.push({...n})}))}</div>`))}
+function pApp(){return pg('Appeals','Review ban and suspension appeals.',tbl('app',['ID','User','Reason','Status'],C.appeals.map(a=>({a,c:[a.id,a.u,esc(a.why),pill(a.st)]})),{search:false,acts:[['Approve and restore',r=>A('Appeal approved',r.a.u,()=>{r.a.st='Approved';const u=uById(r.a.u);if(u)u.status='Active'})(),'g',r=>r.a.st==='Open'],['Deny',r=>A('Appeal denied',r.a.u,()=>{r.a.st='Rejected'})(),'d',r=>r.a.st==='Open']]}))}
+// ---------- growth ----------
+function pRef(){const n=S.rc=S.rc||{c:'NEWCODE',o:'Referral'};return pg('Referral program','',card('Rules',`<div class="grid g3"><div>${fld(C.ref,'rew','Referrer reward (premium days)','number')}</div><div>${fld(C.ref,'newrew','New user reward (premium days)','number')}</div><div>${fld(C.ref,'cap','Max rewards per user','number')}</div></div>${fld(C.ref,'fraud','Block self-referral and device fraud','toggle')}${saveB('Referral program')}`)+tbl('codes',['Code','Uses','Type'],C.codes.map(c=>({c:[c.c,fmt(c.u),c.o]})),{search:false})+card('New invite code',fld(n,'c','Code')+`<div style="margin-top:10px">${btn('Create',A('Created invite code',()=>n.c,()=>C.codes.push({c:n.c.toUpperCase(),u:0,o:n.o})))}</div>`))}
+function pUtm(){const u=S.ut=S.ut||{url:'https://everlane.app',src:'instagram',med:'paid_social',cam:'diwali'},link=`${u.url}?utm_source=${u.src}&utm_medium=${u.med}&utm_campaign=${u.cam}`;return pg('Campaign and UTM tracking','',tbl('utm',['Source','Medium','Campaign','Installs','Signups','CAC (₹)'],C.utm.map(r=>({c:r})),{search:false})+card('UTM link builder',`<div class="grid g3"><div>${fld(u,'url','Landing URL')}</div><div>${fld(u,'src','Source')}</div><div>${fld(u,'med','Medium')}</div><div>${fld(u,'cam','Campaign')}</div></div><p class="sub" style="margin-top:8px;word-break:break-all">${esc(link)}</p>${btn('Copy link',()=>copy(link),'s')}`))}
+function pEvt(){const n=S.ev=S.ev||{n:'New event',city:'Bengaluru',d:'2026-12-01',cap:40};return pg('Events','Speed dating and city events.',tbl('ev',['Event','City','Date','RSVPs','Status'],C.events.map(e=>({e,c:[esc(e.n),e.city,e.d,e.rsvp+' / '+e.cap,pill(e.st,e.st==='Open'?'ok':'warn')]})),{search:false,acts:[['Cancel',r=>A('Cancelled event',r.e.n,()=>{r.e.st='Cancelled'})(),'d',r=>r.e.st==='Open']]})+card('Create event',`<div class="grid g3"><div>${fld(n,'n','Name')}</div><div>${fld(n,'city','City','select',{o:CITY})}</div><div>${fld(n,'d','Date','date')}</div><div>${fld(n,'cap','Capacity','number')}</div></div><div style="margin-top:10px">${btn('Create',A('Created event',()=>n.n,()=>C.events.push({...n,rsvp:0,st:'Open'})))}</div>`))}
+function pAmb(){const n=S.am=S.am||{n:'',c:''};return pg('Influencer and ambassador codes','',tbl('amb',['Name','Code','Signups','Payout due'],C.amb.map(a=>({c:[esc(a.n),a.c,a.s,a.pay]})),{search:false})+card('Add ambassador',fld(n,'n','Name')+fld(n,'c','Code')+`<div style="margin-top:10px">${btn('Add',A('Added ambassador',()=>n.n,()=>{if(n.n)C.amb.push({n:n.n,c:n.c.toUpperCase(),s:0,pay:'₹0'})}))}</div>`))}
+function pWait(){const n=S.wi=S.wi||{k:50};return pg('Waitlist management','Invite users from waitlisted cities.',card('Waitlist by city',bars(C.cities.filter(c=>c.s!=='Live').map(c=>[c.n,c.w])))+card('Invite',fld(n,'k','Invite next N users per waitlisted city','number')+`<div style="margin-top:10px">${btn('Send invites',A('Waitlist invites sent',()=>n.k+' per city',()=>C.cities.forEach(c=>{if(c.s!=='Live')c.w=Math.max(0,c.w-n.k)})))}</div>`))}
+// ---------- admin & security ----------
+function pAccess(){const a=C.acc;return pg('Access and 2FA','',g3(card('Authentication',fld(a,'tfa','Two-factor authentication enabled','toggle')+fld(a,'tfaAll','Require 2FA for all admins','toggle')+fld(a,'sess','Session timeout (minutes)','number')+fld(a,'pw','Minimum password length','number')+saveB('Access policy'),card('IP whitelist',listEd(a.ips,'ip','Add IP or range')))))}
+function pApi(){const k=S.ak=S.ak||{n:''},w=S.wh=S.wh||{u:'https://',ev:'match.created'};return pg('API keys and webhooks','',tbl('keys',['Name','Key','Scopes','Created','Last used'],C.keys.map(x=>({x,c:[esc(x.n),x.p+'••••••',x.sc,x.t,x.l]})),{search:false,acts:[['Revoke',r=>A('Revoked API key',r.x.n,()=>C.keys.splice(C.keys.indexOf(r.x),1))(),'d']]})+card('New key',fld(k,'n','Key name')+`<div style="margin-top:10px">${btn('Generate',A('Generated API key',()=>k.n,()=>{if(k.n)C.keys.push({n:k.n,p:'ek_live_'+Math.random().toString(16).slice(2,6),sc:'read',t:ago(0),l:'Never'})}))}</div>`)+tbl('hooks',['Endpoint','Event','Status'],C.hooks.map(h=>({h,c:[esc(h.u),h.ev,pill(h.st,h.st==='Active'?'ok':'warn')]})),{search:false,acts:[['Test',r=>A('Tested webhook',r.h.u)(),'s'],['Disable',r=>A('Disabled webhook',r.h.u,()=>{r.h.st='Disabled'})(),'d']]})+card('New webhook',fld(w,'u','Endpoint URL')+fld(w,'ev','Event','select',{o:['match.created','user.signup','user.banned','payment.succeeded','report.created']})+`<div style="margin-top:10px">${btn('Add',A('Added webhook',()=>w.u,()=>C.hooks.push({u:w.u,ev:w.ev,st:'Active'})))}</div>`))}
+function pBk(){const b=C.bk;return pg('Backups and data retention','',g3(card('Schedule',fld(b,'freq','Backup schedule','select',{o:['Daily 02:00','Every 12 hours','Weekly']})+fld(b,'keep','Keep backups (days)','number')+fld(b,'logs','Keep logs (days)','number')+fld(b,'del','Keep deleted-account data (days)','number')+`<div class="row" style="margin-top:10px">${saveB('Retention settings')}${btn('Backup now',A('Backup started','manual',()=>C.bks.unshift(now())),'s')}</div>`),card('Recent backups',C.bks.map(x=>`<div class="set"><span>${x}</span>${btn('Restore',()=>{if(confirm('Restore the database to '+x+'?'))A('Restore requested',x)()},'d sm')}</div>`).join(''))))}
+// ---------- technical ----------
+function pLogs(){return pg('Error and crash logs','',tbl('logs',['Time','Level','Service','Message','Count','Status'],C.logs.map(l=>({l,c:[l.t,pill(l.lv,l.lv==='ERROR'?'bad':l.lv==='WARN'?'warn':''),l.svc,l.m,l.n,pill(l.st)]})),{filters:[['Level',1,['ERROR','WARN','INFO']],['Service',2,['api','auth','payments','push','media']]],acts:[['Resolve',r=>A('Resolved log',r.l.m,()=>{r.l.st='Resolved'})(),'g',r=>r.l.st==='Open']]}))}
+function pMon(){const eps=[['POST /auth/login',R(40,90),R(150,300),'0.4%'],['GET /discover',R(80,140),R(300,520),'0.9%'],['POST /swipe',R(30,60),R(100,200),'0.2%'],['POST /messages',R(40,80),R(150,260),'0.5%'],['POST /photos',R(250,500),R(900,1800),'1.8%']];return pg('API monitoring','',kpis([['Uptime (30d)','99.96%'],['p50 latency',R(60,90)+' ms'],['p95 latency',R(240,380)+' ms'],['Error rate','0.6%']])+g3(card('Latency (ms)',line([ser(24,90,25)])),card('Error rate',line([ser(24,.6,.2)])))+tbl('eps',['Endpoint','p50 (ms)','p95 (ms)','Errors'],eps.map(r=>({c:r})),{search:false}))}
+function pInt(){return pg('Integrations','Twilio, Firebase, Stripe, AWS and OneSignal.',`<div class="grid g3">${C.ints.map(i=>card(i.n,`<p>${pill(i.on?'Connected':'Not connected',i.on?'ok':'warn')}</p><p class="sub">Key: ${i.k}</p><div class="row">${btn('Test connection',A('Tested '+i.n,'',()=>{}),'s sm')}${btn(i.on?'Disconnect':'Connect',A((i.on?'Disconnected ':'Connected ')+i.n,'',()=>{i.on=!i.on;i.k=i.on?'••••'+R(10,99):'—'}),i.on?'d sm':'sm')}</div>`)).join('')}</div>`)}
+function pDb(){return pg('Database tools','Read-only insight and safe maintenance jobs.',tbl('db',['Table','Rows','Size'],[['users','412,380','1.2 GB'],['photos','1,204,500','18.4 GB'],['messages','38,900,000','22.1 GB'],['swipes','212,000,000','31.8 GB'],['matches','2,810,000','2.4 GB']].map(r=>({c:r})),{search:false,acts:[['Analyze',r=>A('Analyzed table',r.c[0])(),'s'],['Vacuum',r=>A('Vacuumed table',r.c[0])(),'s']]})+card('Slow queries',bars([['swipes by user',812],['discover candidates',640],['messages by match',390]]))+`<p class="sub">Run migrations and raw SQL from your deployment pipeline, not from the admin panel.</p>`)}
+function pQ(){return pg('Jobs and queues','',tbl('q',['Queue','Waiting','Active','Failed','State'],C.q.map(q=>({q,c:[q.n,q.w,q.a,q.f?pill(q.f,'bad'):0,pill(q.on?'Running':'Paused',q.on?'ok':'warn')]})),{search:false,acts:[['Retry failed',r=>A('Retried failed jobs',r.q.n,()=>{r.q.f=0})(),'s',r=>r.q.f>0],['Pause / resume',r=>A('Toggled queue',r.q.n,()=>{r.q.on=!r.q.on})(),'s'],['Purge',r=>A('Purged queue',r.q.n,()=>{r.q.w=0})(),'d']]}))}
+function pRl(){return pg('Rate limits and anti-spam','',card('Rate limits (requests per minute)',C.rl.map(r=>`<div class="set"><span>${r.n}</span><span class="row" style="flex-wrap:nowrap"><input class="fld" style="width:90px" type="number" value="${r.v}" ${oi(v=>r.v=+v)}>${fld(r,'on','','toggle').replace('class="set"','class="x"')}</span></div>`).join(''))+card('Anti-spam',fld(C.spam,'newcap','Messages allowed for new accounts (first 24h)','number')+fld(C.spam,'links','Block links in first messages','toggle')+fld(C.spam,'captcha','Show CAPTCHA on suspicious activity','toggle')+fld(C.spam,'cth','CAPTCHA risk threshold','range',{min:0,max:100})+saveB('Rate limits')))}
+// ---------- legal ----------
+function pCons(){return pg('Consent versioning','Track which version each user accepted.',tbl('cons',['Consent','Required','Version','Users on latest'],C.cons.map(c=>({c:[c.n,c.req?'Yes':'No',c.v,`<div class="bar" style="width:120px;display:inline-block;vertical-align:middle"><i style="width:${c.pct}%"></i></div> ${c.pct}%`]})),{search:false}))}
+function pAge(){return pg('Age verification and regional compliance','',g3(card('Minimum age',fld(C.age,'min','Minimum age','number')+Object.keys(C.age.m).map(k=>fld(C.age.m,k,'Method: '+k,'select',{o:['Self-declare','Self-declare + selfie','Selfie age estimate','Selfie age estimate + ID on doubt','ID document']})).join('')+saveB('Age verification')),card('Regional compliance',C.reg.map(r=>fld(r,'on',r.n,'toggle')).join('')+saveB('Regional compliance')),card('Checklist',['Data protection officer named','Breach notification process (72 hours)','Records of processing kept','Data residency decided','Biometric consent flow reviewed'].map(x=>`<p>✓ ${x}</p>`).join(''))))}
+// ---------- navigation ----------
+// ---------- pages and rendering ----------
+const PAGES = {
+  'dash-retention': ['dash', pRetention], 'dash-geo': ['dash', pGeo], 'dash-reports': ['dash', pReports],
+  'users-multi': ['users', pMulti], 'users-gdpr': ['users', pDsar],
+  'mod-chat': ['mod', pChat], 'mod-fake': ['mod', pFake], 'mod-bans': ['mod', pBans], 'mod-auto': ['mod', pAuto], 'mod-underage': ['mod', pUnder],
+  'match-algorithm': ['match', pAlgo], 'match-visibility': ['match', pVis], 'match-limits': ['match', pLim], 'match-locations': ['match', pLoc], 'match-ab': ['match', pAB],
+  'bots-behaviour': ['bots', pBotBeh], 'bots-phase-out': ['bots', pBotPh], 'bots-activity': ['bots', pBotAct],
+  'subs-plans': ['subs', pPlans], 'subs-promos': ['subs', pPromo], 'subs-transactions': ['subs', pTx], 'subs-store-sync': ['subs', pSync], 'subs-iap': ['subs', pIap], 'subs-reports': ['subs', pRev],
+  'cfg-flags': ['cfg', pFlags], 'cfg-languages': ['cfg', pLang], 'cfg-onboarding': ['cfg', pOnb], 'cfg-banners': ['cfg', pBan], 'cfg-app-control': ['cfg', pCtl],
+  'comm-push': ['comm', pPush], 'comm-email': ['comm', pMail], 'comm-broadcast': ['comm', pBroad], 'comm-lifecycle': ['comm', pLife],
+  'sup-tickets': ['sup', pTix], 'sup-live-chat': ['sup', pLive], 'sup-help': ['sup', pFaq], 'sup-appeals': ['sup', pApp],
+  'grow-referrals': ['grow', pRef], 'grow-campaigns': ['grow', pUtm], 'grow-events': ['grow', pEvt], 'grow-ambassadors': ['grow', pAmb], 'grow-waitlist': ['grow', pWait],
+  'sec-access': ['sec', pAccess], 'sec-api': ['sec', pApi], 'sec-backups': ['sec', pBk],
+  'tech-logs': ['tech', pLogs], 'tech-monitor': ['tech', pMon], 'tech-integrations': ['tech', pInt], 'tech-database': ['tech', pDb], 'tech-queues': ['tech', pQ], 'tech-rate-limits': ['tech', pRl],
+  'legal-consent': ['legal', pCons], 'legal-age': ['legal', pAge], 'legal-data-requests': ['legal', pDsar]};
+let CUR = null;
+function render() {
+  const vw = $('#view-mock'); if (!CUR || !vw) return;
+  const y = window.scrollY, ae = document.activeElement; let idx = -1, pos = 0;
+  if (ae && ae.tagName === 'INPUT' && vw.contains(ae)) { idx = [...vw.querySelectorAll('input')].indexOf(ae); try { pos = ae.selectionStart } catch (e) {} }
+  H.length = 0;
+  const [sec, fn] = PAGES[CUR]; S.sec = sec;
+  try { vw.innerHTML = fn() } catch (e) { vw.innerHTML = BANNER + `<div class="card">Something went wrong: ${esc(e && e.message || 'Check your input')}</div>` }
+  const top = vw.querySelector('.mkban');
+  if (!can() && sec !== 'dash') top.insertAdjacentHTML('afterend', `<div class="note">Previewing as ${esc(S.role)}: this sample page is read-only for that role.</div>`);
+  if (S.imp) top.insertAdjacentHTML('afterend', `<div class="imp"><span>Viewing as <b>${esc(S.imp)}</b> (read-only, audited)</span><button class="btn s sm" ${on(() => { log('Impersonation ended', S.imp); S.imp = null; render() })}>Exit</button></div>`);
+  if (MODAL) MODAL();
+  if (idx >= 0) { const n = vw.querySelectorAll('input')[idx]; if (n) { n.focus(); try { n.setSelectionRange(pos, pos) } catch (e) {} } }
+  window.scrollTo(0, y);
+}
+document.addEventListener('click', e => { const t = e.target.closest('[data-mh]'); if (t) { const f = H[+t.dataset.mh]; if (f) f(t, e) } });
+document.addEventListener('input', e => { const t = e.target.closest('[data-mi]'); if (t) { const f = H[+t.dataset.mi]; if (f) f(t.type === 'checkbox' ? t.checked : t.value, t) } });
+$('#mkMd').addEventListener('click', e => { if (e.target === $('#mkMd')) closeM() });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && MODAL) closeM() });
+// "Preview as role" only changes which sample pages are read-only; it never touches real permissions.
+const roleSel = $('#mkRole');
+const paintRole = () => { roleSel.innerHTML = Object.keys(WR).map(r => `<option ${r === S.role ? 'selected' : ''}>${r}</option>`).join('') };
+roleSel.addEventListener('change', e => { S.role = e.target.value; log('Switched preview role', S.role); render(); toast('Sample pages now preview as ' + S.role) });
+paintRole();
+window.EverlaneMock = Object.freeze({
+  has: id => Object.prototype.hasOwnProperty.call(PAGES, id),
+  render(id) { if (!this.has(id)) return; if (CUR !== id) closeM(); CUR = id; render() },
+  close() { CUR = null; closeM() },
+  setRole(r) { if (r in WR) S.role = r; paintRole() }
+});
+})();
+</script>
 <script>
 const SUPABASE_URL = 'https://fqtcazstfcusheakyown.supabase.co';
 // Publishable key: safe in a browser; every table and function is guarded by
@@ -594,6 +961,10 @@ const ROLE_INFO = {
 const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', hangouts: 'bots', reports: 'moderate', photos: 'moderate',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team',
   legal: null };
+// Sample pages (tabs marked data-mock) use mock data only, so every admin can open them.
+const MOCK_VIEWS = new Set([...document.querySelectorAll('.nav.sb [data-mock]')].map(b => b.dataset.view)
+  .filter(v => window.EverlaneMock?.has(v)));
+MOCK_VIEWS.forEach(v => VIEW_PERM[v] = null);
 let perms = [];
 const can = p => perms.includes(p);
 // A view with no permission (Legal) is open to every admin.
@@ -617,6 +988,10 @@ async function start() {
   perms = st.permissions || [];
   $('#who').textContent = session.user.email || session.user.phone || '';
   $('#rolePill').textContent = ROLES[st.role] || st.role || 'Admin';
+  // The sample pages preview as the real role until someone picks another in "Preview as role".
+  window.EverlaneMock?.setRole(ROLES[st.role] || 'Analyst');
+  // The header kill switch shows the real bots state.
+  if (can('bots')) loadBots(); else paintBotsPill();
   // Hide sub-tabs the role can't open, and sections with none left.
   document.querySelectorAll('.nav.sb .tab').forEach(b => b.classList.toggle('hidden', !canView(b.dataset.view)));
   document.querySelectorAll('#nav [data-sec]').forEach(b =>
@@ -665,12 +1040,15 @@ function show(view) {
     b.classList.toggle('on', b.dataset.view === view);
     b.toggleAttribute('aria-current', b.dataset.view === view);
   });
-  for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== view);
+  for (const v of VIEWS) $('#view-' + v)?.classList.toggle('hidden', v !== view);
+  $('#view-mock').classList.toggle('hidden', !MOCK_VIEWS.has(view));
   // Keep the active section visible in the scrolling row on small screens.
   const onBtn = $('#nav button.on');
   if (onBtn) { const nav = $('#nav'); nav.scrollLeft = Math.max(0, onBtn.offsetLeft - nav.offsetLeft - 16); }
   // The current page lives in the address, so a reload or shared link opens it again.
   try { history.replaceState(null, '', '#' + view); } catch (e) {}
+  if (MOCK_VIEWS.has(view)) return window.EverlaneMock.render(view);
+  window.EverlaneMock?.close();
   return ({ overview: loadOverview, leads: loadMembers, gen: loadGenerator, bots: loadBots, hangouts: loadHangouts, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
      audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: () => {} })[view]();
 }
@@ -1200,6 +1578,7 @@ async function loadBots() {
   $('#botsLive').textContent = live ? 'Switch all bots off' : 'Switch all bots on';
   $('#botsLive').className = 'btn' + (live ? ' danger' : '');
   $('#botsLive').disabled = !bots.length;
+  paintBotsPill();
   const fill = (sel, first, values) => {
     const v = $(sel).value;
     $(sel).innerHTML = `<option value="">${first}</option>` + values.map(x => `<option>${esc(x)}</option>`).join('');
@@ -1323,13 +1702,26 @@ async function copyBots(asCsv) {
 $('#botJson').onclick = () => copyBots(false);
 $('#botCsv').onclick = () => copyBots(true);
 $('#newBot').onclick = () => editProfile(null);
-$('#botsLive').onclick = async () => {
-  const live = $('#botsLive').textContent.includes('on');
+// The real switch for every bot (admin_set_bots_live), used by the Profiles button and the header pill.
+async function setBotsLive(live) {
   if (!live && !confirm('Switch every bot off? They disappear from the app until you switch them back on.')) return;
   const { error } = await sb.rpc('admin_set_bots_live', { live });
   if (error) return fail(error);
   toast(live ? 'Bots switched on' : 'Bots switched off'); loadBots();
-};
+}
+$('#botsLive').onclick = () => setBotsLive($('#botsLive').textContent.includes('on'));
+// Bots count as on while any bot is live, matching the Profiles button.
+const botsAreLive = () => !!bots.length && bots.some(b => !b.blocked);
+function paintBotsPill() {
+  const p = $('#botsPill');
+  if (!can('bots')) return p.classList.add('hidden');
+  const live = botsAreLive();
+  p.className = 'pill ' + (!bots.length ? 'muted' : live ? 'ok' : 'bad');
+  p.textContent = !bots.length ? 'No bots yet' : live ? 'Bots ON · tap to kill' : 'Bots OFF · tap to enable';
+  p.disabled = !bots.length;
+  p.title = live ? 'Switch every bot off' : 'Switch all bots on';
+}
+$('#botsPill').onclick = () => setBotsLive(!botsAreLive());
 
 // Edits a bot ([bot] null makes a new one), or a member's profile when [member] is set.
 async function editProfile(bot, member = false) {
