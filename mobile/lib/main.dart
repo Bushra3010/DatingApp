@@ -203,7 +203,7 @@ class _EverlaneShellState extends State<EverlaneShell> {
                       drawer: SideMenu(
                           name: store.myName,
                           age: store.myAge,
-                          location: 'Bengaluru, India',
+                          location: store.myCity,
                           photo: store.hasPhoto
                               ? MemoryImage(store.myPhotos.first)
                               : null,
@@ -213,38 +213,50 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                 const Icon(Icons.favorite_border_rounded),
                                 'Admirers',
                                 'People who have liked your profile',
-                                const Color(0xFFE79AA8),
+                                const Color(0xFFF472B6),
                                 fromMenu(() => setState(() => selected = 2)),
                                 badge: store.incoming.length),
                             SideMenuItem(
                                 const TwoHeartsIcon(),
                                 'Connections',
                                 'Your mutual likes and matches',
-                                const Color(0xFFCDB8DA),
+                                const Color(0xFFC4B5FD),
                                 fromMenu(() => setState(() => selected = 3))),
                             SideMenuItem(
                                 const Icon(Icons.explore_outlined),
                                 'Dating Goals',
                                 'What you’re looking for',
-                                const Color(0xFFD9A57A),
+                                const Color(0xFFA78BFA),
                                 fromMenu(() => showFilters(context, store))),
                             SideMenuItem(
                                 const Icon(Icons.calendar_today_outlined),
-                                'Let’s Meet',
-                                'Plans to meet and spend time together',
-                                const Color(0xFF95CDB8),
-                                fromMenu(() => openHangouts(context, store))),
+                                'Hangouts',
+                                'Host a plan or join one near you',
+                                const Color(0xFFF9A8D4),
+                                fromMenu(() => setState(() => selected = 1))),
+                            SideMenuItem(
+                                const Icon(Icons.travel_explore_rounded),
+                                'Explore',
+                                'Introductions, nearby and crossed paths',
+                                const Color(0xFFA78BFA),
+                                fromMenu(() => Navigator.push(
+                                    context,
+                                    MaterialPageRoute<void>(
+                                        builder: (_) => Scaffold(
+                                            appBar: AppBar(),
+                                            body: ExploreScreen(
+                                                store: store)))))),
                             SideMenuItem(
                                 const CrownIcon(),
                                 'Everlane Plus',
                                 'Premium plans and exclusive benefits',
-                                const Color(0xFFE2B26C),
+                                const Color(0xFFF2A93B),
                                 fromMenu(() => openMembership(context, store))),
                             SideMenuItem(
                                 const Icon(Icons.settings_outlined),
                                 'Preferences',
                                 'Account, privacy and app preferences',
-                                const Color(0xFFBBA8CF),
+                                const Color(0xFFC4B5FD),
                                 fromMenu(() => setState(() => selected = 4))),
                           ]),
                       appBar: AppBar(
@@ -282,7 +294,7 @@ class _EverlaneShellState extends State<EverlaneShell> {
                           ])),
                       body: IndexedStack(index: selected, children: [
                         DiscoverScreen(store: store),
-                        ExploreScreen(store: store),
+                        HangoutsScreen(store: store, embedded: true),
                         LikesScreen(store: store),
                         MessagesScreen(store: store),
                         ProfileScreen(store: store)
@@ -293,12 +305,13 @@ class _EverlaneShellState extends State<EverlaneShell> {
                             setState(() => selected = value);
                             // Pick up anyone who joined since.
                             if (value == 0) store.refreshMembers();
+                            if (value == 1) store.loadHangouts();
                           },
                           items: [
                             const _NavItem(Icons.home_outlined,
                                 Icons.home_rounded, 'Discover'),
-                            const _NavItem(Icons.explore_outlined,
-                                Icons.explore_rounded, 'Explore'),
+                            const _NavItem(Icons.groups_outlined,
+                                Icons.groups_rounded, 'Hangouts'),
                             _NavItem(Icons.favorite_border_rounded,
                                 Icons.favorite_rounded, 'Likes you',
                                 dot: store.incoming.isNotEmpty),

@@ -80,7 +80,8 @@ class Person {
         age: (r['age'] as num?)?.toInt() ?? 0,
         job: r['job'] as String? ?? '',
         photo: '',
-        distance: 0,
+        // Rounded server-side from city centres; unknown is "Nearby".
+        distance: (r['distance_km'] as num?)?.toInt() ?? 0,
         answer: r['prompt_answer'] as String? ?? '',
         lookingFor: [looking],
         verified: r['verified'] as bool? ?? false,
@@ -275,68 +276,167 @@ enum HangoutKind {
 
 /// A plan someone hosts and others ask to join. A null [host] means you.
 class Hangout {
-  const Hangout(
+  Hangout(
       {required this.id,
       required this.host,
       required this.kind,
       required this.title,
-      required this.when,
-      required this.place,
-      required this.note,
-      required this.spots});
-  final String id, title, when, place, note;
+      required this.startsAt,
+      required this.area,
+      this.city = '',
+      this.venue = '',
+      this.note = '',
+      this.lookingFor = '',
+      required this.spots,
+      int? spotsLeft,
+      this.distanceKm,
+      this.status,
+      this.pendingRequests = 0})
+      : spotsLeft = spotsLeft ?? spots;
+
+  /// From a `hangouts_near` row (see migration 020).
+  factory Hangout.fromRow(Map<String, dynamic> r, String Function(String) photoUrl) {
+    final mine = r['mine'] as bool? ?? false;
+    return Hangout(
+        id: r['id'] as String,
+        host: mine
+            ? null
+            : Person(
+                id: r['host'] as String,
+                name: r['host_name'] as String? ?? '',
+                age: (r['host_age'] as num?)?.toInt() ?? 0,
+                job: '',
+                photo: '',
+                distance: (r['distance_km'] as num?)?.toInt() ?? 0,
+                answer: '',
+                lookingFor: const [],
+                verified: r['host_verified'] as bool? ?? false,
+                city: r['city'] as String? ?? '',
+                photoUrls: [
+                  for (final path in List<String>.from(r['host_photos'] as List? ?? const []))
+                    photoUrl(path)
+                ],
+                remote: true),
+        kind: HangoutKind.values.firstWhere((k) => k.name == r['kind'],
+            orElse: () => HangoutKind.coffee),
+        title: r['title'] as String? ?? '',
+        startsAt: DateTime.parse(r['starts_at'] as String).toLocal(),
+        area: r['area'] as String? ?? '',
+        city: r['city'] as String? ?? '',
+        venue: r['venue'] as String? ?? '',
+        note: r['note'] as String? ?? '',
+        lookingFor: r['looking_for'] as String? ?? '',
+        spots: (r['spots'] as num?)?.toInt() ?? 1,
+        spotsLeft: (r['spots_left'] as num?)?.toInt(),
+        distanceKm: (r['distance_km'] as num?)?.toInt(),
+        status: r['my_status'] as String?,
+        pendingRequests: (r['pending_requests'] as num?)?.toInt() ?? 0);
+  }
+
+  final String id, title, area, city, venue, note, lookingFor;
   final Person? host;
   final HangoutKind kind;
-  final int spots;
+  final DateTime startsAt;
+  final int spots, spotsLeft, pendingRequests;
+  final int? distanceKm;
+
+  /// Your request: null (none), 'pending', 'accepted' or 'declined'.
+  String? status;
+
+  bool get mine => host == null;
+
+  /// "Tonight, 8:00 pm", "Tomorrow, 4:00 pm" or "Sat 1 Nov, 7:00 pm".
+  String get when => whenLabel(startsAt);
+
+  /// The public area, e.g. "Kurla, Mumbai".
+  String get place => [area, city.split(',').first]
+      .where((s) => s.trim().isNotEmpty)
+      .toSet()
+      .join(', ');
 }
 
-final demoHangouts = [
-  Hangout(
-      id: 'h1',
-      host: demoPeople[0],
-      kind: HangoutKind.coffee,
-      title: 'Filter coffee and a bookstore',
-      when: 'Saturday, 10:30 am',
-      place: 'Church Street, Bengaluru',
-      note: 'Slow morning, good books, no rush.',
-      spots: 2),
-  Hangout(
-      id: 'h2',
-      host: demoPeople[3],
-      kind: HangoutKind.dinner,
-      title: 'Cook-along dinner night',
-      when: 'Tonight, 8:00 pm',
-      place: 'Indiranagar, Bengaluru',
-      note: 'I’ll handle dessert. Bring a playlist.',
-      spots: 3),
-  Hangout(
-      id: 'h3',
-      host: demoPeople[2],
-      kind: HangoutKind.movie,
-      title: 'Late show at the cinema',
-      when: 'Friday, 9:30 pm',
-      place: 'Koramangala, Bengaluru',
-      note: 'Open to any genre. We vote at the door.',
-      spots: 2),
-  Hangout(
-      id: 'h4',
-      host: demoPeople[1],
-      kind: HangoutKind.outdoors,
-      title: 'Sunset walk at Cubbon Park',
-      when: 'Sunday, 5:30 pm',
-      place: 'Cubbon Park, Bengaluru',
-      note: 'Easy pace, followed by chai.',
-      spots: 4),
-  Hangout(
-      id: 'h5',
-      host: demoPeople[2],
-      kind: HangoutKind.drinks,
-      title: 'Rooftop drinks after work',
-      when: 'Thursday, 7:00 pm',
-      place: 'MG Road, Bengaluru',
-      note: 'Small group, big views.',
-      spots: 1),
-];
+String whenLabel(DateTime t) {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final diff = DateTime(t.year, t.month, t.day).difference(today).inDays;
+  final h = t.hour % 12 == 0 ? 12 : t.hour % 12;
+  final time = '$h:${t.minute.toString().padLeft(2, '0')} ${t.hour < 12 ? 'am' : 'pm'}';
+  final day = switch (diff) {
+    0 => t.hour >= 17 ? 'Tonight' : 'Today',
+    1 => 'Tomorrow',
+    _ => '${days[t.weekday - 1]} ${t.day} ${months[t.month - 1]}',
+  };
+  return '$day, $time';
+}
+
+/// Someone asking to join one of your plans.
+class HangoutRequest {
+  HangoutRequest(this.hangoutId, this.person, this.status);
+  final String hangoutId;
+  final Person person;
+  String status;
+}
+
+DateTime _at(int days, int hour, [int minute = 0]) {
+  final n = DateTime.now();
+  return DateTime(n.year, n.month, n.day + days, hour, minute);
+}
+
+List<Hangout> demoHangouts() => [
+      Hangout(
+          id: 'h1',
+          host: demoPeople[0],
+          kind: HangoutKind.coffee,
+          title: 'Filter coffee and a bookstore',
+          startsAt: _at(1, 10, 30),
+          area: 'Church Street',
+          city: 'Bengaluru',
+          note: 'Slow morning, good books, no rush.',
+          spots: 2),
+      Hangout(
+          id: 'h2',
+          host: demoPeople[3],
+          kind: HangoutKind.dinner,
+          title: 'Dinner and good conversation',
+          startsAt: _at(0, 20),
+          area: 'Indiranagar',
+          city: 'Bengaluru',
+          note: 'No phones at the table.',
+          lookingFor: 'People who love long conversations',
+          spots: 3),
+      Hangout(
+          id: 'h3',
+          host: demoPeople[2],
+          kind: HangoutKind.movie,
+          title: 'Late show at the cinema',
+          startsAt: _at(2, 21, 30),
+          area: 'Koramangala',
+          city: 'Bengaluru',
+          note: 'Open to any genre. We vote at the door.',
+          spots: 2),
+      Hangout(
+          id: 'h4',
+          host: demoPeople[1],
+          kind: HangoutKind.outdoors,
+          title: 'Sunset walk at Cubbon Park',
+          startsAt: _at(3, 17, 30),
+          area: 'Cubbon Park',
+          city: 'Bengaluru',
+          note: 'Easy pace, followed by chai.',
+          spots: 4),
+      Hangout(
+          id: 'h5',
+          host: demoPeople[2],
+          kind: HangoutKind.drinks,
+          title: 'Rooftop drinks after work',
+          startsAt: _at(4, 19),
+          area: 'MG Road',
+          city: 'Bengaluru',
+          note: 'Small group, big views.',
+          spots: 1),
+    ];
 
 class ChatMessage {
   ChatMessage(this.text, {this.mine = false, DateTime? sentAt})
@@ -556,6 +656,10 @@ class PreviewStore extends ChangeNotifier {
   List<Person> get _pool => live ? members : demoPeople;
   RangeValues ages = const RangeValues(21, 40);
   double distance = 25;
+
+  /// Discover asks the server for people within [distance], unless a city
+  /// filter is set (that city may be further away).
+  int? get _maxKm => cityFilter.isEmpty ? distance.round() : null;
 
   /// Show people in one city only (empty: anywhere within [distance]).
   /// Looking in another city ignores the distance limit.
@@ -1161,7 +1265,7 @@ class PreviewStore extends ChangeNotifier {
     if (b == null || !b.signedIn) return;
     try {
       await _loadSampleIds(b);
-      final rows = await b.discover();
+      final rows = await b.discover(maxKm: _maxKm);
       members
         ..clear()
         ..addAll(rows
@@ -1182,7 +1286,7 @@ class PreviewStore extends ChangeNotifier {
     final me = b.user!.id;
     await _loadSampleIds(b);
     final results = await Future.wait(
-        [b.discover(), b.likesReceived(), b.myMatches()]);
+        [b.discover(maxKm: _maxKm), b.likesReceived(), b.myMatches()]);
     Person card(Map<String, dynamic> r) => Person.fromCard(r, b.photoUrl, voiceUrl: b.voiceUrl);
     _clearCommunity();
     members.addAll(results[0].map(card));
@@ -1284,12 +1388,15 @@ class PreviewStore extends ChangeNotifier {
     crossings.addAll(_demoCrossings());
   }
 
-  /// Hangouts come with Platinum.
-  bool get canHangout => plan == Plan.platinum;
-  final List<Hangout> hangouts = [...demoHangouts];
-  final Set<String> hangoutRequests = {};
+  /// Hangouts are open to everyone: one of Everlane's main features.
+  bool get canHangout => true;
+  final List<Hangout> hangouts = demoHangouts();
 
-  /// Set by "Ready to Hangout?"; null until the member joins Hangouts.
+  /// People asking to join your plans (real members only).
+  final List<HangoutRequest> hangoutRequests = [];
+  bool hangoutsLoading = false;
+
+  /// Set by "Ready to Hangout?"; null until the member picks a vibe.
   String? hangoutMood;
   String hangoutDetail = '';
   bool hangoutHasPlace = false;
@@ -1301,14 +1408,76 @@ class PreviewStore extends ChangeNotifier {
     notifyListeners();
   }
 
-  void requestToJoin(Hangout h) {
-    hangoutRequests.add(h.id);
+  /// Plans within your Discover distance, and requests to your own plans.
+  Future<void> loadHangouts() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    hangoutsLoading = true;
     notifyListeners();
+    try {
+      final results = await Future.wait(
+          [b.hangoutsNear(maxKm: _maxKm), b.hangoutRequestsMine()]);
+      hangouts
+        ..clear()
+        ..addAll(results[0].map((r) => Hangout.fromRow(r, b.photoUrl)));
+      hangoutRequests
+        ..clear()
+        ..addAll(results[1].map((r) => HangoutRequest(
+            r['hangout'] as String,
+            Person.fromCard({...r, 'id': r['member']}, b.photoUrl),
+            r['status'] as String)));
+    } catch (_) {
+      _failed('Couldn’t load Hangouts. Check your connection.');
+    } finally {
+      hangoutsLoading = false;
+      notifyListeners();
+    }
   }
 
-  void hostHangout(Hangout h) {
-    hangouts.insert(0, h);
+  Future<void> requestToJoin(Hangout h) async {
+    final b = backend;
+    h.status = 'pending';
     notifyListeners();
+    if (b == null || !b.signedIn || h.host?.remote != true) return;
+    try {
+      h.status = await b.requestHangout(h.id);
+      notifyListeners();
+    } catch (_) {
+      h.status = null;
+      _failed('Couldn’t send your request. Try again.');
+    }
+  }
+
+  Future<void> hostHangout(Hangout h) async {
+    final b = backend;
+    if (b == null || !b.signedIn) {
+      hangouts.insert(0, h);
+      notifyListeners();
+      return;
+    }
+    await b.hostHangout(h);
+    await loadHangouts();
+  }
+
+  Future<void> cancelHangout(Hangout h) async {
+    hangouts.remove(h);
+    notifyListeners();
+    final b = backend;
+    if (b != null && b.signedIn) await b.cancelHangout(h.id);
+  }
+
+  Future<void> answerHangoutRequest(HangoutRequest r, {required bool accept}) async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    r.status = accept ? 'accepted' : 'declined';
+    if (!accept) hangoutRequests.remove(r);
+    notifyListeners();
+    try {
+      await b.answerHangoutRequest(r.hangoutId, r.person.id, accept: accept);
+      await loadHangouts();
+    } catch (_) {
+      _failed('Couldn’t update the request. Try again.');
+    }
   }
 
   /// The existing conversation with [p], or a new one.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'auth.dart';
 import 'chemistry.dart';
+import 'cities.dart';
 import 'models.dart';
 import 'photo_picker.dart';
 import 'question_bank.dart';
@@ -168,8 +169,8 @@ class _Option extends StatelessWidget {
               ]))));
 }
 
-/// First launch: welcome, sign-up, profile questions one per page, then an invitation
-/// to the compatibility quiz.
+/// First launch: welcome, sign-up, profile questions one per page, then a
+/// summary. The compatibility quiz is offered later, from the profile.
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({super.key, required this.store});
   final PreviewStore store;
@@ -194,14 +195,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     if (!store.onboarded && mounted) go(1);
   }
 
-  void takeQuiz() {
-    Navigator.push(
-        context,
-        editorialRoute<void>(
-            (_) => CompatibilityQuizScreen(store: widget.store)));
-    widget.store.finishOnboarding();
-  }
-
   @override
   Widget build(BuildContext context) {
     final store = widget.store;
@@ -218,8 +211,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     }
     final body = step == 1
         ? _ProfileSetup(store: store, onBack: () => go(0), onDone: () => go(2))
-        : _AllSet(
-            store: store, onQuiz: takeQuiz, onLater: store.finishOnboarding);
+        : _AllSet(store: store, onDone: store.finishOnboarding);
     return Scaffold(
         body: SafeArea(
             child: Center(
@@ -855,12 +847,7 @@ class _ProfileSetupState extends State<_ProfileSetup> {
       case _SetupStep.city:
         return titled('Where are you based?',
             'We use this to show people near you.', [
-          TextField(
-              controller: city,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                  hintText: 'City or area',
-                  prefixIcon: Icon(Icons.location_on_outlined))),
+          CityField(controller: city),
         ]);
       case _SetupStep.photos:
         return titled('Add your photos',
@@ -1063,10 +1050,9 @@ class _ShowMore extends StatelessWidget {
 }
 
 class _AllSet extends StatelessWidget {
-  const _AllSet(
-      {required this.store, required this.onQuiz, required this.onLater});
+  const _AllSet({required this.store, required this.onDone});
   final PreviewStore store;
-  final VoidCallback onQuiz, onLater;
+  final VoidCallback onDone;
 
   Widget item(bool done, String text) => Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -1101,29 +1087,10 @@ class _AllSet extends StatelessWidget {
             '${store.myInterests.length} interest${store.myInterests.length == 1 ? '' : 's'} · optional'),
         item(false, 'A bio · add from your profile'),
         const SizedBox(height: 24),
-        Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-                color: EverlaneColors.blush,
-                borderRadius: BorderRadius.circular(20)),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('Go a little deeper',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 6),
-              Text(
-                  'The Everlane Compatibility Quiz has 24 questions and takes about five minutes. It powers your Chemistry with each person.',
-                  style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
-            ])),
-        const SizedBox(height: 22),
         FilledButton(
-            onPressed: onQuiz,
+            onPressed: onDone,
             style: FilledButton.styleFrom(backgroundColor: EverlaneColors.like),
-            child: const Text('Take the compatibility quiz')),
-        const SizedBox(height: 8),
-        Center(
-            child: TextButton(
-                onPressed: onLater, child: const Text('Maybe later'))),
+            child: const Text('Start exploring')),
       ]);
 }
 

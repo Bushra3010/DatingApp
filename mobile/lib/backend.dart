@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'models.dart' show Hangout;
 import 'supabase_config.dart';
 
 /// Talks to Supabase for the signed-in member's own account, profile row and
@@ -212,10 +213,47 @@ class ProfileBackend {
 
   Future<void> clearAreas() => client.rpc('clear_my_areas');
 
+  // ---- Hangouts (see migration 020) ----
+
+  Future<List<Map<String, dynamic>>> hangoutsNear({int? maxKm}) async =>
+      _rows(await client.rpc('hangouts_near',
+          params: {if (maxKm != null) 'max_km': maxKm}));
+
+  Future<void> hostHangout(Hangout h) => client.rpc('host_hangout', params: {
+        'kind': h.kind.name,
+        'title': h.title,
+        'starts_at': h.startsAt.toUtc().toIso8601String(),
+        'area': h.area,
+        'venue': h.venue,
+        'city': h.city,
+        'note': h.note,
+        'looking_for': h.lookingFor,
+        'spots': h.spots,
+      });
+
+  Future<void> cancelHangout(String id) =>
+      client.rpc('cancel_hangout', params: {'plan': id});
+
+  /// Returns your request's status: 'pending', or 'accepted' straight away
+  /// for a sample profile's plan.
+  Future<String?> requestHangout(String id) async =>
+      await client.rpc('request_hangout', params: {'plan': id}) as String?;
+
+  Future<List<Map<String, dynamic>>> hangoutRequestsMine() async =>
+      _rows(await client.rpc('hangout_requests_mine'));
+
+  Future<void> answerHangoutRequest(String plan, String member,
+          {required bool accept}) =>
+      client.rpc('answer_hangout_request',
+          params: {'plan': plan, 'who': member, 'accept': accept});
+
   // ---- Discovery, likes, matches and chat ----
 
-  Future<List<Map<String, dynamic>>> discover() async =>
-      _rows(await client.rpc('discover_members'));
+  /// People to discover; with [maxKm], only those within that distance
+  /// of your city (or in your city when a location isn't known).
+  Future<List<Map<String, dynamic>>> discover({int? maxKm}) async =>
+      _rows(await client.rpc('discover_members',
+          params: {if (maxKm != null) 'max_km': maxKm}));
 
   Future<List<Map<String, dynamic>>> likesReceived() async =>
       _rows(await client.rpc('likes_received'));
