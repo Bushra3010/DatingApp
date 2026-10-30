@@ -935,7 +935,7 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                 Center(
                     child: TextButton(
                         onPressed: () => setState(() {
-                              ages = const RangeValues(24, 32);
+                              ages = const RangeValues(21, 40);
                               distance = 25;
                               city = '';
                               cityField.clear();

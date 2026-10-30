@@ -554,7 +554,7 @@ class PreviewStore extends ChangeNotifier {
   RealtimeChannel? _channel;
 
   List<Person> get _pool => live ? members : demoPeople;
-  RangeValues ages = const RangeValues(24, 32);
+  RangeValues ages = const RangeValues(21, 40);
   double distance = 25;
 
   /// Show people in one city only (empty: anywhere within [distance]).
