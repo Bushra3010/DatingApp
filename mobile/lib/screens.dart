@@ -3208,7 +3208,7 @@ class _PlanCard extends StatelessWidget {
         const SizedBox(height: 4),
         Text.rich(TextSpan(children: [
           TextSpan(
-              text: plan.price,
+              text: plan.displayPrice,
               style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -3255,7 +3255,7 @@ class _PlanCard extends StatelessWidget {
         if (plan != Plan.free) ...[
           const SizedBox(height: 8),
           Text(
-              'Renews monthly at ${plan.price} until you cancel. Cancel anytime.',
+              'Renews monthly at ${plan.displayPrice} until you cancel. Cancel anytime.',
               style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
         ],
       ]));

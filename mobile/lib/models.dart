@@ -260,6 +260,9 @@ enum Plan {
   final List<String> perks;
 
   bool atLeast(Plan other) => index >= other.index;
+
+  /// The price the team set in the admin panel, or the built-in one.
+  String get displayPrice => planPrices[this] ?? price;
 }
 
 enum HangoutKind {
@@ -1601,6 +1604,15 @@ class PreviewStore extends ChangeNotifier {
       if (of('interest').isNotEmpty) interestOptions = of('interest');
       if (of('language').isNotEmpty) languageOptions = of('language');
       if (of('prompt').isNotEmpty) promptOptions = of('prompt');
+      for (final r in await b.planPrices()) {
+        for (final p in Plan.values) {
+          if (p.name == r['plan']) {
+            final n = (r['price'] as num);
+            planPrices[p] =
+                '${r['symbol']}${n == n.roundToDouble() ? n.toInt() : n.toStringAsFixed(2)}';
+          }
+        }
+      }
       notifyListeners();
     } catch (_) {
       // Built-in content is a fine fallback.
@@ -1700,3 +1712,8 @@ String heightLabel(int cm) {
 
 /// Admin-made bot profiles (see `sample_profile_ids()` in Supabase).
 final Set<String> sampleProfileIds = {};
+
+/// Monthly prices from Supabase's plan_prices (set in the admin panel),
+/// e.g. {Plan.gold: '₹499'}. Empty until loaded; plans fall back to their
+/// built-in price.
+final Map<Plan, String> planPrices = {};

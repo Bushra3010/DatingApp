@@ -282,6 +282,16 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   .doclinks a:hover { border-color: var(--acc); }
   .doclinks a span { color: var(--mute); font-weight: 500; font-size: 12.5px; }
 
+  /* Revenue */
+  .note.info { border-left-color: var(--acc); }
+  .prow { display: grid; grid-template-columns: 70px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; margin-top: 8px; }
+  .prow > span { font-weight: 600; font-size: 13px; }
+  label.tog { display: inline-flex; align-items: center; gap: 5px; margin: 0; font-weight: 500; font-size: 12.5px; color: var(--mute); white-space: nowrap; cursor: pointer; }
+  label.tog input { width: auto; margin: 0; }
+  .formgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 0 12px; }
+  td input[type=text], td input[type=number] { padding: 6px 8px; min-width: 80px; }
+  td.clip { max-width: 220px; overflow-wrap: anywhere; font-size: 12.5px; color: var(--mute); }
+
   @media (max-width: 800px) { .card.scroll { max-height: none; } }
   @media (max-width: 560px) {
     .row2 { grid-template-columns: 1fr; gap: 0; }
@@ -423,12 +433,12 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   </div>
   <div class="nav sb" data-subnav="hang" aria-label="Hangouts pages"><button type="button" class="tab" data-view="hangouts">Plans</button></div>
   <div class="nav sb" data-subnav="subs" aria-label="Revenue pages">
-    <button type="button" class="tab" data-view="subs-plans" data-mock>Plans</button>
-    <button type="button" class="tab" data-view="subs-promos" data-mock>Promos</button>
-    <button type="button" class="tab" data-view="subs-transactions" data-mock>Transactions</button>
+    <button type="button" class="tab" data-view="subs-plans">Plans</button>
+    <button type="button" class="tab" data-view="subs-promos">Promos</button>
+    <button type="button" class="tab" data-view="subs-transactions">Transactions</button>
     <button type="button" class="tab" data-view="subs-store-sync" data-mock>Store sync</button>
-    <button type="button" class="tab" data-view="subs-iap" data-mock>In-app purchases</button>
-    <button type="button" class="tab" data-view="subs-reports" data-mock>Reports</button>
+    <button type="button" class="tab" data-view="subs-iap">In-app purchases</button>
+    <button type="button" class="tab" data-view="subs-reports">Reports</button>
   </div>
   <div class="nav sb" data-subnav="cfg" aria-label="Content pages">
     <button type="button" class="tab" data-view="questions">Content</button>
@@ -686,6 +696,143 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
       </div>
     </div>
 
+    <!-- Revenue (permission 'billing'; migration 025). -->
+    <div id="view-subs-plans" class="hidden">
+      <div class="head"><div><h2>Plans and pricing</h2>
+        <p class="sub">The monthly price of each paid plan, per country.</p></div>
+        <div class="row"><button class="btn" id="priceAdd">Add country</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <p class="note info revnote"></p>
+      <form class="card pad hidden" id="priceNew" style="margin-bottom:12px">
+        <h3>Add a country</h3>
+        <div class="formgrid">
+          <div><label for="pnCountry">Country</label><input type="text" id="pnCountry" placeholder="e.g. United Arab Emirates" maxlength="60"></div>
+          <div><label for="pnCurrency">Currency code</label><input type="text" id="pnCurrency" placeholder="e.g. AED" maxlength="3" autocapitalize="characters"></div>
+          <div><label for="pnSymbol">Symbol</label><input type="text" id="pnSymbol" placeholder="e.g. AED or $" maxlength="6"></div>
+          <div><label for="pnPlus">Plus price</label><input type="number" id="pnPlus" min="0" step="0.01" placeholder="Leave blank to skip"></div>
+          <div><label for="pnGold">Gold price</label><input type="number" id="pnGold" min="0" step="0.01" placeholder="Leave blank to skip"></div>
+          <div><label for="pnPlatinum">Platinum price</label><input type="number" id="pnPlatinum" min="0" step="0.01" placeholder="Leave blank to skip"></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn primary">Add country</button><button type="button" class="btn" id="pnCancel">Cancel</button></div>
+      </form>
+      <div class="grid g3" id="priceCards"></div>
+      <p class="sub" style="margin-top:12px">The app shows India prices on the Membership screen. Free has no price.</p>
+      <div class="row" style="margin-top:10px"><button class="btn primary" id="priceSave">Save prices</button></div>
+    </div>
+
+    <div id="view-subs-promos" class="hidden">
+      <div class="head"><div><h2>Promo codes</h2>
+        <p class="sub">Discounts and free trials members can enter on the Membership screen.</p></div>
+        <div class="row"><button class="btn" id="promoNew">New code</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <p class="note info revnote"></p>
+      <div class="card scroll"><table>
+        <thead><tr><th>Code</th><th>Offer</th><th>Plans</th><th>Uses</th><th>Expires</th><th>Status</th><th></th></tr></thead>
+        <tbody id="promoRows"></tbody>
+      </table></div>
+      <form class="card pad" id="promoForm" style="margin-top:12px">
+        <h3 id="promoTitle">New promo code</h3>
+        <div class="formgrid">
+          <div><label for="pcCode">Code</label><input type="text" id="pcCode" placeholder="e.g. WELCOME30" maxlength="24" autocapitalize="characters" autocomplete="off"></div>
+          <div><label for="pcKind">Type</label><select id="pcKind">
+            <option value="percent">Percent off</option><option value="amount">Amount off (₹)</option><option value="trial_days">Free trial (days)</option></select></div>
+          <div><label for="pcValue" id="pcValueLbl">Percent off</label><input type="number" id="pcValue" min="0" step="any"></div>
+          <div><label for="pcMax">Max uses</label><input type="number" id="pcMax" min="1" step="1" placeholder="Blank = unlimited"></div>
+          <div><label for="pcExpires">Expires</label><input type="date" id="pcExpires" class="fld"></div>
+          <div><label for="pcNote">Note</label><input type="text" id="pcNote" placeholder="Only admins see this" maxlength="200"></div>
+        </div>
+        <label>Plans <span class="sub" style="font-weight:500">(none ticked = every plan)</span></label>
+        <div class="pick" id="pcPlans"></div>
+        <label class="tog" style="margin-top:12px"><input type="checkbox" id="pcActive" checked> Active</label>
+        <div class="row" style="margin-top:12px"><button class="btn primary">Save code</button><button type="button" class="btn hidden" id="pcCancel">Cancel editing</button></div>
+      </form>
+    </div>
+
+    <div id="view-subs-transactions" class="hidden">
+      <div class="head"><div><h2>Transactions</h2>
+        <p class="sub">Payments, refunds and failed payments, newest first.</p></div>
+        <div class="row">
+          <div class="chips" id="txRange" role="group" aria-label="Date range">
+            <button type="button" class="chip" data-days="30">30 days</button>
+            <button type="button" class="chip" data-days="90">90 days</button>
+            <button type="button" class="chip" data-days="365">365 days</button>
+          </div>
+          <button class="btn" id="txCsv">Export CSV</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <p class="note info revnote"></p>
+      <div class="toolbar">
+        <input type="text" id="txSearch" placeholder="Search name, email, item or reference…" aria-label="Search transactions">
+        <select id="txStatus" aria-label="Status"><option value="">Any status</option><option value="paid">Paid</option><option value="pending">Pending</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select>
+        <select id="txStore" aria-label="Store"><option value="">Any store</option></select>
+      </div>
+      <div class="card scroll"><table>
+        <thead><tr><th>ID</th><th>When</th><th>Member</th><th>Kind</th><th>Item</th><th>Amount</th><th>Store</th><th>Status</th><th>Promo</th><th>Note</th><th></th></tr></thead>
+        <tbody id="txRows"></tbody>
+      </table></div>
+      <div class="pager" id="txPager"></div>
+      <p class="muted" id="txCount" style="margin-top:10px"></p>
+      <p class="sub" style="font-size:12.5px">“Refund” marks the payment refunded in Everlane and ends a refunded subscription now. The money itself must be refunded at the payment provider.</p>
+      <form class="card pad" id="payForm" style="margin-top:12px">
+        <h3>Record a manual payment</h3>
+        <p class="sub">For a payment taken outside the app, such as a bank transfer. It’s saved with the store “Manual”.</p>
+        <div class="formgrid">
+          <div><label for="payWho" id="payWhoLbl">Member</label><input type="text" id="payWho" placeholder="Search by name or email" autocomplete="off"></div>
+          <div id="payPickWrap"><label for="payPick">Matching members</label><select id="payPick"></select></div>
+          <div><label for="payKind">Kind</label><select id="payKind"><option value="subscription">Subscription</option><option value="iap">In-app purchase</option></select></div>
+          <div><label for="payItem">Item</label><select id="payItem"></select></div>
+          <div><label for="payAmount">Amount (₹)</label><input type="number" id="payAmount" min="0" step="0.01"></div>
+          <div><label for="payNote">Note</label><input type="text" id="payNote" placeholder="e.g. Paid by bank transfer" maxlength="200"></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn primary">Record payment</button></div>
+      </form>
+    </div>
+
+    <div id="view-subs-iap" class="hidden">
+      <div class="head"><div><h2>In-app purchases</h2>
+        <p class="sub">One-off items members buy in the app, such as boosts and Sparks.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <p class="note info revnote"></p>
+      <div class="card scroll"><table>
+        <thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Currency</th><th>Active</th><th></th></tr></thead>
+        <tbody id="iapRows"></tbody>
+      </table></div>
+      <form class="card pad" id="iapNew" style="margin-top:12px">
+        <h3>Add a product</h3>
+        <div class="formgrid">
+          <div><label for="inId">ID</label><input type="text" id="inId" placeholder="e.g. boost_3" maxlength="40" autocapitalize="off" autocomplete="off"></div>
+          <div><label for="inName">Name</label><input type="text" id="inName" placeholder="e.g. Boost x3" maxlength="80"></div>
+          <div><label for="inPrice">Price</label><input type="number" id="inPrice" min="0" step="0.01"></div>
+          <div><label for="inCurrency">Currency</label><input type="text" id="inCurrency" value="INR" maxlength="3" autocapitalize="characters"></div>
+        </div>
+        <label class="tog" style="margin-top:12px"><input type="checkbox" id="inActive" checked> Active</label>
+        <p class="sub" style="font-size:12.5px;margin-top:8px">The ID is what the app and stores use: lowercase letters, numbers and _ only. It can’t be changed later.</p>
+        <div class="row" style="margin-top:10px"><button class="btn primary">Add product</button></div>
+      </form>
+    </div>
+
+    <div id="view-subs-reports" class="hidden">
+      <div class="head"><div><h2>Revenue reports</h2>
+        <p class="sub">Money in, refunds and subscriptions. Amounts are in rupees.</p></div>
+        <div class="row">
+          <div class="chips" id="revRange" role="group" aria-label="Date range">
+            <button type="button" class="chip" data-days="7">7 days</button>
+            <button type="button" class="chip" data-days="30">30 days</button>
+            <button type="button" class="chip" data-days="90">90 days</button>
+            <button type="button" class="chip" data-days="365">365 days</button>
+          </div>
+          <button class="btn" data-refresh>Refresh</button></div></div>
+      <p class="note info revnote"></p>
+      <div class="stack">
+        <div class="grid g4" id="revKpis"></div>
+        <div class="card pad"><h3>Daily net revenue</h3>
+          <div class="legend" id="revLegend"></div>
+          <div id="revChart"></div></div>
+        <div class="grid g3">
+          <div class="card pad"><h3>By item</h3><div id="revItems" style="margin-top:10px"></div></div>
+          <div class="card pad"><h3>By store</h3><div id="revStores" style="margin-top:10px"></div></div>
+          <div class="card pad"><h3>By country</h3><div id="revCountries" style="margin-top:10px"></div></div>
+          <div class="card pad"><h3>Active subscriptions by plan</h3><div id="revPlans" style="margin-top:10px"></div></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Sample pages (mock data) are drawn here by window.EverlaneMock. -->
     <div id="view-mock" class="mk hidden"></div>
   </main>
@@ -703,7 +850,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 'use strict';
 const BANNER = '<div class="note mkban" role="note">Sample data — this page is a preview and isn’t connected to the app yet. Numbers and actions here are not real.</div>';
 const $=s=>document.querySelector(s),H=[];const on=f=>{H.push(f);return `data-mh="${H.length-1}"`};const oi=f=>{H.push(f);return `data-mi="${H.length-1}"`};
-const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),P=a=>a[Math.floor(Math.random()*a.length)],esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),fmt=n=>Math.round(n).toLocaleString('en-IN'),sum=a=>a.reduce((x,y)=>x+y,0),last=a=>a[a.length-1];
+const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),P=a=>a[Math.floor(Math.random()*a.length)],esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),fmt=n=>Math.round(n).toLocaleString('en-IN'),sum=a=>a.reduce((x,y)=>x+y,0);
 const ago=d=>new Date(Date.now()-d*864e5).toISOString().slice(0,10),now=()=>new Date().toLocaleString();
 function toast(s){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=s+' (sample only)';document.body.append(t);setTimeout(()=>t.remove(),2300)}
 const pill=(s,c)=>`<span class="pill ${c||({Active:'ok',Verified:'ok',Paid:'ok',Live:'ok',Approved:'ok',Resolved:'ok',Open:'warn',Pending:'warn',Suspended:'warn','Shadow-banned':'warn',Banned:'bad',Failed:'bad',Deleted:'bad',Rejected:'bad',High:'bad',Refunded:'warn',Planned:'',Waitlist:'warn',Medium:'warn'}[s]||'')}">${esc(s)}</span>`;
@@ -721,7 +868,6 @@ const REPORTS=Array.from({length:36},(_,i)=>({id:'RP-'+(5001+i),reporter:P(USERS
 const PHOTOS=Array.from({length:18},(_,i)=>({id:'P-'+(2200+i),user:P(USERS).id,nsfw:+(Math.random()**3).toFixed(2),face:Math.random()<.85,status:'Pending',c:P(['#7C3AED','#EC4899','#3B82F6','#14B8A6','#F59E0B'])}));
 const CHATS=[['Send me your UPI so I can send your prize','Scam'],['You will regret ignoring me','Harassment'],['Contact me on this link to verify your profile','Spam link'],['Send photos or I tell everyone','Harassment'],['I can double your money, DM me','Scam'],['Add me on Telegram for investment tips','Spam link']].map((x,i)=>({id:'CH-'+(300+i),from:P(USERS).id,to:P(USERS).id,text:x[0],why:x[1],status:'Open'}));
 const VER=Array.from({length:10},(_,i)=>({id:'V-'+(700+i),user:P(USERS).id,type:P(['Selfie','Selfie','ID document']),score:R(62,99),status:'Pending'}));
-const TXN=Array.from({length:70},(_,i)=>({id:'TX-'+(90300+i),user:P(USERS).id,item:P(['Gold monthly','Premium monthly','Boost x1','Super Likes x5','Gift: Rose','Gold annual']),amt:P([199,499,999,59,149,29,1999]),store:P(['Apple','Google','Stripe']),status:P(['Paid','Paid','Paid','Paid','Paid','Failed','Refunded']),t:ago(R(0,40))}));
 const TIX=Array.from({length:22},(_,i)=>({id:'T-'+(8100+i),user:P(USERS).id,subj:P(['Cannot log in','Payment failed','Profile not visible','Photo rejected','Delete my data','Refund request','Fake profile report']),prio:P(['High','Medium','Low']),status:P(['Open','Open','Pending','Resolved']),owner:P(['—','Asha','Ravi','Meera']),thread:[]}));
 const BOTS=Array.from({length:30},(_,i)=>{const g=P('FFMMN'.split('')),fn=P(FN[g]);return{id:'BOT-'+String(i+1).padStart(5,'0'),name:fn+' '+P(LN),gender:g==='F'?'Woman':g==='M'?'Man':'Non-binary',city:P(CITY),age:R(21,36),status:'Active',likes:R(0,120),matches:R(0,30),msgs:R(0,200)}});
 const ADM=[['Neha Kapoor','Super Admin',true,'Today'],['Ravi Menon','Moderator',true,'Today'],['Asha Iyer','Support',true,'Yesterday'],['Karan Shah','Finance',false,'3 days ago'],['Diya Rao','Analyst',true,'Today']];
@@ -737,9 +883,6 @@ bans:{Device:['dev-199','dev-250'],IP:['49.101.22.7'],Phone:['+91 90000 11111']}
 auto:[{r:'3 verified reports in 24h',a:'Suspend',on:true},{r:'Link or UPI in first 3 messages',a:'Shadow-ban',on:true},{r:'Duplicate photo on 3+ accounts',a:'Ban',on:true},{r:'50+ likes in 1 minute',a:'Rate limit',on:true},{r:'Underage signal (face + DOB)',a:'Suspend + review',on:true},{r:'Banned device re-registers',a:'Ban',on:false}],
 strike:{s1:'Warning',s2:'7-day suspension',s3:'Permanent ban',decay:90},
 under:[{id:'U-10020',claim:19,sig:'ID DOB shows 16'},{id:'U-10155',claim:21,sig:'Face-age estimate 14'},{id:'U-10230',claim:18,sig:'Bio says “Class 10”'}],
-plans:{India:['₹',0,299,599],USA:['$',0,9.99,19.99],UK:['£',0,8.99,17.99],UAE:['AED',0,39,79],Singapore:['S$',0,12.9,24.9]},
-promos:[{c:'WELCOME30',t:'30% off',u:312,max:1000,on:true},{c:'GOLD7',t:'7-day free trial',u:1480,max:5000,on:true},{c:'DIWALI50',t:'₹50 off',u:90,max:500,on:false}],
-iap:[{n:'Boost (30 min)',p:99,on:true},{n:'Super Likes x5',p:149,on:true},{n:'Gift: Rose',p:49,on:true},{n:'Gift: Coffee',p:79,on:false}],
 content:{interests:['Travel','Coffee','Music','Cooking','Fitness','Art','Books','Hiking'],prompts:['My ideal Sunday is','I’m happiest when','Ask me about'],ice:['What’s your ideal weekend?','Dinner or a film first?','Best trip you’ve taken?'],qs:['What are you looking for?','Do you want kids?']},
 flags:[['Likes you tab',1,100],['Hangouts',1,60],['Boost',1,100],['Super like',1,100],['Undo (rewind)',1,100],['Compatibility quiz',1,100],['Video intro',0,10],['Voice notes',0,0],['Incognito mode',1,20],['AI icebreakers',0,5],['Stories',0,0],['Gifts',1,30],['Referral program',1,100],['Selfie verification',1,100]].map(f=>({n:f[0],on:!!f[1],ro:f[2]})),
 lang:{sel:'Hindi',keys:{welcome:['Welcome','स्वागत है'],like:['Like','पसंद'],pass:['Pass','छोड़ें'],match:['It’s a match','यह एक मैच है'],messages:['Messages','संदेश'],profile:['My profile','मेरी प्रोफ़ाइल']}},
@@ -837,13 +980,8 @@ const prod=()=>C.botc.env==='Production';
 function pBotBeh(){const b=C.botc,lk=prod();return pg('Behaviour and schedule','Automation for test accounts. Locked off in Production.',card('Environment',`<div class="chips">${['Demo','Staging','Production'].map(e=>`<button class="chip ${b.env===e?'on':''}" ${on(()=>{b.env=e;if(e==='Production'){b.label=true;b.autoLike=b.autoMatch=b.autoReply=b.ai=false}log('Bot environment',e);render()})}>${e}</button>`).join('')}</div>${lk?'<div class="note">Production: automated likes, matches and replies are disabled. Seed profiles may only appear with an “Automated profile” label.</div>':''}`)+card('Behaviour (internal test accounts only)',fld(b,'autoLike','Auto-like test accounts','toggle',{lock:lk})+fld(b,'autoMatch','Auto-match with test accounts','toggle',{lock:lk})+fld(b,'autoReply','Auto-reply with templates','toggle',{lock:lk})+fld(b,'ai','AI-driven replies (test accounts only)','toggle',{lock:lk})+`<div class="grid g3"><div>${fld(b,'from','Active from (hour)','number')}</div><div>${fld(b,'to','Active until (hour)','number')}</div></div>${fld(b,'persona','AI persona prompt','area')}${saveB('Bot behaviour')}`)+card('Conversation templates (each is sent with an “Automated message” tag)',listEd(C.tpl,'template','Add template')))}
 function pBotPh(){const b=C.botc;return pg('Gradual phase-out','Reduce bots as real users grow in each city.',card('Rules',fld(b,'rot','Auto-rotate seed profiles per city','toggle')+fld(b,'share','Maximum bot share of any feed','range',{min:0,max:50,u:'%'})+fld(b,'thr','Hide bots in a city once real active users exceed','number')+saveB('Phase-out rules'))+tbl('ph',['City','Real active users','Bots shown','Status'],C.bcity.map(c=>({c0:c,c:[c.c,fmt(c.real),c.real>b.thr?0:c.bots,c.real>b.thr?pill('Phased out','ok'):pill('Seeding','warn')]})),{search:false})+card('Projected bot share',line([ser(12,30,-3).map(v=>Math.max(2,v))])))}
 function pBotAct(){const top=[...BOTS].sort((a,b)=>b.matches-a.matches).slice(0,8);return pg('Bot activity and performance','Per-bot logs and stats.',kpis([['Active bots',BOTS.filter(b=>b.status==='Active').length],['Likes sent',fmt(sum(BOTS.map(b=>b.likes)))],['Matches',fmt(sum(BOTS.map(b=>b.matches)))],['Messages',fmt(sum(BOTS.map(b=>b.msgs)))]])+card('Top bots by matches',bars(top.map(b=>[b.name.split(' ')[0],b.matches])))+card('Activity log',tbl('bl',['Time','Bot','Event'],Array.from({length:12},(_,i)=>({c:[new Date(Date.now()-i*6e5).toLocaleTimeString(),P(BOTS).id,P(['Profile shown','Liked test account','Sent automated message','Paused by schedule'])]}))).replace('class="card"','class="x"')))}
-// ---------- revenue ----------
-function pPlans(){return pg('Plans and pricing','Monthly price per country.',`<div class="grid g3">${Object.keys(C.plans).map(c=>{const p=C.plans[c];return card(c+' ('+p[0]+')',['Free','Gold','Premium'].map((n,i)=>i?`<label class="l">${n}</label><input class="fld" type="number" step="0.01" value="${p[i+1]}" ${oi(v=>p[i+1]=+v)}>`:'<p class="sub">Free: 0</p>').join(''))}).join('')}</div><div>${saveB('Plan pricing')}</div>`)}
-function pPromo(){const n=S.pn=S.pn||{c:'NEWCODE',t:'20% off',max:1000};return pg('Coupons, promo codes and trials','',tbl('promo',['Code','Offer','Redeemed','Limit','Status'],C.promos.map(p=>({p,c:[p.c,p.t,fmt(p.u),fmt(p.max),pill(p.on?'Active':'Paused',p.on?'ok':'warn')]})),{search:false,acts:[['Enable / disable',r=>A('Toggled promo',r.p.c,()=>{r.p.on=!r.p.on})(),'s']]})+card('New code',`<div class="grid g3"><div>${fld(n,'c','Code')}</div><div>${fld(n,'t','Offer (for example 20% off, 7-day trial)')}</div><div>${fld(n,'max','Redemption limit','number')}</div></div><div style="margin-top:10px">${btn('Create code',A('Created promo',()=>n.c,()=>C.promos.push({c:n.c.toUpperCase(),t:n.t,u:0,max:n.max,on:true})))}</div>`))}
-function pTx(){return pg('Transactions','Payments, refunds and failed payments.',tbl('tx',['ID','User','Item','Amount (₹)','Store','Status','Date'],TXN.map(t=>({t,c:[t.id,t.user,t.item,t.amt,t.store,pill(t.status),t.t]})),{filters:[['Status',5,['Paid','Failed','Refunded']],['Store',4,['Apple','Google','Stripe']]],acts:[['Refund',r=>A('Refunded payment',r.t.id+' ₹'+r.t.amt,()=>{r.t.status='Refunded'})(),'d',r=>r.t.status==='Paid'],['Retry',r=>A('Retried payment',r.t.id,()=>{r.t.status='Paid'})(),'g',r=>r.t.status==='Failed']]}))}
+// ---------- revenue (Store sync only; the other Revenue pages are real) ----------
 function pSync(){return pg('Apple and Google subscription sync','Receipts and entitlement checks.',`<div class="grid g3">${['Apple App Store','Google Play'].map((s,i)=>card(s,`<p>${pill('Connected','ok')}</p><p class="sub">Last sync: ${now()}</p><p class="sub">Pending receipts: ${R(0,12)} · Mismatches: ${R(0,4)}</p>${btn('Sync now',A('Synced '+s,'',()=>{}),'')}`)).join('')}</div>`+tbl('mis',['User','Store says','App says','Fix'],Array.from({length:4},()=>({c:[P(USERS).id,'Premium','Free','']})),{search:false,acts:[['Grant entitlement',r=>A('Fixed entitlement',r.c[0],()=>{})(),'g']]}))}
-function pIap(){return pg('In-app purchases','Boosts, super likes and gifts.',card('Catalogue',C.iap.map(i=>`<div class="set"><span>${i.n}</span><span class="row"><input class="fld" type="number" style="width:90px" value="${i.p}" ${oi(v=>i.p=+v)}> ${fld(i,'on','','toggle').replace('set','')}</span></div>`).join('')+saveB('IAP catalogue')))}
-function pRev(){const mrr=ser(12,310,20);return pg('Revenue and LTV','',kpis([['MRR','₹'+fmt(last(mrr)*1000),'+6.2%'],['ARPU','₹'+R(48,70)],['Paying users',fmt(R(12000,16000))],['LTV (12 mo)','₹'+R(900,1500)],['Refund rate',R(2,4)+'%']])+g3(card('MRR trend (₹ thousands)',line([mrr])),card('Revenue by plan',bars([['Gold',182000],['Premium',96000],['Boosts',41000],['Gifts',18000]])),card('Revenue by country',bars([['India',210000],['USA',58000],['UAE',41000],['UK',22000],['Singapore',12000]]))))}
 // ---------- content & config ----------
 function pFlags(){return pg('Feature flags and remote config','Toggle and roll out every feature.',card('',C.flags.map(f=>`<div class="set"><span>${f.n}<small>Rollout ${f.ro}%</small></span><span class="row" style="flex-wrap:nowrap"><input type="range" style="width:110px" min="0" max="100" value="${f.ro}" ${oi((v,el)=>{f.ro=+v;el.closest('.set').querySelector('small').textContent='Rollout '+v+'%'})}>${fld(f,'on','','toggle').replace('class="set"','class="x"')}</span></div>`).join('')+saveB('Feature flags')))}
 function pLang(){const L=C.lang,cols=['Hindi','Kannada','Tamil','Telugu','Bengali','Marathi'];return pg('Languages and translations','',card('Coverage',bars(cols.map(c=>[c,c==='Hindi'?100:R(40,92)])))+card('Edit strings',fld(L,'sel','Language','select',{o:cols,cb:()=>render()})+`<div class="scroll"><table><tr><th>Key</th><th>English</th><th>${L.sel}</th></tr>${Object.entries(L.keys).map(([k,v])=>`<tr><td>${k}</td><td>${v[0]}</td><td><input class="fld" value="${esc(v[1])}" ${oi(x=>v[1]=x)}></td></tr>`).join('')}</table></div><div class="row" style="margin-top:10px">${saveB('Translations')}${btn('Auto-translate missing',A('Auto-translated','missing strings'),'s')}</div>`))}
@@ -891,7 +1029,7 @@ const PAGES = {
   'mod-chat': ['mod', pChat], 'mod-fake': ['mod', pFake], 'mod-bans': ['mod', pBans], 'mod-auto': ['mod', pAuto], 'mod-underage': ['mod', pUnder],
   'match-algorithm': ['match', pAlgo], 'match-visibility': ['match', pVis], 'match-limits': ['match', pLim], 'match-locations': ['match', pLoc], 'match-ab': ['match', pAB],
   'bots-behaviour': ['bots', pBotBeh], 'bots-phase-out': ['bots', pBotPh], 'bots-activity': ['bots', pBotAct],
-  'subs-plans': ['subs', pPlans], 'subs-promos': ['subs', pPromo], 'subs-transactions': ['subs', pTx], 'subs-store-sync': ['subs', pSync], 'subs-iap': ['subs', pIap], 'subs-reports': ['subs', pRev],
+  'subs-store-sync': ['subs', pSync],
   'cfg-flags': ['cfg', pFlags], 'cfg-languages': ['cfg', pLang], 'cfg-onboarding': ['cfg', pOnb], 'cfg-banners': ['cfg', pBan], 'cfg-app-control': ['cfg', pCtl],
   'comm-push': ['comm', pPush], 'comm-email': ['comm', pMail], 'comm-broadcast': ['comm', pBroad], 'comm-lifecycle': ['comm', pLife],
   'sup-tickets': ['sup', pTix], 'sup-live-chat': ['sup', pLive], 'sup-help': ['sup', pFaq], 'sup-appeals': ['sup', pApp],
@@ -960,6 +1098,7 @@ const ROLE_INFO = {
 // Which permission opens each section.
 const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', hangouts: 'bots', reports: 'moderate', photos: 'moderate',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team',
+  'subs-plans': 'billing', 'subs-promos': 'billing', 'subs-transactions': 'billing', 'subs-iap': 'billing', 'subs-reports': 'billing',
   legal: null };
 // Sample pages (tabs marked data-mock) use mock data only, so every admin can open them.
 const MOCK_VIEWS = new Set([...document.querySelectorAll('.nav.sb [data-mock]')].map(b => b.dataset.view)
@@ -1050,7 +1189,9 @@ function show(view) {
   if (MOCK_VIEWS.has(view)) return window.EverlaneMock.render(view);
   window.EverlaneMock?.close();
   return ({ overview: loadOverview, leads: loadMembers, gen: loadGenerator, bots: loadBots, hangouts: loadHangouts, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
-     audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: () => {} })[view]();
+     audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: () => {},
+     'subs-plans': loadPrices, 'subs-promos': loadPromos, 'subs-transactions': loadTransactions, 'subs-iap': loadProducts,
+     'subs-reports': loadRevenue })[view]();
 }
 window.addEventListener('hashchange', () => {
   const v = decodeURIComponent(location.hash.slice(1));
@@ -1090,7 +1231,10 @@ function fail(error) { console.error(error); toast(error.message || 'Something w
 const loadOverview = () => Promise.all([loadDashboard(), loadStats()]);
 let resizeTimer;
 window.addEventListener('resize', () => { clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (current === 'overview' && dash) renderDashboard(dash); }, 200); });
+  resizeTimer = setTimeout(() => {
+    if (current === 'overview' && dash) renderDashboard(dash);
+    if (current === 'subs-reports' && rev) renderRevenue(rev);
+  }, 200); });
 
 const num = v => (Number.isFinite(+v) ? +v : 0);
 const fmtN = v => num(v).toLocaleString('en-IN');
@@ -1116,35 +1260,38 @@ async function loadDashboard() {
   renderDashboard(dash);
 }
 // One labelled bar per entry, longest first; widths are relative to the largest value.
-function barList(obj) {
+function barList(obj, { fmt = fmtN, empty = 'No data yet.' } = {}) {
   const rows = Object.entries(obj || {}).map(([k, v]) => [k, num(v)]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
-  if (!rows.length) return '<p class="sub">No data yet.</p>';
+  if (!rows.length) return `<p class="sub">${esc(empty)}</p>`;
   const max = Math.max(...rows.map(r => r[1])) || 1, total = rows.reduce((s, r) => s + r[1], 0);
   return rows.map(([k, v]) => `<div class="bl"><span title="${esc(k)}">${esc(k || 'Not set')}</span>
     <div class="bar" role="img" aria-label="${esc(k)}: ${v}"><i style="width:${(100 * v / max).toFixed(1)}%"></i></div>
-    <b>${fmtN(v)}<small>${pct(v, total)}</small></b></div>`).join('');
+    <b>${fmt(v)}<small>${pct(v, total)}</small></b></div>`).join('');
 }
 const SERIES = [['signups', 'Sign-ups', 'k1'], ['likes', 'Likes', 'k2'], ['matches', 'Matches', 'k3'], ['messages', 'Messages', 'k4']];
 const shortDay = d => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 // A simple themed line chart of the daily series; colours come from CSS variables.
 // Drawn at the container's own width so labels stay legible on phones.
-function lineChart(daily, width) {
-  const W = Math.max(280, Math.round(width || 640)), H = W < 500 ? 190 : 230, L = 40, R = 12, T = 12, B = 26, n = daily.length;
-  const max = Math.max(1, ...daily.flatMap(d => SERIES.map(([k]) => num(d[k]))));
+// series: [[key, label, colour class]]; fmt formats values, tick the y-axis labels.
+function lineChart(daily, width, { series = SERIES, fmt = fmtN, tick = fmtN } = {}) {
+  const W = Math.max(280, Math.round(width || 640)), H = W < 500 ? 190 : 230, R = 12, T = 12, B = 26, n = daily.length;
+  const max = Math.max(1, ...daily.flatMap(d => series.map(([k]) => num(d[k]))));
   // A round top for the y axis: 1, 2, 5 × 10^k.
   const mag = Math.pow(10, Math.floor(Math.log10(max))), top = [1, 2, 5, 10].map(m => m * mag).find(v => v >= max) || max;
+  const ticks = [0, .25, .5, .75, 1].map(f => Math.round(top * f)).filter((v, i, a) => a.indexOf(v) === i);
+  // Room on the left for the longest y-axis label.
+  const L = Math.max(40, Math.round(10 + 6.5 * Math.max(...ticks.map(v => String(tick(v)).length))));
   const x = i => n > 1 ? L + i * (W - L - R) / (n - 1) : (L + W - R) / 2;
   const y = v => T + (H - T - B) * (1 - num(v) / top);
-  const ticks = [0, .25, .5, .75, 1].map(f => Math.round(top * f)).filter((v, i, a) => a.indexOf(v) === i);
   const grid = ticks.map(v => `<line class="grid-l" x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>
-    <text x="${L - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${fmtN(v)}</text>`).join('');
+    <text x="${L - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${esc(tick(v))}</text>`).join('');
   const idx = n > 1 ? [...new Set([0, Math.floor((n - 1) / 2), n - 1])] : [0];
   const xl = idx.map(i => `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 && n > 1 ? 'start' : i === n - 1 && n > 1 ? 'end' : 'middle'}">${esc(shortDay(daily[i].day))}</text>`).join('');
-  const lines = SERIES.map(([k, , c]) => n > 1
+  const lines = series.map(([k, , c]) => n > 1
     ? `<polyline class="ln ${c}" points="${daily.map((d, i) => `${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join(' ')}"/>`
     : `<circle class="${c}" cx="${x(0)}" cy="${y(daily[0][k]).toFixed(1)}" r="4"/>`).join('');
-  const dots = n <= 31 && W / n >= 14 ? daily.map((d, i) => SERIES.map(([k, label, c]) => `<circle class="${c}" cx="${x(i).toFixed(1)}" cy="${y(d[k]).toFixed(1)}" r="2.5"><title>${esc(shortDay(d.day))} · ${label}: ${fmtN(d[k])}</title></circle>`).join('')).join('') : '';
-  const summary = SERIES.map(([k, label]) => `${label} ${fmtN(daily.reduce((s, d) => s + num(d[k]), 0))}`).join(', ');
+  const dots = n <= 31 && W / n >= 14 ? daily.map((d, i) => series.map(([k, label, c]) => `<circle class="${c}" cx="${x(i).toFixed(1)}" cy="${y(d[k]).toFixed(1)}" r="2.5"><title>${esc(shortDay(d.day))} · ${label}: ${esc(fmt(d[k]))}</title></circle>`).join('')).join('') : '';
+  const summary = series.map(([k, label]) => `${label} ${fmt(daily.reduce((s, d) => s + num(d[k]), 0))}`).join(', ');
   return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily totals over ${n} days: ${esc(summary)}">${grid}${xl}${lines}${dots}</svg>`;
 }
 function renderDashboard(d) {
@@ -2575,6 +2722,380 @@ function renderOptions() {
     const { error } = await sb.from('app_options').delete().eq('id', o.id);
     if (error) return fail(error); toast('Deleted'); loadOptions();
   });
+}
+
+// ---------- Revenue ----------
+// Plan prices, promo codes, in-app products, the payments ledger and reports
+// (migration 025, permission 'billing'). Until a payment provider is
+// connected, the ledger only holds payments an admin records by hand.
+const PLANS = ['plus', 'gold', 'platinum'];
+const STORES = { razorpay: 'Razorpay', google: 'Google Play', apple: 'App Store', stripe: 'Stripe', manual: 'Manual' };
+const TX_STATUS = { paid: ['ok', 'Paid'], pending: ['warn', 'Pending'], failed: ['bad', 'Failed'], refunded: ['warn', 'Refunded'] };
+const TX_KINDS = { subscription: 'Subscription', iap: 'In-app purchase' };
+document.querySelectorAll('.revnote').forEach(n => n.textContent = 'No payment provider is connected yet, so payments only appear here when recorded manually. Connect Razorpay / Google Play / App Store to record them automatically.');
+$('#txStore').innerHTML += Object.entries(STORES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+$('#pcPlans').innerHTML = PLANS.map(p => `<label><input type="checkbox" value="${p}"> ${PLAN_NAMES[p]}</label>`).join('');
+
+// Money in rupees with Indian grouping (₹1,22,07,004); other currencies by code.
+function money(v, cur = 'INR') {
+  try { return new Intl.NumberFormat('en-IN', { style: 'currency', currency: cur || 'INR', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(num(v)); }
+  catch (e) { return `${cur} ${num(v).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`; }
+}
+// Short labels for the chart's y axis: ₹500, ₹2.5k, ₹1.2L, ₹3Cr.
+const moneyShort = v => { v = num(v); const a = Math.abs(v);
+  return '₹' + (a >= 1e7 ? +(v / 1e7).toFixed(1) + 'Cr' : a >= 1e5 ? +(v / 1e5).toFixed(1) + 'L' : a >= 1e3 ? +(v / 1e3).toFixed(1) + 'k' : fmtN(v)); };
+const pad2 = n => String(n).padStart(2, '0');
+const dateInput = d => { const x = new Date(d); return `${x.getFullYear()}-${pad2(x.getMonth() + 1)}-${pad2(x.getDate())}`; };
+const isUuid = s => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s || '');
+function paintChips(sel, days) {
+  document.querySelectorAll(sel + ' [data-days]').forEach(b => {
+    b.classList.toggle('on', +b.dataset.days === days);
+    b.setAttribute('aria-pressed', +b.dataset.days === days);
+  });
+}
+
+// Prices, promos and products in one call; most Revenue pages need some of it.
+let billing = { prices: [], promos: [], products: [] };
+async function loadBilling() {
+  const { data, error } = await sb.rpc('admin_billing_config');
+  if (error) { fail(error); return false; }
+  billing = { prices: data?.prices || [], promos: data?.promos || [], products: data?.products || [] };
+  return true;
+}
+const itemName = (kind, item) => kind === 'subscription' ? (PLAN_NAMES[item] || item)
+  : (billing.products.find(p => p.id === item)?.name || item);
+const indiaPrice = plan => billing.prices.find(p => p.country === 'India' && p.plan === plan);
+
+// ----- Plans -----
+async function loadPrices() { if (await loadBilling()) renderPrices(); }
+function renderPrices() {
+  const byCountry = {};
+  billing.prices.forEach(p => {
+    const g = byCountry[p.country] ||= { currency: p.currency, symbol: p.symbol, plans: {}, updated: null };
+    g.plans[p.plan] = p;
+    if (!g.updated || p.updated_at > g.updated) g.updated = p.updated_at;
+  });
+  const countries = Object.keys(byCountry).sort((a, b) => (b === 'India') - (a === 'India') || a.localeCompare(b));
+  $('#priceCards').innerHTML = countries.map(c => {
+    const g = byCountry[c];
+    return `<div class="card pad" data-country="${esc(c)}" data-currency="${esc(g.currency)}" data-symbol="${esc(g.symbol)}">
+      <h3>${esc(c)} <span class="sub" style="font-weight:500">${esc(g.symbol)} · ${esc(g.currency)}</span></h3>
+      ${PLANS.map(pl => { const p = g.plans[pl]; return `<div class="prow" data-plan="${pl}"><span>${PLAN_NAMES[pl]}</span>
+        <input type="number" min="0" step="0.01" value="${p ? esc(num(p.price)) : ''}" placeholder="Not offered" aria-label="${esc(c)} ${PLAN_NAMES[pl]} price">
+        <label class="tog"><input type="checkbox" ${!p || p.active ? 'checked' : ''}> Active</label>
+        ${p ? `<button type="button" class="btn small danger" data-price-del="${pl}" aria-label="Delete the ${esc(c)} ${PLAN_NAMES[pl]} price">Delete</button>` : '<span></span>'}</div>`; }).join('')}
+      <p class="sub" style="font-size:12px;margin-top:10px">Updated ${fmtDate(g.updated)}</p></div>`;
+  }).join('') || '<p class="sub">No prices yet. Use “Add country”.</p>';
+  document.querySelectorAll('#priceCards [data-price-del]').forEach(b => b.onclick = async () => {
+    const country = b.closest('[data-country]').dataset.country, plan = b.dataset.priceDel;
+    if (!confirm(`Delete the ${PLAN_NAMES[plan]} price for ${country}? Members there won’t be offered ${PLAN_NAMES[plan]} until it’s added again.`)) return;
+    const { error } = await sb.rpc('admin_delete_price', { p_country: country, p_plan: plan });
+    if (error) return fail(error); toast('Price deleted'); loadPrices();
+  });
+}
+$('#priceSave').onclick = async () => {
+  const rows = [];
+  for (const card of document.querySelectorAll('#priceCards [data-country]')) {
+    for (const r of card.querySelectorAll('.prow')) {
+      const raw = $('input[type=number]', r).value.trim();
+      if (!raw) continue;
+      const price = +raw;
+      if (!(price >= 0)) return toast(`Check the ${PLAN_NAMES[r.dataset.plan]} price for ${card.dataset.country}`);
+      rows.push({ country: card.dataset.country, currency: card.dataset.currency, symbol: card.dataset.symbol,
+        plan: r.dataset.plan, price, active: $('input[type=checkbox]', r).checked });
+    }
+  }
+  if (!rows.length) return toast('Nothing to save');
+  const { error } = await sb.rpc('admin_save_prices', { rows });
+  if (error) return fail(error); toast('Prices saved'); loadPrices();
+};
+$('#priceAdd').onclick = () => { $('#priceNew').classList.remove('hidden'); $('#pnCountry').focus(); };
+$('#pnCancel').onclick = () => { $('#priceNew').reset(); $('#priceNew').classList.add('hidden'); };
+$('#priceNew').onsubmit = async e => {
+  e.preventDefault();
+  const country = $('#pnCountry').value.trim(), currency = $('#pnCurrency').value.trim().toUpperCase(), symbol = $('#pnSymbol').value.trim();
+  if (!country) return toast('Enter the country');
+  if (!/^[A-Z]{3}$/.test(currency)) return toast('The currency code is three letters, e.g. INR');
+  if (!symbol) return toast('Enter the currency symbol');
+  const rows = [];
+  for (const [plan, sel] of [['plus', '#pnPlus'], ['gold', '#pnGold'], ['platinum', '#pnPlatinum']]) {
+    const raw = $(sel).value.trim(); if (!raw) continue;
+    if (!(+raw >= 0)) return toast(`Check the ${PLAN_NAMES[plan]} price`);
+    rows.push({ country, currency, symbol, plan, price: +raw, active: true });
+  }
+  if (!rows.length) return toast('Enter at least one price');
+  if (billing.prices.some(p => p.country.toLowerCase() === country.toLowerCase())
+    && !confirm(`${country} already has prices. Replace the ones you entered?`)) return;
+  const { error } = await sb.rpc('admin_save_prices', { rows });
+  if (error) return fail(error);
+  $('#priceNew').reset(); $('#priceNew').classList.add('hidden'); toast(`${country} added`); loadPrices();
+};
+
+// ----- Promos -----
+const offerText = p => p.kind === 'percent' ? `${fmtN(p.value)}% off`
+  : p.kind === 'amount' ? `${money(p.value)} off` : `${fmtN(p.value)}-day free trial`;
+function promoState(p) {
+  if (!p.active) return ['muted', 'Paused'];
+  if (p.expires_at && new Date(p.expires_at) <= new Date()) return ['bad', 'Expired'];
+  if (p.max_uses != null && num(p.uses) >= num(p.max_uses)) return ['bad', 'Used up'];
+  return ['ok', 'Active'];
+}
+let promoEditing = null;
+async function loadPromos() { if (await loadBilling()) renderPromos(); }
+function renderPromos() {
+  $('#promoRows').innerHTML = billing.promos.map(p => { const [tone, label] = promoState(p); return `<tr style="cursor:default">
+    <td><b style="color:var(--text)">${esc(p.code)}</b>${p.note ? `<br><span class="code">${esc(p.note)}</span>` : ''}</td>
+    <td>${esc(offerText(p))}</td>
+    <td>${p.plans?.length ? p.plans.map(x => esc(PLAN_NAMES[x] || x)).join(', ') : 'All plans'}</td>
+    <td>${fmtN(p.uses)} / ${p.max_uses == null ? '∞' : fmtN(p.max_uses)}</td>
+    <td style="white-space:nowrap">${p.expires_at ? fmtDate(p.expires_at) : 'Never'}</td>
+    <td><span class="pill ${tone}">${label}</span></td>
+    <td style="white-space:nowrap"><button class="btn small" data-promo-edit="${esc(p.code)}">Edit</button>
+      <button class="btn small danger" data-promo-del="${esc(p.code)}">Delete</button></td></tr>`; }).join('')
+    || '<tr><td colspan="7" class="muted">No promo codes yet. Create one below.</td></tr>';
+  document.querySelectorAll('[data-promo-edit]').forEach(b => b.onclick = () => {
+    promoForm(billing.promos.find(p => p.code === b.dataset.promoEdit));
+    $('#promoForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  document.querySelectorAll('[data-promo-del]').forEach(b => b.onclick = async () => {
+    const code = b.dataset.promoDel;
+    if (!confirm(`Delete the promo code ${code}? Members can no longer use it.`)) return;
+    const { error } = await sb.rpc('admin_delete_promo', { promo: code });
+    if (error) return fail(error);
+    if (promoEditing === code) promoForm(null);
+    toast(`${code} deleted`); loadPromos();
+  });
+  if (promoEditing && !billing.promos.some(p => p.code === promoEditing)) promoForm(null);
+}
+const VALUE_LABEL = { percent: 'Percent off (1–100)', amount: 'Amount off (₹)', trial_days: 'Free trial length (days)' };
+const paintPromoKind = () => { $('#pcValueLbl').textContent = VALUE_LABEL[$('#pcKind').value]; };
+$('#pcKind').onchange = paintPromoKind;
+function promoForm(p) {
+  promoEditing = p?.code || null;
+  $('#promoTitle').textContent = p ? `Edit ${p.code}` : 'New promo code';
+  $('#pcCode').value = p?.code || ''; $('#pcCode').readOnly = !!p;
+  $('#pcKind').value = p?.kind || 'percent'; $('#pcValue').value = p ? num(p.value) : '';
+  document.querySelectorAll('#pcPlans input').forEach(i => i.checked = !!p?.plans?.includes(i.value));
+  $('#pcMax').value = p?.max_uses ?? ''; $('#pcExpires').value = p?.expires_at ? dateInput(p.expires_at) : '';
+  $('#pcActive').checked = p ? !!p.active : true; $('#pcNote').value = p?.note || '';
+  $('#pcCancel').classList.toggle('hidden', !p);
+  paintPromoKind();
+}
+promoForm(null);
+$('#promoNew').onclick = () => { promoForm(null); $('#promoForm').scrollIntoView({ behavior: 'smooth', block: 'start' }); $('#pcCode').focus(); };
+$('#pcCancel').onclick = () => promoForm(null);
+$('#promoForm').onsubmit = async e => {
+  e.preventDefault();
+  const code = $('#pcCode').value.trim().toUpperCase(), kind = $('#pcKind').value, value = +$('#pcValue').value;
+  if (!/^[A-Z0-9_-]{3,24}$/.test(code)) return toast('Codes are 3 to 24 letters, numbers, _ or -');
+  if (!(value > 0)) return toast('Enter a value above 0');
+  if (kind === 'percent' && value > 100) return toast('A percent off can be at most 100');
+  if (kind === 'trial_days' && !Number.isInteger(value)) return toast('A free trial is a whole number of days');
+  const max = $('#pcMax').value.trim();
+  if (max && !(Number.isInteger(+max) && +max > 0)) return toast('Max uses is a whole number, or blank for unlimited');
+  const exp = $('#pcExpires').value;
+  if (!promoEditing && billing.promos.some(p => p.code === code) && !confirm(`${code} already exists. Replace it?`)) return;
+  const item = { code, kind, value, plans: [...document.querySelectorAll('#pcPlans input:checked')].map(i => i.value),
+    max_uses: max ? +max : '', expires_at: exp ? new Date(exp + 'T23:59:59').toISOString() : '',
+    active: $('#pcActive').checked, note: $('#pcNote').value.trim() };
+  const { error } = await sb.rpc('admin_save_promo', { item });
+  if (error) return fail(error);
+  toast(`${code} saved`); promoForm(null); loadPromos();
+};
+
+// ----- Transactions -----
+let txs = [], txDays = 30, txPage = 0;
+const TX_PAGE = 50;
+document.querySelectorAll('#txRange [data-days]').forEach(b => b.onclick = () => { txDays = +b.dataset.days; txPage = 0; loadTransactions(); });
+async function loadTransactions() {
+  paintChips('#txRange', txDays);
+  const [, res] = await Promise.all([loadBilling(), sb.rpc('admin_transactions', { days: txDays })]);
+  paintPayItems();
+  if (res.error) return fail(res.error);
+  txs = res.data || [];
+  renderTransactions();
+  // The member picker searches the members list when this role can see it.
+  if (can('members') && !members.length) { const { data } = await sb.rpc('admin_members'); members = data || []; }
+  paintPayPick();
+}
+function filteredTx() {
+  const q = $('#txSearch').value.trim().toLowerCase(), st = $('#txStatus').value, store = $('#txStore').value;
+  return txs.filter(t => (!st || t.status === st) && (!store || t.store === store)
+    && (!q || [t.member_name, t.member_email, t.item, itemName(t.kind, t.item), t.provider_ref, t.id, t.promo_code, t.note]
+      .some(v => String(v || '').toLowerCase().includes(q))));
+}
+function renderTransactions() {
+  const list = filteredTx(), pages = Math.max(1, Math.ceil(list.length / TX_PAGE));
+  txPage = Math.min(txPage, pages - 1);
+  $('#txRows').innerHTML = list.slice(txPage * TX_PAGE, (txPage + 1) * TX_PAGE).map(t => {
+    const [tone, label] = TX_STATUS[t.status] || ['muted', t.status];
+    const who = esc(t.member_name || (t.user_id ? 'Unnamed member' : 'Deleted member'));
+    return `<tr style="cursor:default">
+    <td class="code" title="${esc(t.id)}${t.provider_ref ? ' · ref ' + esc(t.provider_ref) : ''}">${esc(String(t.id).slice(0, 8))}</td>
+    <td style="white-space:nowrap">${fmtTime(t.created_at)}</td>
+    <td>${t.user_id && can('members') ? `<a href="#" data-tx-member="${esc(t.user_id)}"><b>${who}</b></a>` : `<b style="color:var(--text)">${who}</b>`}
+      <br><span class="code">${esc(t.member_email || '')}</span></td>
+    <td>${esc(TX_KINDS[t.kind] || t.kind)}</td><td>${esc(itemName(t.kind, t.item))}</td>
+    <td style="white-space:nowrap">${money(t.amount, t.currency)}</td><td>${esc(STORES[t.store] || t.store)}</td>
+    <td><span class="pill ${tone}" ${t.refunded_at ? `title="Refunded ${esc(fmtTime(t.refunded_at))}"` : ''}>${esc(label)}</span></td>
+    <td>${esc(t.promo_code || '—')}</td><td class="clip">${esc(t.note || '')}</td>
+    <td>${t.status === 'paid' ? `<button class="btn small danger" data-refund="${esc(t.id)}">Refund</button>` : ''}</td></tr>`;
+  }).join('') || `<tr><td colspan="11" class="muted">${txs.length ? 'No payments match.' : `No payments in the last ${txDays} days.`}</td></tr>`;
+  $('#txPager').innerHTML = pages > 1 ? `<button class="btn small" id="txPrev" ${txPage ? '' : 'disabled'}>Previous</button>
+    <span class="muted">Page ${txPage + 1} of ${pages}</span><button class="btn small" id="txNext" ${txPage < pages - 1 ? '' : 'disabled'}>Next</button>` : '';
+  $('#txPrev')?.addEventListener('click', () => { txPage--; renderTransactions(); });
+  $('#txNext')?.addEventListener('click', () => { txPage++; renderTransactions(); });
+  const paid = list.filter(t => t.status === 'paid').reduce((s, t) => s + num(t.amount), 0);
+  $('#txCount').textContent = `${fmtN(list.length)} of ${fmtN(txs.length)} payment${txs.length === 1 ? '' : 's'} · ${money(paid)} paid`;
+  document.querySelectorAll('#txRows [data-tx-member]').forEach(a => a.onclick = async e => {
+    e.preventDefault();
+    if (!members.length) { const { data } = await sb.rpc('admin_members'); members = data || []; }
+    openMember(a.dataset.txMember);
+  });
+  document.querySelectorAll('#txRows [data-refund]').forEach(b => b.onclick = async () => {
+    const t = txs.find(x => x.id === b.dataset.refund); if (!t) return;
+    const reason = prompt(`Refund ${money(t.amount, t.currency)} from ${t.member_name || 'this member'} for ${itemName(t.kind, t.item)}?\n\nThis marks it refunded in Everlane${t.kind === 'subscription' ? ' and ends their plan now' : ''}. Refund the money itself at ${STORES[t.store] || 'the payment provider'}.\n\nReason (optional):`, '');
+    if (reason === null) return;
+    const { error } = await sb.rpc('admin_refund', { tx: t.id, reason: reason.trim() });
+    if (error) return fail(error); toast('Marked refunded'); loadTransactions();
+  });
+}
+['#txSearch', '#txStatus', '#txStore'].forEach(sel => $(sel).addEventListener('input', () => { txPage = 0; renderTransactions(); }));
+$('#txCsv').onclick = () => {
+  const cols = ['id', 'created_at', 'member_name', 'member_email', 'kind', 'item', 'amount', 'currency', 'store', 'status', 'provider_ref', 'promo_code', 'country', 'note', 'refunded_at'];
+  const cell = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csv = [cols.join(','), ...filteredTx().map(t => cols.map(c => cell(t[c])).join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `everlane-transactions-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+};
+
+// Record a manual payment.
+function paintPayPick() {
+  const searchable = can('members');
+  $('#payPickWrap').classList.toggle('hidden', !searchable);
+  $('#payWhoLbl').textContent = searchable ? 'Member' : 'Member ID';
+  $('#payWho').placeholder = searchable ? 'Search by name or email' : 'The member’s ID';
+  if (!searchable) return;
+  const q = $('#payWho').value.trim().toLowerCase(), keep = $('#payPick').value;
+  const found = q ? members.filter(m => !m.deleted_at && [m.name, m.email, m.phone, m.id].some(v => (v || '').toLowerCase().includes(q))).slice(0, 50) : [];
+  $('#payPick').innerHTML = `<option value="">${q ? (found.length ? `${found.length === 50 ? '50+' : found.length} found, pick one` : 'No members match') : 'Type to search members'}</option>`
+    + found.map(m => `<option value="${esc(m.id)}" ${m.id === keep ? 'selected' : ''}>${esc(m.name || 'Unnamed')} · ${esc(m.email || m.phone || m.id.slice(0, 8))}</option>`).join('');
+  if (found.length === 1) $('#payPick').value = found[0].id;
+}
+function paintPayItems() {
+  const kind = $('#payKind').value, keep = $('#payItem').value;
+  $('#payItem').innerHTML = kind === 'subscription'
+    ? PLANS.map(p => `<option value="${p}">${PLAN_NAMES[p]}${indiaPrice(p) ? ' · ' + money(indiaPrice(p).price) : ''}</option>`).join('')
+    : billing.products.map(p => `<option value="${esc(p.id)}">${esc(p.name)} · ${money(p.price, p.currency)}${p.active ? '' : ' (inactive)'}</option>`).join('')
+      || '<option value="">No products yet</option>';
+  if ([...$('#payItem').options].some(o => o.value === keep)) $('#payItem').value = keep;
+  prefillPayAmount();
+}
+function prefillPayAmount() {
+  const kind = $('#payKind').value, item = $('#payItem').value;
+  const price = kind === 'subscription' ? indiaPrice(item)?.price : billing.products.find(p => p.id === item)?.price;
+  $('#payAmount').value = price != null ? num(price) : '';
+}
+$('#payWho').addEventListener('input', paintPayPick);
+$('#payKind').onchange = paintPayItems;
+$('#payItem').onchange = prefillPayAmount;
+paintPayPick();
+$('#payForm').onsubmit = async e => {
+  e.preventDefault();
+  const typed = $('#payWho').value.trim();
+  const member = !$('#payPickWrap').classList.contains('hidden') && $('#payPick').value ? $('#payPick').value : typed;
+  if (!isUuid(member)) return toast(can('members') ? 'Search for the member and pick them from the list' : 'Enter the member’s ID');
+  const kind = $('#payKind').value, item = $('#payItem').value, amount = +$('#payAmount').value;
+  if (!item) return toast('Pick what they paid for');
+  if (!($('#payAmount').value.trim() && amount >= 0)) return toast('Enter the amount paid');
+  const m = members.find(x => x.id === member), who = m ? (m.name || m.email || 'this member') : 'member ' + member.slice(0, 8);
+  const what = itemName(kind, item);
+  if (!confirm(`Record ${money(amount)} from ${who} for ${what}?${kind === 'subscription' ? `\n\nA subscription payment gives the member ${what} for one month.` : ''}`)) return;
+  const { error } = await sb.rpc('admin_record_payment', { member, kind, item, amount, note: $('#payNote').value.trim() });
+  if (error) return fail(error);
+  toast('Payment recorded');
+  $('#payWho').value = ''; $('#payNote').value = ''; paintPayPick(); txPage = 0; loadTransactions();
+};
+
+// ----- In-app purchases -----
+async function loadProducts() { if (await loadBilling()) renderProducts(); }
+function renderProducts() {
+  $('#iapRows').innerHTML = billing.products.map(p => `<tr style="cursor:default" data-product="${esc(p.id)}">
+    <td class="code" style="font-size:12.5px">${esc(p.id)}</td>
+    <td><input type="text" data-f="name" value="${esc(p.name)}" maxlength="80" aria-label="Name of ${esc(p.id)}"></td>
+    <td><input type="number" data-f="price" value="${esc(num(p.price))}" min="0" step="0.01" style="max-width:110px" aria-label="Price of ${esc(p.id)}"></td>
+    <td><input type="text" data-f="currency" value="${esc(p.currency)}" maxlength="3" style="max-width:80px" aria-label="Currency of ${esc(p.id)}"></td>
+    <td><label class="tog"><input type="checkbox" data-f="active" ${p.active ? 'checked' : ''}> Active</label></td>
+    <td style="white-space:nowrap"><button class="btn small primary" data-product-save>Save</button>
+      <button class="btn small danger" data-product-del>Delete</button></td></tr>`).join('')
+    || '<tr><td colspan="6" class="muted">No products yet. Add one below.</td></tr>';
+  document.querySelectorAll('#iapRows [data-product-save]').forEach(b => b.onclick = () => {
+    const r = b.closest('[data-product]'), f = k => $(`[data-f="${k}"]`, r);
+    saveProduct({ id: r.dataset.product, name: f('name').value.trim(), price: f('price').value.trim(),
+      currency: f('currency').value.trim().toUpperCase(), active: f('active').checked });
+  });
+  document.querySelectorAll('#iapRows [data-product-del]').forEach(b => b.onclick = async () => {
+    const id = b.closest('[data-product]').dataset.product;
+    if (!confirm(`Delete the product “${itemName('iap', id)}” (${id})? Members can no longer buy it; past payments stay in Transactions.`)) return;
+    const { error } = await sb.rpc('admin_delete_product', { product: id });
+    if (error) return fail(error); toast('Product deleted'); loadProducts();
+  });
+}
+async function saveProduct(item, isNew) {
+  if (!/^[a-z0-9_]{2,40}$/.test(item.id)) return toast('The ID is 2 to 40 lowercase letters, numbers or _');
+  if (!item.name) return toast('Enter a name');
+  if (!(item.price !== '' && +item.price >= 0)) return toast('Enter a price of 0 or more');
+  if (!/^[A-Z]{3}$/.test(item.currency)) return toast('The currency code is three letters, e.g. INR');
+  if (isNew && billing.products.some(p => p.id === item.id)) return toast(`${item.id} already exists. Edit it in the table instead.`);
+  const { error } = await sb.rpc('admin_save_product', { item: { ...item, price: +item.price } });
+  if (error) { fail(error); return false; }
+  toast(`${item.name} saved`); loadProducts(); return true;
+}
+$('#iapNew').onsubmit = async e => {
+  e.preventDefault();
+  const ok = await saveProduct({ id: $('#inId').value.trim().toLowerCase(), name: $('#inName').value.trim(), price: $('#inPrice').value.trim(),
+    currency: $('#inCurrency').value.trim().toUpperCase(), active: $('#inActive').checked }, true);
+  if (ok) { $('#iapNew').reset(); $('#inCurrency').value = 'INR'; }
+};
+
+// ----- Reports -----
+let revDays = 30, rev = null;
+const REV_SERIES = [['net', 'Net revenue', 'k1'], ['refunds', 'Refunds', 'k2']];
+document.querySelectorAll('#revRange [data-days]').forEach(b => b.onclick = () => { revDays = +b.dataset.days; loadRevenue(); });
+async function loadRevenue() {
+  paintChips('#revRange', revDays);
+  const [, res] = await Promise.all([loadBilling(), sb.rpc('admin_revenue', { days: revDays })]);
+  if (res.error) {
+    $('#revKpis').innerHTML = `<p class="note" style="grid-column:1/-1">The revenue report couldn’t load: ${esc(res.error.message || 'unknown error')}</p>`;
+    return;
+  }
+  rev = res.data || {};
+  renderRevenue(rev);
+}
+function renderRevenue(d) {
+  const t = d.totals || {}, s = d.subscriptions || {}, daily = Array.isArray(d.daily) ? d.daily : [];
+  const kpis = [['Net revenue', money(t.net), `${fmtN(t.payments)} payment${num(t.payments) === 1 ? '' : 's'} in ${revDays} days`],
+    ['Gross', money(t.gross), 'Before refunds'],
+    ['Refunds', money(t.refunds), `${fmtN(t.failed)} failed payment${num(t.failed) === 1 ? '' : 's'}`],
+    ['Paying members', fmtN(t.payers), `Paid in the last ${revDays} days`],
+    ['Active subscriptions', fmtN(s.active), 'Paid plans running now'],
+    ['MRR', money(s.mrr), 'Active plans at India prices']];
+  $('#revKpis').innerHTML = kpis.map(([k, v, sub]) => `<div class="kpi"><span>${esc(k)}</span><b>${esc(v)}</b><i>${esc(sub)}</i></div>`).join('');
+  const any = daily.some(x => num(x.net) || num(x.refunds));
+  $('#revLegend').innerHTML = any ? REV_SERIES.map(([k, label, c]) =>
+    `<span><i class="${c}"></i>${label} <b>${money(daily.reduce((sum, x) => sum + num(x[k]), 0))}</b></span>`).join('') : '';
+  $('#revChart').innerHTML = any ? lineChart(daily, $('#revChart').clientWidth, { series: REV_SERIES, fmt: money, tick: moneyShort })
+    : `<p class="sub">No payments yet in the last ${revDays} days.</p>`;
+  const items = {};
+  (Array.isArray(d.by_item) ? d.by_item : []).forEach(i => {
+    const k = itemName(i.kind, i.item); items[k] = num(items[k]) + num(i.net); });
+  const rename = (obj, names) => Object.fromEntries(Object.entries(obj || {}).map(([k, v]) => [names[k] || k, v]));
+  const asMoney = { fmt: money, empty: 'No payments yet.' };
+  $('#revItems').innerHTML = barList(items, asMoney);
+  $('#revStores').innerHTML = barList(rename(d.by_store, STORES), asMoney);
+  $('#revCountries').innerHTML = barList(d.by_country, asMoney);
+  $('#revPlans').innerHTML = barList(rename(s.by_plan, PLAN_NAMES), { empty: 'No active paid plans.' });
 }
 
 // ---------- Team ----------
