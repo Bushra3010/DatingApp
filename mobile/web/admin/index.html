@@ -2,229 +2,402 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
 <title>Everlane Admin</title>
 <link rel="icon" type="image/png" href="../favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Caveat:wght@700&family=Poppins:wght@600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Caveat+Brush&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+// Apply a saved light/dark choice before first paint; otherwise follow the system.
+try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
 <style>
   :root {
-    --bg: #0D0B12; --card: #191621; --card2: #211D2B; --line: #2A2436;
-    --text: #FFFFFF; --body: #E4E4E7; --muted: #A1A1AA; --purple: #7C3AED;
-    --pink: #F472B6; --lavender: #C4B5FD; --green: #2F9E75; --red: #F87171;
-    --grad: linear-gradient(135deg, #7C3AED, #EC4899);
+    --bg: #F4F4FA; --surf: #FFFFFF; --ink: #17171F; --mute: #62627A; --line: #E3E3EE;
+    --acc: #7C3AED; --acc2: #EC4899; --ok: #15803D; --bad: #C0263B; --warn: #B45309;
+    --s1: #7C3AED; --s2: #DB2777; --s3: #B45309; --s4: #0E7490;
+    --sh: 0 8px 28px -14px rgba(30,30,80,.25); --scrim: rgba(10,10,25,.55);
+    --tint: rgba(124,58,237,.10);
   }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0C0C12; --surf: #16161F; --ink: #F2F2F8; --mute: #A2A2B8; --line: #2A2A38;
+      --acc: #8B5CF6; --ok: #4ADE80; --bad: #FB7185; --warn: #FBBF24;
+      --s1: #A78BFA; --s2: #F472B6; --s3: #FBBF24; --s4: #22D3EE;
+      --sh: 0 8px 28px -14px rgba(0,0,0,.7); --scrim: rgba(0,0,0,.65); --tint: rgba(139,92,246,.16);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0C0C12; --surf: #16161F; --ink: #F2F2F8; --mute: #A2A2B8; --line: #2A2A38;
+    --acc: #8B5CF6; --ok: #4ADE80; --bad: #FB7185; --warn: #FBBF24;
+    --s1: #A78BFA; --s2: #F472B6; --s3: #FBBF24; --s4: #22D3EE;
+    --sh: 0 8px 28px -14px rgba(0,0,0,.7); --scrim: rgba(0,0,0,.65); --tint: rgba(139,92,246,.16);
+  }
+  /* Older names still used by inline styles in the scripts below. */
+  :root { --text: var(--ink); --body: var(--ink); --muted: var(--mute); --card: var(--surf); --card2: var(--bg);
+          --purple: var(--acc); --lavender: var(--acc); --pink: var(--acc2); --red: var(--bad); --green: var(--ok); }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--body);
-         font: 14px/1.5 Inter, system-ui, sans-serif; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 14.5px/1.45 Inter, system-ui, sans-serif;
+         min-height: 100vh; overflow-x: hidden; }
   button, input, select, textarea { font: inherit; color: inherit; }
-  .logo { font-family: Caveat, cursive; font-size: 34px; line-height: 1;
-          background: linear-gradient(135deg, #A78BFA, #F472B6);
-          -webkit-background-clip: text; background-clip: text; color: transparent; }
-  h1, h2, h3 { font-family: Poppins, Inter, sans-serif; color: var(--text); margin: 0; font-weight: 600; }
-  .muted { color: var(--muted); }
+  a { color: var(--acc); }
+  img { max-width: 100%; }
   .hidden { display: none !important; }
-  .btn { border: 1px solid var(--line); background: var(--card2); border-radius: 12px;
-         padding: 9px 14px; cursor: pointer; font-weight: 600; white-space: nowrap; }
-  .btn:hover { border-color: var(--purple); }
-  .btn.primary { background: var(--grad); border: 0; color: #fff; box-shadow: 0 8px 22px rgba(124,58,237,.35); }
-  .btn.danger { color: var(--red); }
-  .btn.small { padding: 5px 10px; font-size: 12px; border-radius: 9px; }
-  .btn:disabled { opacity: .5; cursor: default; }
-  input[type=text], input[type=email], input[type=password], input[type=number], select, textarea {
-    width: 100%; background: var(--card2); border: 1px solid var(--line); border-radius: 12px;
-    padding: 10px 12px; outline: none; }
-  input:focus, select:focus, textarea:focus { border-color: var(--purple); }
-  label { display: block; font-size: 12px; color: var(--muted); margin: 12px 0 6px; }
+  .muted, .sub { color: var(--mute); }
+  p.sub { margin: 2px 0 0; font-size: 13.5px; }
+  h1, h2, h3, h4 { color: var(--ink); margin: 0; }
+  h1, h2 { font: 700 23px/1.15 Inter, system-ui, sans-serif; letter-spacing: -.03em; }
+  h3 { font: 700 15.5px/1.3 Inter, system-ui, sans-serif; }
+  h4 { font-size: 13px; }
+  .logo { font: 400 32px/1 'Caveat Brush', cursive; background: linear-gradient(90deg, #9B6CF0, #E8509F);
+          -webkit-background-clip: text; background-clip: text; color: transparent; padding: 0 4px; white-space: nowrap; }
+  .logo small { font: 700 12px Inter, system-ui, sans-serif; -webkit-text-fill-color: var(--mute); letter-spacing: .1em; margin-left: 6px; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  /* Buttons */
+  .btn { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 10px;
+         padding: 8px 14px; font: 600 13.5px Inter, system-ui, sans-serif; cursor: pointer; white-space: nowrap; }
+  .btn:hover { border-color: var(--acc); }
+  .btn.primary { background: linear-gradient(90deg, var(--acc), var(--acc2)); border-color: transparent; color: #fff; }
+  .btn.danger { color: var(--bad); }
+  .btn.danger:hover { border-color: var(--bad); }
+  .btn.small { padding: 5px 10px; font-size: 12.5px; border-radius: 9px; }
+  .btn:disabled, .btn[disabled] { opacity: .45; cursor: default; }
+  .iconbtn { border: 1px solid var(--line); background: var(--surf); color: var(--ink); border-radius: 20px;
+             padding: 5px 11px; font: 600 12.5px Inter, system-ui, sans-serif; cursor: pointer; }
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible,
+  summary:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+
+  /* Fields */
+  input[type=text], input[type=email], input[type=password], input[type=number], select, textarea, .fld {
+    width: 100%; padding: 9px 11px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg);
+    color: var(--ink); outline: none; min-width: 0; }
+  input:focus, select:focus, textarea:focus { border-color: var(--acc); }
+  textarea { resize: vertical; }
+  input[type=range] { width: 100%; accent-color: var(--acc); margin: 6px 0 2px; }
+  input[type=checkbox] { accent-color: var(--acc); }
+  label { display: block; font-weight: 600; font-size: 12.5px; color: var(--ink); margin: 12px 0 5px; }
+  .err { color: var(--bad); font-size: 13px; margin-top: 12px; min-height: 18px; }
+
+  /* Pills */
+  .pill { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 20px; padding: 2px 9px;
+          background: var(--tint); color: var(--acc); white-space: nowrap; vertical-align: middle; }
+  .pill.ok { background: rgba(21,128,61,.14); color: var(--ok); }
+  .pill.bad { background: rgba(192,38,59,.14); color: var(--bad); }
+  .pill.warn { background: rgba(180,83,9,.16); color: var(--warn); }
+  .pill.muted { background: var(--bg); color: var(--mute); border: 1px solid var(--line); }
 
   /* Login */
-  #login { min-height: 100vh; display: grid; place-items: center; padding: 20px;
-           background: radial-gradient(600px 400px at 20% 0%, rgba(124,58,237,.25), transparent),
-                       radial-gradient(500px 400px at 100% 20%, rgba(236,72,153,.18), transparent); }
-  .login-card { width: min(400px, 100%); background: var(--card); border: 1px solid var(--line);
-                border-radius: 24px; padding: 32px; }
-  .err { color: var(--red); font-size: 13px; margin-top: 12px; min-height: 18px; }
+  #login { min-height: 100vh; display: grid; place-items: center; padding: 20px 16px;
+           background: radial-gradient(600px 400px at 15% 0%, var(--tint), transparent),
+                       radial-gradient(500px 400px at 100% 20%, rgba(236,72,153,.10), transparent), var(--bg); }
+  .login-card { width: min(400px, 100%); background: var(--surf); border: 1px solid var(--line); border-radius: 18px;
+                padding: 26px 22px; box-shadow: var(--sh); }
+  .login-card .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 
   /* Shell */
-  #app { display: grid; grid-template-columns: 230px 1fr; min-height: 100vh; }
-  nav { border-right: 1px solid var(--line); padding: 24px 16px; display: flex; flex-direction: column; gap: 6px;
-        position: sticky; top: 0; height: 100vh; }
-  nav .tab { text-align: left; background: none; border: 0; padding: 10px 12px; border-radius: 12px;
-             cursor: pointer; color: var(--muted); font-weight: 600; }
-  nav .tab.active { background: rgba(124,58,237,.18); color: var(--lavender); }
-  nav .who { margin-top: auto; font-size: 12px; color: var(--muted); word-break: break-all; }
-  main { padding: 28px 32px; min-width: 0; }
-  .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; }
-  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
-  .stat b { display: block; font-size: 28px; color: var(--text); font-family: Poppins, Inter; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; }
-  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
-  .toolbar input { max-width: 320px; } .toolbar select { max-width: 190px; }
-  table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-  th { font-size: 12px; color: var(--muted); font-weight: 600; position: sticky; top: 0; background: var(--card); }
-  tbody tr { cursor: pointer; } tbody tr:hover { background: rgba(124,58,237,.07); }
-  .scroll { overflow: auto; max-height: calc(100vh - 220px); border-radius: 18px; }
-  .pill { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .pill.ok { background: rgba(47,158,117,.18); color: #5DD3A6; }
-  .pill.warn { background: rgba(242,169,59,.16); color: #F2A93B; }
-  .pill.bad { background: rgba(248,113,113,.16); color: var(--red); }
-  .avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--card2);
-            display: inline-grid; place-items: center; color: var(--pink); font-weight: 700; vertical-align: middle; }
+  #app { max-width: 1180px; margin: 0 auto; padding: 12px 16px 70px; padding-top: max(12px, env(safe-area-inset-top)); }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .who { font-size: 12.5px; color: var(--mute); overflow-wrap: anywhere; }
+  .nav { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+  .nav button { flex: none; border: 1px solid var(--line); background: var(--surf); color: var(--mute); border-radius: 12px;
+                padding: 9px 14px; font: 600 13.5px Inter, system-ui, sans-serif; cursor: pointer; }
+  .nav button:hover { color: var(--ink); }
+  .nav button.on { background: linear-gradient(90deg, var(--acc), var(--acc2)); color: #fff; border-color: transparent; }
+  .nav button.on .pill { background: rgba(255,255,255,.25); color: #fff; }
+  .nav.sb { margin-top: 2px; }
+  .nav.sb button { border-radius: 20px; padding: 6px 13px; font-size: 13px; font-weight: 500; }
+  .nav.sb button.on { background: var(--ink); color: var(--bg); }
+  .nav.sb button.on .pill { background: var(--bad); color: #fff; }
+  .nav .pill { margin-left: 5px; font-size: 10.5px; padding: 1px 7px; }
+  main { min-width: 0; }
+  .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin: 14px 0 14px; flex-wrap: wrap; }
+  .head > div:first-child { min-width: 0; flex: 1 1 320px; }
+
+  /* Cards, grids, KPIs */
+  .card { background: var(--surf); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--sh); }
+  .pad { padding: 14px 16px; }
+  .card.pad, .card .pad { margin-bottom: 0; }
+  .stack > * + * { margin-top: 12px; }
+  .grid { display: grid; gap: 12px; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
+  .g4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .kpi { background: var(--surf); border: 1px solid var(--line); border-radius: 14px; padding: 12px; min-width: 0; }
+  .kpi b { display: block; font: 700 24px Inter, system-ui, sans-serif; letter-spacing: -.04em; color: var(--ink); }
+  .kpi span { color: var(--mute); font-size: 12.5px; }
+  .kpi i { display: block; font-style: normal; font-size: 12px; color: var(--mute); margin-top: 2px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .stat { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 12px; min-width: 0; }
+  .stat b { display: block; font: 700 20px Inter, system-ui, sans-serif; letter-spacing: -.03em; color: var(--ink); overflow-wrap: anywhere; }
+  .stat .muted { font-size: 12.5px; }
+  .note { font-size: 13px; color: var(--mute); border-left: 3px solid var(--warn); padding: 6px 12px; margin: 10px 0; }
+
+  /* Bar lists and charts */
+  .bl { display: grid; grid-template-columns: minmax(70px, 120px) 1fr auto; gap: 10px; align-items: center; margin-bottom: 8px; font-size: 13px; }
+  .bl > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bl b { text-align: right; font-weight: 600; white-space: nowrap; }
+  .bl b small { color: var(--mute); font-weight: 500; margin-left: 4px; }
+  .bar { height: 8px; border-radius: 8px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--acc), var(--acc2)); }
+  .ch { width: 100%; height: auto; display: block; }
+  .ch .grid-l { stroke: var(--line); stroke-width: 1; }
+  .ch text { fill: var(--mute); font: 500 11px Inter, system-ui, sans-serif; }
+  .ch .ln { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+  .k1 { stroke: var(--s1); fill: var(--s1); } .k2 { stroke: var(--s2); fill: var(--s2); }
+  .k3 { stroke: var(--s3); fill: var(--s3); } .k4 { stroke: var(--s4); fill: var(--s4); }
+  .ch .ln.k1, .ch .ln.k2, .ch .ln.k3, .ch .ln.k4 { fill: none; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--mute); margin: 4px 0 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .legend .k1 { background: var(--s1); } .legend .k2 { background: var(--s2); }
+  .legend .k3 { background: var(--s3); } .legend .k4 { background: var(--s4); }
+  .legend b { color: var(--ink); font-weight: 600; }
+  .attn { display: grid; gap: 8px; }
+  .attn button { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left;
+                 border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 10px 12px;
+                 cursor: pointer; font: 500 13.5px Inter, system-ui, sans-serif; }
+  .attn button:hover { border-color: var(--acc); }
+  .attn button b { font: 700 20px Inter, system-ui, sans-serif; letter-spacing: -.03em; }
+
+  /* Tables */
+  .scroll { overflow: auto; -webkit-overflow-scrolling: touch; }
+  .card.scroll { border-radius: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  .card.scroll table, .tablewide { min-width: 680px; }
+  th { text-align: left; color: var(--mute); font-weight: 600; font-size: 12px; padding: 9px 12px; border-bottom: 1px solid var(--line);
+       white-space: nowrap; position: sticky; top: 0; background: var(--surf); z-index: 1; }
+  td { padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr { cursor: pointer; } tbody tr:hover { background: var(--bg); }
+  @media (min-width: 801px) { .card.scroll { max-height: calc(100vh - 230px); } }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--bg); border: 1px solid var(--line);
+            display: inline-grid; place-items: center; color: var(--acc2); font-weight: 700; vertical-align: middle; }
 
   /* Drawer & modal */
-  .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 10; }
-  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); background: var(--card);
-            border-left: 1px solid var(--line); z-index: 11; overflow: auto; padding: 24px; }
-  .modal { position: fixed; inset: 0; display: grid; place-items: center; z-index: 11; padding: 16px; }
-  .modal .box { width: min(680px, 100%); max-height: 92vh; overflow: auto; background: var(--card);
-                border: 1px solid var(--line); border-radius: 22px; padding: 24px; }
+  .backdrop { position: fixed; inset: 0; background: var(--scrim); z-index: 50; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(460px, 100%); background: var(--surf);
+            border-left: 1px solid var(--line); z-index: 51; overflow: auto; padding: 20px 18px; box-shadow: var(--sh); }
+  .drawer h3 { margin-bottom: 4px; }
+  .modal { position: fixed; inset: 0; display: grid; place-items: center; z-index: 51; padding: 18px 12px; }
+  .modal .box { width: min(720px, 100%); max-height: 92vh; overflow: auto; background: var(--surf);
+                border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--sh); }
   .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
   .photos img { width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 12px; }
-  dl { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; margin: 0; }
-  dt { color: var(--muted); } dd { margin: 0; color: var(--body); word-break: break-word; }
+  dl { display: grid; grid-template-columns: 130px 1fr; gap: 6px 12px; margin: 0; font-size: 13.5px; }
+  dt { color: var(--mute); } dd { margin: 0; color: var(--ink); overflow-wrap: anywhere; }
 
-  .q { padding: 16px 18px; border-bottom: 1px solid var(--line); display: flex; gap: 14px; align-items: flex-start; }
+  /* Quiz questions */
+  .q { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
   .q:last-child { border-bottom: 0; }
-  .q .n { color: var(--muted); font-weight: 700; width: 28px; flex: none; }
-  .q .body { flex: 1; min-width: 0; }
-  .q .prompt { color: var(--text); font-weight: 600; }
+  .q .n { color: var(--mute); font-weight: 700; width: 28px; flex: none; }
+  .q .body { flex: 1 1 260px; min-width: 0; }
+  .q .prompt { color: var(--ink); font-weight: 600; }
   .q .opts { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
-  .q .opts span { background: var(--card2); border: 1px solid var(--line); border-radius: 20px; padding: 2px 10px; font-size: 12px; }
+  .q .opts span { background: var(--bg); border: 1px solid var(--line); border-radius: 20px; padding: 2px 10px; font-size: 12px; }
   .q .actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
   .opt-row { display: grid; grid-template-columns: 1fr 1fr auto auto; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .opt-row .chk { font-size: 12px; color: var(--muted); display: flex; gap: 5px; align-items: center; white-space: nowrap; }
+  .opt-row .chk { font-size: 12px; color: var(--mute); display: flex; gap: 5px; align-items: center; white-space: nowrap; }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 18px; }
-  .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card2); border: 1px solid var(--line);
-          border-radius: 20px; padding: 6px 8px 6px 14px; }
+
+  /* Chips */
+  .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+  .card > .chips { padding: 14px 16px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+          border-radius: 16px; padding: 5px 8px 5px 12px; font: 500 13px Inter, system-ui, sans-serif; }
+  button.chip { padding: 5px 12px; cursor: pointer; }
+  .chip.on { background: var(--acc); color: #fff; border-color: var(--acc); }
   .chip.off { opacity: .45; }
-  .chip button { background: none; border: 0; cursor: pointer; color: var(--muted); padding: 2px 4px; }
-  .chip button:hover { color: var(--text); }
-  .queue { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px; }
-  .queue .item { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .chip button { background: none; border: 0; cursor: pointer; color: var(--mute); padding: 2px 4px; border-radius: 6px; }
+  .chip button:hover { color: var(--ink); }
+
+  /* Review queues */
+  .queue { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .queue .item { background: var(--surf); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; box-shadow: var(--sh); }
   .queue img { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; }
   .queue .meta { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
-  .verify { padding: 16px; margin-bottom: 14px; }
-  .verify .frames { display: flex; gap: 8px; margin: 12px 0; overflow-x: auto; }
-  .verify .frames figure { margin: 0; flex: 0 0 auto; text-align: center; font-size: 11px; color: var(--muted); }
+  .verify { padding: 14px 16px; margin-bottom: 12px; }
+  .verify .frames { display: flex; gap: 8px; margin: 12px 0 0; overflow-x: auto; }
+  .verify .frames figure { margin: 0; flex: 0 0 auto; text-align: center; font-size: 11px; color: var(--mute); }
   .verify .frames img { width: 120px; aspect-ratio: 3/4; object-fit: cover; border-radius: 12px; display: block; margin-bottom: 4px; }
-  .verify .frames figure.profile img { outline: 2px solid var(--line); }
-  .report { padding: 18px; margin-bottom: 14px; }
+  .verify .frames figure.profile img { outline: 2px solid var(--acc); }
+  .report { padding: 14px 16px; margin-bottom: 12px; }
+  .report p { margin: 8px 0 0; }
   .report .msgs { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
-  .report .msg { background: var(--card2); border-radius: 12px; padding: 8px 12px; max-width: 80%; }
-  .report .msg.reported { border: 1px solid rgba(248,113,113,.45); }
+  .report .msg { background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; max-width: 85%; overflow-wrap: anywhere; }
+  .report .msg.reported { border-color: var(--bad); }
   .report .msg.reporter { align-self: flex-end; }
-  .actionbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-  nav .tab .pill { margin-left: 4px; }
-  .edit-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 8px; margin: 8px 0; }
+  .actionbar { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; align-items: center; }
+  .edit-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; margin: 8px 0; }
   .edit-photos figure { margin: 0; position: relative; }
   .edit-photos img { width: 100%; aspect-ratio: 4/5; object-fit: cover; border-radius: 12px; display: block; }
   .edit-photos figure span { position: absolute; left: 6px; top: 6px; font-size: 10px; }
   .edit-photos .tools { position: absolute; right: 4px; bottom: 4px; display: flex; gap: 4px; }
   .edit-photos .add { aspect-ratio: 4/5; border: 1px dashed var(--line); border-radius: 12px; display: grid;
-                      place-items: center; cursor: pointer; color: var(--muted); text-align: center; font-size: 12px; }
-  .edit-photos .add:hover { border-color: var(--purple); color: var(--lavender); }
+                      place-items: center; cursor: pointer; color: var(--mute); text-align: center; font-size: 12px; }
+  .edit-photos .add:hover { border-color: var(--acc); color: var(--acc); }
   .pick { display: flex; flex-wrap: wrap; gap: 6px; }
-  .pick label { margin: 0; display: inline-flex; gap: 5px; align-items: center; background: var(--card2);
-                border: 1px solid var(--line); border-radius: 20px; padding: 4px 10px; color: var(--body); cursor: pointer; }
+  .pick label { margin: 0; display: inline-flex; gap: 5px; align-items: center; background: var(--bg); font-weight: 500;
+                border: 1px solid var(--line); border-radius: 20px; padding: 4px 10px; color: var(--ink); cursor: pointer; }
   .pick input { width: auto; margin: 0; }
   details.quiz { margin-top: 8px; font-size: 12px; }
-  details.quiz summary { cursor: pointer; color: var(--muted, #9aa); }
+  details.quiz summary { cursor: pointer; color: var(--mute); }
   details.quiz ol { margin: 6px 0 0; padding-left: 18px; max-height: 260px; overflow: auto; }
   details.quiz li { margin-bottom: 6px; }
-  .pending { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
-  .pending button { flex: 1 1 180px; text-align: left; }
-  .pending button b { font-size: 22px; color: var(--text); font-family: Poppins, Inter; margin-right: 6px; }
-  .gen { display: grid; gap: 14px; max-width: 760px; }
-  .gen .card { padding: 18px; }
-  .gen h3 { font-size: 15px; margin-bottom: 4px; }
-  input[type=range] { width: 100%; accent-color: var(--purple); margin: 6px 0 2px; }
+
+  /* Bot generator */
+  .gen { display: grid; gap: 12px; max-width: 760px; }
+  .gen .card { padding: 14px 16px; }
+  .gen h3 { margin-bottom: 4px; }
   .presets { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .seg { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
-  .seg button.on, .presets button.on { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .seg button.on, .presets button.on { background: var(--acc); border-color: var(--acc); color: #fff; }
   .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
-  .tags .tag { background: var(--purple); color: #fff; border-radius: 20px; padding: 4px 6px 4px 12px; font-size: 12px; font-weight: 600; }
+  .tags .tag { background: var(--acc); color: #fff; border-radius: 20px; padding: 4px 6px 4px 12px; font-size: 12px; font-weight: 600; }
   .tags .tag button { background: none; border: 0; color: #fff; cursor: pointer; padding: 0 4px; }
-  .summary { padding: 14px 18px; border: 1px solid rgba(124,58,237,.5); background: rgba(124,58,237,.1); border-radius: 18px; color: var(--text); }
-  .samples { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
-  .sample { background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  .summary { padding: 12px 16px; border: 1px solid var(--acc); background: var(--tint); border-radius: 14px; color: var(--ink); }
+  .samples { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .sample { background: var(--surf); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
   .sample img { width: 100%; aspect-ratio: 4/5; object-fit: cover; display: block; }
   .sample .meta { padding: 10px 12px; font-size: 12px; }
-  .sample .meta b { color: var(--text); font-size: 14px; }
-  .sample .opts span { display: inline-block; background: var(--card2); border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; margin: 4px 4px 0 0; }
+  .sample .meta b { color: var(--ink); font-size: 14px; }
+  .sample .opts span { display: inline-block; background: var(--bg); border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; margin: 4px 4px 0 0; }
+
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .toolbar input[type=text] { flex: 1 1 220px; max-width: 340px; }
+  .toolbar select { flex: 0 1 180px; width: auto; }
   .bulkbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 12px; }
-  .code { font-size: 11px; color: var(--muted); }
+  .code { font-size: 11px; color: var(--mute); }
   .pager { display: flex; gap: 10px; align-items: center; justify-content: center; margin-top: 12px; }
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--card2);
-           border: 1px solid var(--purple); padding: 10px 18px; border-radius: 12px; z-index: 20; }
-  @media (max-width: 800px) {
-    #app { grid-template-columns: 1fr; }
-    /* One scrolling row of tabs instead of several wrapped ones. */
-    nav { position: sticky; top: 0; z-index: 5; background: var(--bg); height: auto; flex-direction: row;
-          align-items: center; overflow-x: auto; scrollbar-width: none; border-right: 0;
-          border-bottom: 1px solid var(--line); padding: 10px 12px; }
-    nav::-webkit-scrollbar { display: none; }
-    nav > .logo, nav > .muted { display: none; }
-    nav .tab { flex: none; white-space: nowrap; }
-    nav .who { margin: 0 0 0 8px; flex: none; }
-    nav .who #who { display: none; }
-    nav .who #logout { margin-top: 0 !important; }
-    main { padding: 20px 16px; }
+  .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: var(--bg);
+           padding: 10px 18px; border-radius: 20px; font-size: 13px; z-index: 70; max-width: 92%; text-align: center; box-shadow: var(--sh); }
+  .doclinks { display: grid; gap: 8px; margin-top: 10px; }
+  .doclinks a { display: flex; justify-content: space-between; align-items: center; gap: 10px; text-decoration: none; color: var(--ink);
+                border: 1px solid var(--line); background: var(--bg); border-radius: 12px; padding: 11px 13px; font-weight: 600; }
+  .doclinks a:hover { border-color: var(--acc); }
+  .doclinks a span { color: var(--mute); font-weight: 500; font-size: 12.5px; }
+
+  @media (max-width: 800px) { .card.scroll { max-height: none; } }
+  @media (max-width: 560px) {
+    .row2 { grid-template-columns: 1fr; gap: 0; }
+    .opt-row { grid-template-columns: 1fr 1fr; }
+    dl { grid-template-columns: 1fr; gap: 2px; } dd { margin-bottom: 6px; }
+    .toolbar input[type=text], .toolbar select { flex: 1 1 100%; max-width: none; }
+    .logo { font-size: 28px; }
+    .bl { grid-template-columns: 84px 1fr auto; }
   }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 </style>
 </head>
 <body>
 
 <section id="login" class="hidden">
   <form class="login-card" id="loginForm">
-    <div class="logo"><img src="../icons/Icon-192.png" alt="" width="40" height="40" style="vertical-align:middle;margin-right:8px">Everlane</div>
-    <h2 style="margin-top:14px">Admin sign in</h2>
-    <p class="muted" style="margin:6px 0 4px">For Everlane team members only.</p>
+    <div class="top"><div class="logo">Everlane<small>ADMIN</small></div>
+      <button type="button" class="iconbtn" data-theme-toggle>Dark mode</button></div>
+    <h2 style="margin-top:16px">Sign in</h2>
+    <p class="sub">For Everlane team members only.</p>
     <label for="email">Email</label>
     <input id="email" type="email" autocomplete="username" required>
     <label for="password">Password</label>
     <input id="password" type="password" autocomplete="current-password" required>
-    <div class="err" id="loginErr"></div>
-    <button class="btn primary" style="width:100%;margin-top:8px" id="loginBtn">Sign in</button>
+    <div class="err" id="loginErr" role="alert"></div>
+    <button class="btn primary" style="width:100%;margin-top:6px;padding:10px" id="loginBtn">Sign in</button>
   </form>
 </section>
 
 <section id="app" class="hidden">
-  <nav>
-    <div class="logo" style="padding:4px 12px 2px"><img src="../icons/Icon-192.png" alt="" width="28" height="28" style="vertical-align:middle;margin-right:6px">Everlane</div>
-    <div class="muted" style="padding:0 12px 14px;font-size:12px">Admin</div>
-    <button class="tab active" data-view="overview">Overview</button>
-    <button class="tab" data-view="leads">Leads &amp; members</button>
-    <button class="tab" data-view="gen">Generate bots</button>
-    <button class="tab" data-view="bots">Bots</button>
-    <button class="tab" data-view="hangouts">Hangouts</button>
-    <button class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
-    <button class="tab" data-view="photos">Photo queue <span class="pill warn hidden" id="photoBadge"></span></button>
-    <button class="tab" data-view="verify">Verifications <span class="pill warn hidden" id="verifyBadge"></span></button>
-    <button class="tab" data-view="words">Banned words</button>
-    <button class="tab" data-view="audit">Audit log</button>
-    <button class="tab" data-view="questions">Questions</button>
-    <button class="tab" data-view="options">Options</button>
-    <button class="tab" data-view="team">Team</button>
-    <div class="who"><span id="who"></span><br><button class="btn small" id="logout" style="margin-top:8px">Sign out</button></div>
+  <header class="top">
+    <div class="logo">Everlane<small>ADMIN</small></div>
+    <div class="row">
+      <span class="pill" id="rolePill"></span>
+      <span class="who" id="who"></span>
+      <button type="button" class="iconbtn" data-theme-toggle>Dark mode</button>
+      <button type="button" class="btn small" id="logout">Sign out</button>
+    </div>
+  </header>
+
+  <nav class="nav" id="nav" aria-label="Sections">
+    <button type="button" data-sec="dash">Dashboard</button>
+    <button type="button" data-sec="users">Users</button>
+    <button type="button" data-sec="mod">Moderation <span class="pill bad hidden" id="modBadge"></span></button>
+    <button type="button" data-sec="bots">Bots and seed</button>
+    <button type="button" data-sec="hang">Hangouts</button>
+    <button type="button" data-sec="cfg">Content and config</button>
+    <button type="button" data-sec="sec">Admin and security</button>
+    <button type="button" data-sec="legal">Legal</button>
   </nav>
+  <div class="nav sb" data-subnav="dash" aria-label="Dashboard pages"><button type="button" class="tab" data-view="overview">Overview</button></div>
+  <div class="nav sb" data-subnav="users" aria-label="Users pages"><button type="button" class="tab" data-view="leads">Directory</button></div>
+  <div class="nav sb" data-subnav="mod" aria-label="Moderation pages">
+    <button type="button" class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
+    <button type="button" class="tab" data-view="photos">Photos <span class="pill warn hidden" id="photoBadge"></span></button>
+    <button type="button" class="tab" data-view="verify">Verification <span class="pill warn hidden" id="verifyBadge"></span></button>
+    <button type="button" class="tab" data-view="words">Text filter</button>
+  </div>
+  <div class="nav sb" data-subnav="bots" aria-label="Bots pages">
+    <button type="button" class="tab" data-view="bots">Profiles</button>
+    <button type="button" class="tab" data-view="gen">Create</button>
+  </div>
+  <div class="nav sb" data-subnav="hang" aria-label="Hangouts pages"><button type="button" class="tab" data-view="hangouts">Plans</button></div>
+  <div class="nav sb" data-subnav="cfg" aria-label="Content pages">
+    <button type="button" class="tab" data-view="questions">Quiz questions</button>
+    <button type="button" class="tab" data-view="options">Options</button>
+  </div>
+  <div class="nav sb" data-subnav="sec" aria-label="Admin pages">
+    <button type="button" class="tab" data-view="team">Team</button>
+    <button type="button" class="tab" data-view="audit">Audit log</button>
+  </div>
+  <div class="nav sb" data-subnav="legal" aria-label="Legal pages"><button type="button" class="tab" data-view="legal">Documents</button></div>
+
   <main>
     <div id="view-overview">
-      <div class="head"><h1>Overview</h1><button class="btn" data-refresh>Refresh</button></div>
-      <div class="pending" id="pending"></div>
-      <div class="stats" id="stats"></div>
+      <div class="head"><div><h2>Overview</h2>
+        <p class="sub">Members, activity and review queues. Bots are left out of member counts.</p></div>
+        <div class="row">
+          <div class="chips" id="dashRange" role="group" aria-label="Date range">
+            <button type="button" class="chip" data-days="7">7 days</button>
+            <button type="button" class="chip" data-days="30">30 days</button>
+            <button type="button" class="chip" data-days="90">90 days</button>
+          </div>
+          <button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="stack">
+        <div class="grid g4" id="dashKpis"></div>
+        <div class="grid g3">
+          <div class="card pad" id="dashAttnCard"><h3>Needs attention</h3>
+            <p class="sub" style="margin-bottom:10px">Open the matching review queue.</p>
+            <div class="attn" id="dashQueues"></div></div>
+          <div class="card pad"><h3>Activity <span class="sub" style="font-weight:500" id="dashActLabel"></span></h3>
+            <div id="dashActivity" style="margin-top:10px"></div></div>
+        </div>
+        <div class="card pad"><h3>Daily trend</h3>
+          <div class="legend" id="dashLegend"></div>
+          <div id="dashChart"></div></div>
+        <div class="grid g3">
+          <div class="card pad"><h3>Gender</h3><div id="dashGender" style="margin-top:10px"></div></div>
+          <div class="card pad"><h3>Looking for</h3><div id="dashGoals" style="margin-top:10px"></div></div>
+        </div>
+        <div class="card pad"><h3>Top cities</h3><p class="sub" style="margin-bottom:8px">Real members compared with bots placed in each city.</p>
+          <div class="scroll"><table>
+            <thead><tr><th>City</th><th>Members</th><th>Bots</th><th style="width:34%">Real share</th></tr></thead>
+            <tbody id="dashCities"></tbody></table></div></div>
+        <div class="card pad"><h3>All-time counts</h3>
+          <div class="stats" id="stats" style="margin-top:10px"></div></div>
+      </div>
     </div>
 
     <div id="view-leads" class="hidden">
-      <div class="head"><h1>Leads &amp; members</h1>
-        <div style="display:flex;gap:8px"><button class="btn" id="exportCsv">Export CSV</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="head"><div><h2>Directory</h2>
+        <p class="sub">Everyone who has started signing up, with their profile and moderation status.</p></div>
+        <div class="row"><button class="btn" id="exportCsv">Export CSV</button><button class="btn" data-refresh>Refresh</button></div></div>
       <div class="toolbar">
-        <input type="text" id="search" placeholder="Search name, email, phone, city or ID…">
-        <select id="filter">
+        <input type="text" id="search" placeholder="Search name, email, phone, city or ID…" aria-label="Search members">
+        <select id="filter" aria-label="Member filter">
           <option value="all">Everyone</option>
           <option value="onboarded">Finished profile</option>
           <option value="incomplete">Didn’t finish sign-up</option>
@@ -238,10 +411,10 @@
           <option value="verified">Verified</option>
           <option value="test">Test accounts</option>
         </select>
-        <select id="fGender"><option value="">Any gender</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
-        <select id="fCity"><option value="">Any city</option></select>
-        <input type="number" id="fAgeMin" placeholder="Age from" min="18" max="99" style="max-width:110px">
-        <input type="number" id="fAgeMax" placeholder="to" min="18" max="99" style="max-width:90px">
+        <select id="fGender" aria-label="Gender"><option value="">Any gender</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
+        <select id="fCity" aria-label="City"><option value="">Any city</option></select>
+        <input type="number" id="fAgeMin" placeholder="Age from" min="18" max="99" style="max-width:110px" aria-label="Age from">
+        <input type="number" id="fAgeMax" placeholder="to" min="18" max="99" style="max-width:90px" aria-label="Age to">
         <button class="btn small" id="fClear" style="align-self:center">Clear</button>
       </div>
       <div class="card scroll"><table>
@@ -252,15 +425,15 @@
     </div>
 
     <div id="view-bots" class="hidden">
-      <div class="head"><div><h1>Bots</h1>
-        <p class="muted" style="margin:4px 0 0">Profiles you make and add photos to by hand, for testing, demos and store screenshots. Bots are shown to every member, always labelled “Sample profile” in the app, so nobody takes them for real people. They can’t sign in.</p></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="botsLive"></button><button class="btn" id="bulkBots">Bulk create</button><button class="btn primary" id="newBot">New bot</button></div></div>
+      <div class="head"><div><h2>Bot profiles</h2>
+        <p class="sub">Profiles you make and add photos to by hand, for testing, demos and store screenshots. Bots are shown to every member, always labelled “Sample profile” in the app, so nobody takes them for real people. They can’t sign in.</p></div>
+        <div class="row"><button class="btn" id="botsLive"></button><button class="btn" id="bulkBots">Bulk create</button><button class="btn primary" id="newBot">New bot</button></div></div>
       <div class="toolbar">
-        <input type="text" id="botSearch" placeholder="Search name, city or BOT number…">
-        <select id="botGender"><option value="">All genders</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
-        <select id="botCity"><option value="">All cities</option></select>
-        <select id="botStatus"><option value="">Any status</option><option value="live">Live</option><option value="paused">Paused</option><option value="off">Switched off</option><option value="nophoto">Needs a real photo</option></select>
-        <select id="botBatch"><option value="">All batches</option></select>
+        <input type="text" id="botSearch" placeholder="Search name, city or BOT number…" aria-label="Search bots">
+        <select id="botGender" aria-label="Bot gender"><option value="">All genders</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
+        <select id="botCity" aria-label="Bot city"><option value="">All cities</option></select>
+        <select id="botStatus" aria-label="Bot status"><option value="">Any status</option><option value="live">Live</option><option value="paused">Paused</option><option value="off">Switched off</option><option value="nophoto">Needs a real photo</option></select>
+        <select id="botBatch" aria-label="Bot batch"><option value="">All batches</option></select>
       </div>
       <div class="bulkbar">
         <button class="btn small" id="botSelAll"></button><button class="btn small" id="botSelClear">Clear</button>
@@ -274,21 +447,21 @@
         <thead><tr><th></th><th>Name</th><th>Age</th><th>Gender → wants</th><th>City</th><th>Batch</th><th>Status</th><th>Photo</th></tr></thead>
         <tbody id="bots"></tbody>
       </table></div>
-      <input type="file" id="botQuickFile" accept="image/jpeg,image/png,image/webp" class="hidden">
+      <input type="file" id="botQuickFile" accept="image/jpeg,image/png,image/webp" class="hidden" aria-label="Bot photo">
       <div class="pager" id="botPager"></div>
       <p class="muted" id="botCount" style="margin-top:10px"></p>
     </div>
 
     <div id="view-gen" class="hidden">
-      <div class="head"><div><h1>Generate bots</h1>
-        <p class="muted" style="margin:4px 0 0">Make test bots in bulk. Every member sees bots, always labelled “Sample profile” in the app. To type bots in by hand, use “New bot” or “Bulk create” on the Bots page.</p></div></div>
+      <div class="head"><div><h2>Create bots</h2>
+        <p class="sub">Make test bots in bulk. Every member sees bots, always labelled “Sample profile” in the app. To type bots in by hand, use “New bot” or “Bulk create” under Profiles.</p></div></div>
       <form class="gen" id="genForm"></form>
     </div>
 
     <div id="view-hangouts" class="hidden">
-      <div class="head"><div><h1>Hangouts</h1>
-        <p class="muted" style="margin:4px 0 0">Plans members host (dinner, a movie, coffee…). Members see the area; the exact venue is only shown to guests the host accepts.</p></div>
-        <div style="display:flex;gap:8px"><select id="hgFilter" style="width:auto"><option value="upcoming">Upcoming</option><option value="all">All</option></select><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="head"><div><h2>Hangout plans</h2>
+        <p class="sub">Plans members host (dinner, a movie, coffee…). Members see the area; the exact venue is only shown to guests the host accepts.</p></div>
+        <div class="row"><select id="hgFilter" style="width:auto" aria-label="Which plans"><option value="upcoming">Upcoming</option><option value="all">All</option></select><button class="btn" data-refresh>Refresh</button></div></div>
       <div class="bulkbar">
         <button class="btn small" id="hgSelAll"></button><button class="btn small" id="hgSelClear">Clear</button>
         <span class="muted" id="hgSelCount" style="margin-right:8px"></span>
@@ -302,38 +475,38 @@
     </div>
 
     <div id="view-reports" class="hidden">
-      <div class="head"><div><h1>Reports</h1>
-        <p class="muted" style="margin:4px 0 0">What members reported, with the last five messages between them saved at the time.</p></div>
-        <div style="display:flex;gap:8px"><select id="reportFilter" style="width:auto"><option value="open">Open</option><option value="all">All</option></select><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="head"><div><h2>Reports</h2>
+        <p class="sub">What members reported, with the last five messages between them saved at the time.</p></div>
+        <div class="row"><select id="reportFilter" style="width:auto" aria-label="Which reports"><option value="open">Open</option><option value="all">All</option></select><button class="btn" data-refresh>Refresh</button></div></div>
       <div id="reports"></div>
     </div>
 
     <div id="view-photos" class="hidden">
-      <div class="head"><div><h1>Photo queue</h1>
-        <p class="muted" style="margin:4px 0 0">New profile photos. Rejecting removes the photo from the profile and deletes the file.</p></div>
+      <div class="head"><div><h2>Photo queue</h2>
+        <p class="sub">New profile photos. Rejecting removes the photo from the profile and deletes the file.</p></div>
         <button class="btn" data-refresh>Refresh</button></div>
       <div class="queue" id="photoQueue"></div>
     </div>
 
     <div id="view-verify" class="hidden">
-      <div class="head"><div><h1>Selfie verifications</h1>
-        <p class="muted" style="margin:4px 0 0">Live selfies, in the order taken: eyes open, three frames through a blink, eyes open again. Approve when the eyes close in the blink frames and the face matches the profile photo.</p></div>
+      <div class="head"><div><h2>Selfie verification</h2>
+        <p class="sub">Live selfies, in the order taken: eyes open, three frames through a blink, eyes open again. Approve when the eyes close in the blink frames and the face matches the profile photo.</p></div>
         <button class="btn" data-refresh>Refresh</button></div>
       <div id="verifyQueue"></div>
     </div>
 
     <div id="view-words" class="hidden">
-      <div class="head"><div><h1>Banned words</h1>
-        <p class="muted" style="margin:4px 0 0">Messages and profile text (name, job, bio, prompt) containing any of these are refused. Matching ignores case.</p></div></div>
+      <div class="head"><div><h2>Text filter</h2>
+        <p class="sub">Messages and profile text (name, job, bio, prompt) containing any of these banned words are refused. Matching ignores case.</p></div></div>
       <div class="card">
-        <form id="addWord" style="display:flex;gap:8px;padding:18px 18px 0"><input type="text" placeholder="Add a word, phrase or link, e.g. t.me/" style="max-width:340px"><button class="btn small primary">Add</button></form>
+        <form id="addWord" class="row" style="padding:14px 16px 0"><input type="text" placeholder="Add a word, phrase or link, e.g. t.me/" style="flex:1 1 220px;max-width:340px" aria-label="Banned word"><button class="btn small primary">Add</button></form>
         <div class="chips" id="words"></div>
       </div>
     </div>
 
     <div id="view-audit" class="hidden">
-      <div class="head"><div><h1>Audit log</h1>
-        <p class="muted" style="margin:4px 0 0">Every admin action, newest first. Entries can’t be edited or deleted.</p></div>
+      <div class="head"><div><h2>Audit log</h2>
+        <p class="sub">Every admin action, newest first. Entries can’t be edited or deleted.</p></div>
         <button class="btn" data-refresh>Refresh</button></div>
       <div class="card scroll"><table>
         <thead><tr><th>When</th><th>Admin</th><th>Action</th><th>Member</th><th>Details</th></tr></thead>
@@ -342,28 +515,28 @@
     </div>
 
     <div id="view-questions" class="hidden">
-      <div class="head"><div><h1>Compatibility quiz</h1>
-        <p class="muted" style="margin:4px 0 0">Changes show in the app the next time it opens. Keep answer values stable — saved answers use them.</p></div>
+      <div class="head"><div><h2>Quiz questions</h2>
+        <p class="sub">The compatibility quiz. Changes show in the app the next time it opens. Keep answer values stable — saved answers use them.</p></div>
         <button class="btn primary" id="addQuestion">Add question</button></div>
       <div class="card" id="questions"></div>
     </div>
 
     <div id="view-options" class="hidden">
-      <div class="head"><div><h1>Options</h1>
-        <p class="muted" style="margin:4px 0 0">The lists members pick from in the app.</p></div></div>
+      <div class="head"><div><h2>Options</h2>
+        <p class="sub">The lists members pick from in the app.</p></div></div>
       <div id="optionGroups"></div>
     </div>
 
     <div id="view-team" class="hidden">
-      <div class="head"><div><h1>Team</h1>
-        <p class="muted" style="margin:4px 0 0">Who can use this panel, and what each role can do.</p></div>
+      <div class="head"><div><h2>Team</h2>
+        <p class="sub">Who can use this panel, and what each role can do.</p></div>
         <button class="btn" data-refresh>Refresh</button></div>
-      <div class="card" style="padding:18px;margin-bottom:16px">
+      <div class="card pad" style="margin-bottom:12px">
         <h3>Add an admin</h3>
-        <p class="muted" style="font-size:12px;margin:4px 0 0">They need an Everlane account first: they can sign up in the app or on this page’s sign-in screen.</p>
-        <form id="addAdmin" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-          <input type="email" id="adminEmail" placeholder="Their email" required style="flex:2;min-width:200px">
-          <select id="adminRole" style="flex:1;min-width:150px"></select>
+        <p class="sub" style="font-size:12.5px">They need an Everlane account first: they can sign up in the app or on this page’s sign-in screen.</p>
+        <form id="addAdmin" class="row" style="margin-top:10px">
+          <input type="email" id="adminEmail" placeholder="Their email" required style="flex:2 1 200px;width:auto" aria-label="New admin email">
+          <select id="adminRole" style="flex:1 1 150px;width:auto" aria-label="New admin role"></select>
           <button class="btn primary">Add</button>
         </form>
       </div>
@@ -371,7 +544,20 @@
         <thead><tr><th>Admin</th><th>Role</th><th>Added</th><th>Last sign-in</th><th></th></tr></thead>
         <tbody id="team"></tbody>
       </table></div>
-      <div class="card" style="padding:18px;margin-top:16px" id="roleGuide"></div>
+      <div class="card pad" style="margin-top:12px" id="roleGuide"></div>
+    </div>
+
+    <div id="view-legal" class="hidden">
+      <div class="head"><div><h2>Legal documents</h2>
+        <p class="sub">The public pages members are linked to from the app and stores.</p></div></div>
+      <div class="card pad" style="max-width:640px">
+        <h3>Documents</h3>
+        <div class="doclinks">
+          <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy <span>/privacy.html · opens in a new tab</span></a>
+          <a href="/terms.html" target="_blank" rel="noopener">Terms of Service <span>/terms.html · opens in a new tab</span></a>
+        </div>
+        <p class="note">These are templates with placeholders. Have a lawyer review and complete them before launch.</p>
+      </div>
     </div>
   </main>
 </section>
@@ -387,7 +573,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const toast = msg => { const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+const toast = msg => { const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
   document.body.append(t); setTimeout(() => t.remove(), 2600); };
 const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN', {day:'numeric', month:'short', year:'numeric'}) : '—';
 const photoUrl = p => sb.storage.from('photos').getPublicUrl(p).data.publicUrl;
@@ -406,9 +592,12 @@ const ROLE_INFO = {
   analyst: 'The overview and members list, read-only.' };
 // Which permission opens each section.
 const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', hangouts: 'bots', reports: 'moderate', photos: 'moderate',
-  verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team' };
+  verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team',
+  legal: null };
 let perms = [];
 const can = p => perms.includes(p);
+// A view with no permission (Legal) is open to every admin.
+const canView = v => v in VIEW_PERM && (VIEW_PERM[v] === null || can(VIEW_PERM[v]));
 const screen = id => ['login', 'app'].forEach(s => $('#' + s).classList.toggle('hidden', s !== id));
 
 async function start() {
@@ -425,11 +614,16 @@ async function start() {
     await sb.auth.signOut();
     return showLogin('The database still needs two-step sign-in. Apply migration 014, then sign in again.');
   }
-  perms = st.permissions;
-  $('#who').textContent = `${session.user.email || session.user.phone || ''} · ${ROLES[st.role] || st.role}`;
-  document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('hidden', !can(VIEW_PERM[b.dataset.view])));
+  perms = st.permissions || [];
+  $('#who').textContent = session.user.email || session.user.phone || '';
+  $('#rolePill').textContent = ROLES[st.role] || st.role || 'Admin';
+  // Hide sub-tabs the role can't open, and sections with none left.
+  document.querySelectorAll('.nav.sb .tab').forEach(b => b.classList.toggle('hidden', !canView(b.dataset.view)));
+  document.querySelectorAll('#nav [data-sec]').forEach(b =>
+    b.classList.toggle('hidden', !SECTION_VIEWS(b.dataset.sec).some(canView)));
   screen('app');
-  show(Object.keys(VIEW_PERM).find(v => can(VIEW_PERM[v])) || 'overview');
+  const asked = decodeURIComponent(location.hash.slice(1));
+  show(canView(asked) ? asked : Object.keys(VIEW_PERM).find(v => VIEW_PERM[v] && can(VIEW_PERM[v])) || 'legal');
 }
 function showLogin(msg = '') {
   screen('login');
@@ -449,30 +643,175 @@ $('#logout').onclick = async () => { await sb.auth.signOut(); showLogin(); };
 // ---------- Navigation ----------
 let current = 'overview';
 const VIEWS = Object.keys(VIEW_PERM);
-document.querySelectorAll('nav .tab').forEach(b => b.onclick = () => show(b.dataset.view));
+// Two-level navigation: a section row, then that section's sub-tabs (from the markup).
+const SECTION_VIEWS = sec => [...document.querySelectorAll(`[data-subnav="${sec}"] [data-view]`)].map(b => b.dataset.view);
+const sectionOf = view => document.querySelector(`.nav.sb [data-view="${view}"]`)?.closest('[data-subnav]')?.dataset.subnav;
+document.querySelectorAll('.nav.sb .tab').forEach(b => b.onclick = () => show(b.dataset.view));
+document.querySelectorAll('#nav [data-sec]').forEach(b => b.onclick = () => {
+  const first = SECTION_VIEWS(b.dataset.sec).find(canView);
+  if (first) show(first);
+});
 document.querySelectorAll('[data-refresh]').forEach(b => b.onclick = () => show(current));
 function show(view) {
+  if (!canView(view)) view = VIEWS.find(canView) || 'legal';
   current = view;
-  document.querySelectorAll('nav .tab').forEach(b => b.classList.toggle('active', b.dataset.view === view));
+  const sec = sectionOf(view);
+  document.querySelectorAll('#nav [data-sec]').forEach(b => {
+    b.classList.toggle('on', b.dataset.sec === sec);
+    b.toggleAttribute('aria-current', b.dataset.sec === sec);
+  });
+  document.querySelectorAll('[data-subnav]').forEach(n => n.classList.toggle('hidden', n.dataset.subnav !== sec));
+  document.querySelectorAll('.nav.sb .tab').forEach(b => {
+    b.classList.toggle('on', b.dataset.view === view);
+    b.toggleAttribute('aria-current', b.dataset.view === view);
+  });
   for (const v of VIEWS) $('#view-' + v).classList.toggle('hidden', v !== view);
-  return ({ overview: loadStats, leads: loadMembers, gen: loadGenerator, bots: loadBots, hangouts: loadHangouts, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
-     audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam })[view]();
+  // Keep the active section visible in the scrolling row on small screens.
+  const onBtn = $('#nav button.on');
+  if (onBtn) { const nav = $('#nav'); nav.scrollLeft = Math.max(0, onBtn.offsetLeft - nav.offsetLeft - 16); }
+  // The current page lives in the address, so a reload or shared link opens it again.
+  try { history.replaceState(null, '', '#' + view); } catch (e) {}
+  return ({ overview: loadOverview, leads: loadMembers, gen: loadGenerator, bots: loadBots, hangouts: loadHangouts, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
+     audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: () => {} })[view]();
 }
-function badge(sel, n) { const b = $(sel); b.textContent = n; b.classList.toggle('hidden', !n); }
+window.addEventListener('hashchange', () => {
+  const v = decodeURIComponent(location.hash.slice(1));
+  if (v !== current && canView(v) && !$('#app').classList.contains('hidden')) show(v);
+});
+const BADGE_COUNTS = {};
+function badge(sel, n) {
+  const b = $(sel); n = +n || 0; b.textContent = n; b.classList.toggle('hidden', !n);
+  // The Moderation section shows the total of its queues.
+  BADGE_COUNTS[sel] = n;
+  const total = ['#reportBadge', '#photoBadge', '#verifyBadge'].reduce((s, k) => s + (BADGE_COUNTS[k] || 0), 0);
+  $('#modBadge').textContent = total; $('#modBadge').classList.toggle('hidden', !total);
+}
+
+// ---------- Theme ----------
+// Follows the system until someone picks; the choice is kept in this browser.
+const isDark = () => document.documentElement.dataset.theme === 'dark'
+  || (!document.documentElement.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+function paintThemeButtons() {
+  document.querySelectorAll('[data-theme-toggle]').forEach(b => {
+    b.textContent = isDark() ? 'Light mode' : 'Dark mode';
+    b.setAttribute('aria-label', isDark() ? 'Switch to light mode' : 'Switch to dark mode');
+  });
+}
+document.querySelectorAll('[data-theme-toggle]').forEach(b => b.onclick = () => {
+  const next = isDark() ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('everlane-admin-theme', next); } catch (e) {}
+  paintThemeButtons();
+});
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', paintThemeButtons); } catch (e) {}
+paintThemeButtons();
 function fail(error) { console.error(error); toast(error.message || 'Something went wrong'); }
 
 // ---------- Overview ----------
-async function loadStats() {
-  const [{ data, error }, { data: selfies }] = await Promise.all([sb.rpc('admin_stats'),
-    can('moderate') ? sb.rpc('admin_verification_queue') : Promise.resolve({ data: [] })]);
-  if (error) return fail(error);
-  const waiting = [['photos', data.pending_photos, 'photos to review'], ['reports', data.open_reports, 'open reports'],
-    ['verify', selfies?.length || 0, 'selfies to verify']];
+// Dashboard (admin_dashboard) plus the all-time counts (admin_stats).
+const loadOverview = () => Promise.all([loadDashboard(), loadStats()]);
+let resizeTimer;
+window.addEventListener('resize', () => { clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { if (current === 'overview' && dash) renderDashboard(dash); }, 200); });
+
+const num = v => (Number.isFinite(+v) ? +v : 0);
+const fmtN = v => num(v).toLocaleString('en-IN');
+const pct = (a, b) => num(b) > 0 ? Math.round(100 * num(a) / num(b)) + '%' : '—';
+let dashDays = 30, dash = null;
+try { const d = +localStorage.getItem('everlane-admin-days'); if ([7, 30, 90].includes(d)) dashDays = d; } catch (e) {}
+document.querySelectorAll('#dashRange [data-days]').forEach(b => b.onclick = () => {
+  dashDays = +b.dataset.days;
+  try { localStorage.setItem('everlane-admin-days', dashDays); } catch (e) {}
+  loadDashboard();
+});
+async function loadDashboard() {
+  document.querySelectorAll('#dashRange [data-days]').forEach(b => {
+    b.classList.toggle('on', +b.dataset.days === dashDays);
+    b.setAttribute('aria-pressed', +b.dataset.days === dashDays);
+  });
+  const { data, error } = await sb.rpc('admin_dashboard', { days: Math.min(180, Math.max(7, dashDays)) });
+  if (error) {
+    $('#dashKpis').innerHTML = `<p class="note" style="grid-column:1/-1">The dashboard couldn’t load: ${esc(error.message || 'unknown error')}</p>`;
+    return;
+  }
+  dash = data || {};
+  renderDashboard(dash);
+}
+// One labelled bar per entry, longest first; widths are relative to the largest value.
+function barList(obj) {
+  const rows = Object.entries(obj || {}).map(([k, v]) => [k, num(v)]).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  if (!rows.length) return '<p class="sub">No data yet.</p>';
+  const max = Math.max(...rows.map(r => r[1])) || 1, total = rows.reduce((s, r) => s + r[1], 0);
+  return rows.map(([k, v]) => `<div class="bl"><span title="${esc(k)}">${esc(k || 'Not set')}</span>
+    <div class="bar" role="img" aria-label="${esc(k)}: ${v}"><i style="width:${(100 * v / max).toFixed(1)}%"></i></div>
+    <b>${fmtN(v)}<small>${pct(v, total)}</small></b></div>`).join('');
+}
+const SERIES = [['signups', 'Sign-ups', 'k1'], ['likes', 'Likes', 'k2'], ['matches', 'Matches', 'k3'], ['messages', 'Messages', 'k4']];
+const shortDay = d => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+// A simple themed line chart of the daily series; colours come from CSS variables.
+// Drawn at the container's own width so labels stay legible on phones.
+function lineChart(daily, width) {
+  const W = Math.max(280, Math.round(width || 640)), H = W < 500 ? 190 : 230, L = 40, R = 12, T = 12, B = 26, n = daily.length;
+  const max = Math.max(1, ...daily.flatMap(d => SERIES.map(([k]) => num(d[k]))));
+  // A round top for the y axis: 1, 2, 5 × 10^k.
+  const mag = Math.pow(10, Math.floor(Math.log10(max))), top = [1, 2, 5, 10].map(m => m * mag).find(v => v >= max) || max;
+  const x = i => n > 1 ? L + i * (W - L - R) / (n - 1) : (L + W - R) / 2;
+  const y = v => T + (H - T - B) * (1 - num(v) / top);
+  const ticks = [0, .25, .5, .75, 1].map(f => Math.round(top * f)).filter((v, i, a) => a.indexOf(v) === i);
+  const grid = ticks.map(v => `<line class="grid-l" x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>
+    <text x="${L - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${fmtN(v)}</text>`).join('');
+  const idx = n > 1 ? [...new Set([0, Math.floor((n - 1) / 2), n - 1])] : [0];
+  const xl = idx.map(i => `<text x="${x(i).toFixed(1)}" y="${H - 6}" text-anchor="${i === 0 && n > 1 ? 'start' : i === n - 1 && n > 1 ? 'end' : 'middle'}">${esc(shortDay(daily[i].day))}</text>`).join('');
+  const lines = SERIES.map(([k, , c]) => n > 1
+    ? `<polyline class="ln ${c}" points="${daily.map((d, i) => `${x(i).toFixed(1)},${y(d[k]).toFixed(1)}`).join(' ')}"/>`
+    : `<circle class="${c}" cx="${x(0)}" cy="${y(daily[0][k]).toFixed(1)}" r="4"/>`).join('');
+  const dots = n <= 31 && W / n >= 14 ? daily.map((d, i) => SERIES.map(([k, label, c]) => `<circle class="${c}" cx="${x(i).toFixed(1)}" cy="${y(d[k]).toFixed(1)}" r="2.5"><title>${esc(shortDay(d.day))} · ${label}: ${fmtN(d[k])}</title></circle>`).join('')).join('') : '';
+  const summary = SERIES.map(([k, label]) => `${label} ${fmtN(daily.reduce((s, d) => s + num(d[k]), 0))}`).join(', ');
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily totals over ${n} days: ${esc(summary)}">${grid}${xl}${lines}${dots}</svg>`;
+}
+function renderDashboard(d) {
+  const t = d.totals || {}, a = d.activity || {}, q = d.queues || {}, daily = Array.isArray(d.daily) ? d.daily : [];
+  const kpis = [['Members', t.members, `${fmtN(t.onboarded)} finished profile`],
+    ['New this week', t.new_7d, 'Sign-ups in the last 7 days'],
+    ['Active this week', t.active_7d, `${pct(t.active_7d, t.members)} of members`],
+    ['Verified', t.verified, `${pct(t.verified, t.members)} of members`],
+    ['Premium', t.premium, `${pct(t.premium, t.members)} of members`],
+    ['Live bots', t.bots_live, `of ${fmtN(t.bots)} bots`]];
+  $('#dashKpis').innerHTML = kpis.map(([k, v, s]) => `<div class="kpi"><span>${esc(k)}</span><b>${fmtN(v)}</b><i>${esc(s)}</i></div>`).join('');
+
   // The review queues are for moderators; others don't see the shortcuts.
-  $('#pending').innerHTML = can('moderate') ? waiting.map(([view, n, label]) =>
-    `<button class="btn" data-go="${view}"><b>${n}</b>${label}${n ? '' : ' ✓'}</button>`).join('') : '';
-  document.querySelectorAll('#pending [data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
-  badge('#verifyBadge', selfies?.length || 0);
+  $('#dashAttnCard').classList.toggle('hidden', !can('moderate'));
+  const queues = [['reports', q.reports, 'Open reports', 'bad'], ['photos', q.photos, 'Photos to review', 'warn'],
+    ['verify', q.verifications, 'Selfies to verify', 'warn']];
+  $('#dashQueues').innerHTML = queues.map(([view, n, label, tone]) => `<button type="button" data-go="${view}">
+    <span>${label}</span><span class="row" style="flex-wrap:nowrap">${num(n) ? `<span class="pill ${tone}">Review</span>` : '<span class="pill ok">Clear</span>'}<b>${fmtN(n)}</b></span></button>`).join('');
+  document.querySelectorAll('#dashQueues [data-go]').forEach(b => b.onclick = () => show(b.dataset.go));
+  if (can('moderate')) { badge('#reportBadge', q.reports); badge('#photoBadge', q.photos); badge('#verifyBadge', q.verifications); }
+
+  $('#dashActLabel').textContent = `· last ${dashDays} days`;
+  const act = [['Likes', a.likes], ['Matches', a.matches], ['Messages', a.messages], ['Hangouts posted', a.hangouts], ['Hangout requests', a.hangout_requests]];
+  $('#dashActivity').innerHTML = `<div class="grid g2">${act.map(([k, v]) => `<div class="stat"><span class="muted">${k}</span><b>${fmtN(v)}</b></div>`).join('')}</div>`
+    + `<p class="sub" style="margin-top:10px;font-size:12.5px">${num(a.likes) ? `${pct(a.matches, a.likes)} of likes became matches.` : 'No likes in this range yet.'}</p>`;
+
+  $('#dashLegend').innerHTML = SERIES.map(([k, label, c]) =>
+    `<span><i class="${c}"></i>${label} <b>${fmtN(daily.reduce((s, x) => s + num(x[k]), 0))}</b></span>`).join('');
+  $('#dashChart').innerHTML = daily.length ? lineChart(daily, $('#dashChart').clientWidth) : '<p class="sub">No activity in this range yet.</p>';
+
+  $('#dashGender').innerHTML = barList(d.gender);
+  $('#dashGoals').innerHTML = barList(d.goals);
+
+  const cities = Array.isArray(d.cities) ? d.cities : [];
+  $('#dashCities').innerHTML = cities.map(c => {
+    const m = num(c.members), b = num(c.bots), tot = m + b;
+    return `<tr style="cursor:default"><td>${esc(c.city || 'Not set')}</td><td>${fmtN(m)}</td><td>${fmtN(b)}</td>
+      <td><div class="bar" role="img" aria-label="${pct(m, tot)} real members"><i style="width:${tot ? (100 * m / tot).toFixed(1) : 0}%"></i></div>
+        <span class="sub" style="font-size:11.5px">${tot ? pct(m, tot) + ' real' : '—'}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="4" class="muted">No cities yet.</td></tr>';
+}
+
+async function loadStats() {
+  const { data, error } = await sb.rpc('admin_stats');
+  if (error) return fail(error);
   const ratio = data.women ? (data.men / data.women).toFixed(2) + ' : 1' : '—';
   const finished = data.accounts ? ` (${Math.round(100 * data.onboarded / data.accounts)}%)` : '';
   const items = [['Accounts', data.accounts], ['Finished profiles', data.onboarded + finished],
@@ -764,8 +1103,8 @@ function openMember(id) {
     const devices = [...new Set(data.logins.map(l => device(l.user_agent)))];
     box.innerHTML = `
       <p class="muted" style="font-size:12px;margin:4px 0 8px">${data.open_sessions} open session${data.open_sessions === 1 ? '' : 's'} · Devices: ${esc(devices.join(', ') || 'none yet')}</p>
-      ${data.shared.length ? `<div class="card" style="padding:12px 14px;border-color:rgba(242,169,59,.5);margin-bottom:10px">
-        <b style="color:#F2A93B">Possible multiple accounts</b>
+      ${data.shared.length ? `<div class="card" style="padding:12px 14px;border-color:var(--warn);margin-bottom:10px">
+        <b style="color:var(--warn)">Possible multiple accounts</b>
         <p class="muted" style="font-size:12px;margin:4px 0 6px">These accounts signed in from the same IP address. Shared Wi-Fi or mobile networks can cause this too.</p>
         ${data.shared.map(s => `<div style="padding:4px 0"><a href="#" data-other="${esc(s.id)}" style="color:var(--lavender)">${esc(s.name || s.contact || s.id.slice(0, 8))}</a>
           <span class="muted" style="font-size:12px">${esc(s.contact)} · ${esc(s.ips.join(', '))}</span>${s.blocked ? ' <span class="pill bad">Blocked</span>' : ''}</div>`).join('')}</div>` : ''}
@@ -1465,11 +1804,11 @@ async function createBots() {
       for (let i = 0; i < ids.length; i += 100)
         await botsAction(ids.slice(i, i + 100), 'fields', Object.fromEntries(ids.slice(i, i + 100).map(id => [id, fields[id]])));
     }
-    out.innerHTML = `<div class="summary" style="border-color:rgba(47,158,117,.6);background:rgba(47,158,117,.1)">
+    out.innerHTML = `<div class="summary" style="border-color:var(--ok);background:rgba(21,128,61,.10)">
       <b>Done.</b> ${made.bots.length} bots created in batch <b>${esc(made.batch)}</b>.
       <div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn small primary" id="gView">View bots</button><button type="button" class="btn small" id="gUndo">Undo this batch</button></div></div>`;
   } catch (x) {
-    out.innerHTML = `<div class="summary" style="border-color:rgba(248,113,113,.6)">${made
+    out.innerHTML = `<div class="summary" style="border-color:var(--bad);background:rgba(192,38,59,.08)">${made
       ? `Bots created in batch <b>${esc(made.batch)}</b>, but adding photos stopped: ${esc(x.message)}. Upload photos from the Bots page, or undo the batch.`
       : `Nothing was created: ${esc(x.message || 'something went wrong')}`}
       ${made ? '<div style="display:flex;gap:8px;margin-top:10px"><button type="button" class="btn small" id="gView">View bots</button><button type="button" class="btn small" id="gUndo">Undo this batch</button></div>' : ''}</div>`;
