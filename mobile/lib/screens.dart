@@ -15,7 +15,6 @@ import 'widgets.dart';
 import 'hangouts.dart';
 import 'introductions.dart';
 import 'legal.dart';
-import 'onboarding.dart';
 
 class DiscoverScreen extends StatelessWidget {
   const DiscoverScreen({super.key, required this.store});
@@ -630,11 +629,6 @@ class PersonDetailsScreen extends StatelessWidget {
                         const SizedBox(height: 22),
                         VoicePrompt.of(person),
                       ],
-                      const SizedBox(height: 22),
-                      ListenableBuilder(
-                          listenable: store,
-                          builder: (context, _) =>
-                              ChemistryCard(store: store, person: person)),
                       const SizedBox(height: 30),
                       const DetailHeading(
                           icon: Icons.person_outline_rounded,
@@ -1368,7 +1362,7 @@ class MessagesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       ListView(padding: const EdgeInsets.all(24), children: [
-        const Eyebrow('Less small talk. More possibility.'),
+        const Eyebrow('Less talk. More possibility.'),
         const SizedBox(height: 10),
         Text('Messages', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 28),
@@ -2110,8 +2104,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () => editProfile(context, store)),
           ]),
       _MembershipBanner(store: store),
-      const SizedBox(height: 12),
-      QuizCard(store: store),
       const SizedBox(height: 16),
       _ProfileSection(
           title: 'Privacy & safety',

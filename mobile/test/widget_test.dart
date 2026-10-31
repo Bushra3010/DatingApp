@@ -381,9 +381,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(const EverlaneApp());
     await tester.pumpAndSettle();
-    expect(
-        find.text('Less swiping. More meaningful connections.'.toUpperCase()),
-        findsOneWidget);
+    expect(find.text('Find someone worth\nstaying for.'), findsOneWidget);
     await tester.tap(find.text('Get started'));
     await tester.pumpAndSettle();
     // One question per page.
@@ -419,51 +417,9 @@ void main() {
     await tapText('Add photo');
     await tapText('Finish');
     expect(find.text('You’re all set, Aarav.'), findsOneWidget);
-    // The quiz isn't part of sign-up; it's offered from profiles later.
     expect(find.text('Take the compatibility quiz'), findsNothing);
     await tapText('Start exploring');
-    await tester.tap(find.text('Ananya, 27'));
-    await tester.pumpAndSettle();
-    final profile = find
-        .descendant(
-            of: find.byType(PersonDetailsScreen),
-            matching: find.byType(Scrollable))
-        .first;
-    await tester.scrollUntilVisible(find.text('Take the quiz'), 200,
-        scrollable: profile);
-    await tester.ensureVisible(find.text('Take the quiz'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Take the quiz'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Question 1 of 24'), findsOneWidget);
-    await tester.tap(find.text('A long-term committed relationship'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Slowly, building trust first'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('After a few dates'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Very important, with room for compromise'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('A few meaningful conversations'));
-    await tester.pumpAndSettle();
-    // Choose up to 2: a third pick is ignored.
-    await tester.tap(find.text('Words of appreciation'));
-    await tester.tap(find.text('Quality time and undivided attention'));
-    await tester.tap(find.text('Physical affection'));
-    await tester.pumpAndSettle();
-    expect(find.byIcon(Icons.check_box_rounded), findsNWidgets(2));
-    // Back on Ananya's profile, which now shows Chemistry.
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    final details = find
-        .descendant(
-            of: find.byType(PersonDetailsScreen),
-            matching: find.byType(Scrollable))
-        .first;
-    await tester.scrollUntilVisible(find.text('Chemistry'), 200,
-        scrollable: details);
-    expect(find.text('Preliminary'), findsOneWidget);
-    expect(find.text('Continue the quiz'), findsOneWidget);
+    expect(find.text('Ananya, 27'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
