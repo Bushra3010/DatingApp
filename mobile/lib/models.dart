@@ -164,8 +164,8 @@ const demoPeople = [
           'A slow morning, a strong filter coffee, and getting wonderfully lost in a bookstore.'),
   Person(
       id: 'meera',
-      bio: 'Architect who sketches cafés instead of buildings on Sundays. Dog person, always.',
-      interests: ['Travel', 'Art', 'Dogs'],
+      bio: 'Architect who sketches cafés instead of buildings on Sundays. Long walks, always.',
+      interests: ['Travel', 'Art', 'Pets'],
       soundtrack: 'Norah Jones – Sunrise',
       lookingFor: [
         LookingFor.coffeeDate,
@@ -178,7 +178,7 @@ const demoPeople = [
       photo: 'photo-1524504388940-b1c1722653e1',
       distance: 7,
       answer:
-          'Finding a little café with a big personality. Bonus points if there’s a dog.'),
+          'Finding a little café with a big personality. Bonus points if there’s live music.'),
   Person(
       id: 'isha',
       activeNow: true,

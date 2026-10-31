@@ -170,7 +170,7 @@ class _Option extends StatelessWidget {
 }
 
 /// First launch: welcome, sign-up, profile questions one per page, then a
-/// summary. The compatibility quiz is offered later, from the profile.
+/// summary.
 class OnboardingFlow extends StatefulWidget {
   const OnboardingFlow({super.key, required this.store});
   final PreviewStore store;
@@ -207,7 +207,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           onLogIn: store.backend == null || store.signedIn
               ? null
               : () => account(signUp: false),
-          onSkip: store.finishOnboarding);
+          onSkip: store.backend == null ? store.finishOnboarding : null);
     }
     final body = step == 1
         ? _ProfileSetup(store: store, onBack: () => go(0), onDone: () => go(2))
@@ -233,200 +233,94 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   }
 }
 
-/// First screen: a fanned stack of real-looking profile cards over soft
-/// purple and pink light, the promise, and the way in.
+/// First screen: one full-bleed photo, the name, one line and the way in.
 class _Welcome extends StatelessWidget {
-  const _Welcome(
-      {required this.onStart, required this.onSkip, required this.onLogIn});
-  final VoidCallback onStart, onSkip;
+  const _Welcome({required this.onStart, required this.onLogIn, this.onSkip});
+  final VoidCallback onStart;
 
   /// Null when there's no account backend (tests, offline).
   final VoidCallback? onLogIn;
 
-  Widget _card(String image, double angle, double scale) => Transform.rotate(
-      angle: angle,
-      child: Transform.scale(
-          scale: scale,
-          child: DecoratedBox(
-              decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(26),
-                  border: Border.all(
-                      color: Colors.white.withValues(alpha: .14), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withValues(alpha: .45),
-                        blurRadius: 30,
-                        offset: const Offset(0, 16))
-                  ]),
-              child: ClipRRect(
-                  borderRadius: BorderRadius.circular(26),
-                  child: Image.asset('assets/images/$image.jpg',
-                      width: 168,
-                      height: 232,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, error, stack) => Container(
-                          width: 168,
-                          height: 232,
-                          color: EverlaneColors.card))))));
-
-  Widget _chip(IconData icon, String text, Color color) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-          color: EverlaneColors.card.withValues(alpha: .92),
-          borderRadius: BorderRadius.circular(30),
-          border: Border.all(color: EverlaneColors.line),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withValues(alpha: .35),
-                blurRadius: 16,
-                offset: const Offset(0, 6))
-          ]),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 15, color: color),
-        const SizedBox(width: 6),
-        Text(text,
-            style: const TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600, color: Colors.white)),
-      ]));
-
-  Widget _trust(IconData icon, String text) => Expanded(
-          child: Column(children: [
-        Icon(icon, size: 20, color: EverlaneColors.lavender),
-        const SizedBox(height: 6),
-        Text(text,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
-      ]));
+  /// Only offered in the offline preview.
+  final VoidCallback? onSkip;
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      body: Stack(children: [
-        // Soft glows behind the cards.
-        Positioned(
-            top: -120,
-            left: -80,
-            child: _glow(EverlaneColors.gradientStart, 360)),
-        Positioned(
-            top: 40, right: -120, child: _glow(EverlaneColors.gradientEnd, 320)),
+      backgroundColor: Colors.black,
+      body: Stack(fit: StackFit.expand, children: [
+        Image.asset('assets/images/tara.jpg',
+            fit: BoxFit.cover,
+            alignment: const Alignment(0, -.3),
+            errorBuilder: (_, error, stack) =>
+                ColoredBox(color: EverlaneColors.card)),
+        // Darkens the bottom so the words read over any photo.
+        const DecoratedBox(
+            decoration: BoxDecoration(
+                gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: [0, .25, .55, 1],
+                    colors: [
+              Color(0x66000000),
+              Color(0x00000000),
+              Color(0x33000000),
+              Color(0xE6000000),
+            ]))),
         SafeArea(
             child: Center(
                 child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
-                    child: LayoutBuilder(builder: (context, c) {
-                      final tall = c.maxHeight > 700;
-                      return Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-                          child: Column(children: [
-                            const SizedBox(height: 8),
-                            Image.asset('assets/images/app_logo.png',
-                                width: 64, height: 64),
-                            const SizedBox(height: 6),
-                            ShaderMask(
-                                shaderCallback: (b) =>
-                                    EverlaneColors.textGradient.createShader(b),
-                                child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10),
-                                    child: Text('Everlane',
-                                        style: EverlaneFonts.logo(
-                                            size: 34, color: Colors.white)))),
-                            Expanded(
-                                child: FittedBox(
-                                    child: SizedBox(
-                                        width: 360,
-                                        height: 330,
-                                        child: Stack(
-                                            alignment: Alignment.center,
-                                            clipBehavior: Clip.none,
-                                            children: [
-                                              Positioned(
-                                                  left: 0,
-                                                  top: 40,
-                                                  child: _card(
-                                                      'welcome_man', -.16, .9)),
-                                              Positioned(
-                                                  right: 0,
-                                                  top: 40,
-                                                  child: _card(
-                                                      demoPeople[1].id, .16, .9)),
-                                              _card(demoPeople[0].id, 0, 1),
-                                              // Sits on the lower edge of the
-                                              // centre photo.
-                                              Positioned(
-                                                  bottom: 62,
-                                                  child: _chip(
-                                                      Icons.verified_rounded,
-                                                      'Verified member',
-                                                      const Color(0xFF60A5FA))),
-                                              Positioned(
-                                                  right: 2,
-                                                  top: 10,
-                                                  child: _chip(
-                                                      Icons.favorite_rounded,
-                                                      'It’s a match!',
-                                                      EverlaneColors.like)),
-                                            ])))),
-                            const Eyebrow(
-                                'Less swiping. More meaningful connections.',
-                                color: EverlaneColors.like,
-                                textAlign: TextAlign.center),
-                            const SizedBox(height: 12),
-                            Text('Find someone worth\nstaying for.',
-                                textAlign: TextAlign.center,
-                                style: EverlaneFonts.playfair(
-                                    size: tall ? 32 : 27,
-                                    weight: FontWeight.w600,
-                                    height: 1.15,
-                                    color: EverlaneColors.plum)),
-                            const SizedBox(height: 10),
-                            Text(
-                                'Real profiles, thoughtful matches and conversations that go somewhere.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    color: EverlaneColors.muted, height: 1.5)),
-                            SizedBox(height: tall ? 20 : 14),
-                            Row(children: [
-                              _trust(Icons.chat_bubble_outline_rounded,
-                                  'Real\nconversations'),
-                              _trust(Icons.lock_outline_rounded,
-                                  'Private\nby design'),
-                              _trust(Icons.favorite_border_rounded,
-                                  'Made for\nsomething real'),
-                            ]),
-                            SizedBox(height: tall ? 22 : 14),
-                            GradientButton(
-                                label: 'Get started', onTap: onStart),
-                            if (onLogIn != null) ...[
-                              const SizedBox(height: 10),
+                    child: Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Center(
+                                  child: Text('Everlane',
+                                      style: EverlaneFonts.logo(
+                                          size: 34, color: Colors.white))),
+                              const Spacer(),
+                              Text('Find someone worth\nstaying for.',
+                                  style: EverlaneFonts.playfair(
+                                      size: 32,
+                                      weight: FontWeight.w600,
+                                      height: 1.12,
+                                      color: Colors.white)),
+                              const SizedBox(height: 28),
                               SizedBox(
                                   width: double.infinity,
-                                  child: OutlinedButton(
-                                      onPressed: onLogIn,
-                                      style: OutlinedButton.styleFrom(
-                                          minimumSize: const Size(0, 52),
-                                          side: BorderSide(
-                                              color: EverlaneColors.deep
-                                                  .withValues(alpha: .7))),
-                                      child: const Text(
-                                          'I already have an account'))),
-                            ],
-                            TextButton(
-                                onPressed: onSkip,
-                                child: const Text('Skip to the app (preview)')),
-                          ]));
-                    })))),
+                                  child: FilledButton(
+                                      onPressed: onStart,
+                                      style: FilledButton.styleFrom(
+                                          minimumSize: const Size(0, 54),
+                                          backgroundColor: Colors.white,
+                                          foregroundColor: Colors.black,
+                                          shape: const StadiumBorder(),
+                                          // Plain white, not the theme's gradient.
+                                          backgroundBuilder:
+                                              (context, states, child) =>
+                                                  child!,
+                                          textStyle: const TextStyle(
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w700)),
+                                      child: const Text('Get started'))),
+                              if (onLogIn != null)
+                                Center(
+                                    child: TextButton(
+                                        onPressed: onLogIn,
+                                        style: TextButton.styleFrom(
+                                            foregroundColor: Colors.white),
+                                        child: const Text('Log in'))),
+                              if (onSkip != null)
+                                Center(
+                                    child: TextButton(
+                                        onPressed: onSkip,
+                                        style: TextButton.styleFrom(
+                                            foregroundColor: Colors.white70),
+                                        child: const Text(
+                                            'Skip to the app (preview)'))),
+                            ]))))),
       ]));
-
-  Widget _glow(Color color, double size) => IgnorePointer(
-      child: Container(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [
-                color.withValues(alpha: .35),
-                color.withValues(alpha: 0),
-              ]))));
 }
 
 /// Everything sign-up needs, on one page: name, date of birth, gender, who
