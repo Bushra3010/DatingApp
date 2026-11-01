@@ -1362,8 +1362,6 @@ class MessagesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) =>
       ListView(padding: const EdgeInsets.all(24), children: [
-        const Eyebrow('Less talk. More possibility.'),
-        const SizedBox(height: 10),
         Text('Messages', style: Theme.of(context).textTheme.headlineLarge),
         const SizedBox(height: 28),
         Row(children: [
