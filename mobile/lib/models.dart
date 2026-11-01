@@ -1322,10 +1322,15 @@ class PreviewStore extends ChangeNotifier {
   void _listen(ProfileBackend b, String me) {
     if (_channel != null) return;
     _matchPollTimer?.cancel();
-    _matchPollTimer = Timer.periodic(const Duration(minutes: 1), (_) async {
+    var pollCount = 0;
+    _matchPollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
       if (!signedIn || backend == null) return;
       try {
-        await backend!.myMatches();
+        await backend!.checkBotReplies();
+        pollCount++;
+        if (pollCount % 12 == 0) {
+          await backend!.myMatches();
+        }
       } catch (_) {}
     });
     _channel = b.listen(onMessage: (m) {

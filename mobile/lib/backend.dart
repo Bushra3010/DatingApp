@@ -268,12 +268,20 @@ class ProfileBackend {
   Future<List<Map<String, dynamic>>> myMatches() async =>
       _rows(await client.rpc('my_matches'));
 
-  Future<List<Map<String, dynamic>>> messages(String matchId) async =>
-      _rows(await client
-          .from('messages')
-          .select()
-          .eq('match_id', matchId)
-          .order('created_at'));
+  Future<void> checkBotReplies() async {
+    try {
+      await client.rpc('process_due_bot_replies');
+    } catch (_) {}
+  }
+
+  Future<List<Map<String, dynamic>>> messages(String matchId) async {
+    checkBotReplies().ignore();
+    return _rows(await client
+        .from('messages')
+        .select()
+        .eq('match_id', matchId)
+        .order('created_at'));
+  }
 
   /// Likes [to]; returns the match id if they had already liked you back.
   Future<String?> like(String to, {String target = 'photo', String comment = ''}) async {
