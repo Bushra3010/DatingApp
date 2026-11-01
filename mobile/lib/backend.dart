@@ -270,7 +270,7 @@ class ProfileBackend {
 
   Future<void> checkBotReplies() async {
     try {
-      await client.rpc('process_due_bot_replies');
+      await client.rpc('process_due_bot_events');
     } catch (_) {}
   }
 
