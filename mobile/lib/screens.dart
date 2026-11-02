@@ -401,7 +401,9 @@ class _PersonCard extends StatelessWidget {
                       left: 14,
                       right: 10,
                       child: Row(children: [
-                        if (person.activeNow)
+                        if (person.sample)
+                          const Flexible(child: SampleBadge(onPhoto: true))
+                        else if (person.activeNow)
                           const Flexible(
                               child: _GlassPill(
                                   child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -597,7 +599,10 @@ class PersonDetailsScreen extends StatelessWidget {
                 child: ListView(
                     padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
                     children: [
-
+                      if (person.sample) ...[
+                        const SampleNotice(),
+                        const SizedBox(height: 14),
+                      ],
                       AspectRatio(
                           aspectRatio: 1.05,
                           child: ClipRRect(
@@ -1391,7 +1396,10 @@ class MessagesScreen extends StatelessWidget {
                       child: Text(chat.person.name,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.w600))),
-
+                  if (chat.person.sample) ...[
+                    const SizedBox(width: 8),
+                    const Flexible(child: SampleBadge()),
+                  ],
                 ]),
                 subtitle: Text(
                     chat.messages.isEmpty
@@ -1532,7 +1540,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           padding: const EdgeInsets.all(12),
                           color: EverlaneColors.blush,
                           child: Text(
-                              widget.chat.person.remote
+                              widget.chat.person.sample
+                                  ? 'Automated profile · Replies are automatic, not from a real person'
+                                  : widget.chat.person.remote
                                   ? 'You matched · Be kind, be yourself'
                                   : 'Demo conversation · Messages stay on this device',
                               textAlign: TextAlign.center,
@@ -3482,7 +3492,7 @@ class SampleBadge extends StatelessWidget {
   final bool onPhoto;
   @override
   Widget build(BuildContext context) => Tooltip(
-      message: 'A sample profile, not a real person',
+      message: 'An automated profile, not a real person',
       child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
           decoration: BoxDecoration(
@@ -3497,7 +3507,7 @@ class SampleBadge extends StatelessWidget {
                 size: 14, color: EverlaneColors.star),
             SizedBox(width: 6),
             Flexible(
-                child: Text('Sample profile',
+                child: Text('Automated profile',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -3523,7 +3533,7 @@ class SampleNotice extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(
             child: Text(
-                'This is a sample profile, not a real person. It shows how Everlane works while more members join, and its chat replies are automatic.',
+                'This is an automated profile run by Everlane, not a real person. It shows how Everlane works while more members join. Its chat replies are automatic, and it never meets anyone or asks for money.',
                 style: TextStyle(height: 1.45, color: EverlaneColors.body))),
       ]));
 }
