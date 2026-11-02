@@ -297,6 +297,14 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   td input[type=text], td input[type=number] { padding: 6px 8px; min-width: 80px; }
   td.clip { max-width: 220px; overflow-wrap: anywhere; font-size: 12.5px; color: var(--mute); }
 
+  /* Bot training chat */
+  .tchat { display: flex; flex-direction: column; gap: 6px; min-height: 180px; max-height: 420px; overflow: auto; margin: 12px 0; padding: 2px; }
+  .tchat .msg { max-width: 82%; padding: 8px 12px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line); overflow-wrap: anywhere; align-self: flex-start; }
+  .tchat .msg.me { align-self: flex-end; background: var(--acc); color: #fff; border-color: transparent; }
+  .tchat .msg .meta { font-size: 11.5px; color: var(--mute); margin-top: 4px; }
+  .tchat .msg .meta a { font-weight: 600; text-decoration: none; }
+  .tchat .msg .meta a:hover { text-decoration: underline; }
+
   @media (max-width: 800px) { .card.scroll { max-height: none; } }
   @media (max-width: 560px) {
     .row2 { grid-template-columns: 1fr; gap: 0; }
@@ -388,6 +396,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     <button type="button" data-sec="mod">Moderation <span class="pill bad hidden" id="modBadge"></span></button>
     <button type="button" data-sec="match">Matching</button>
     <button type="button" data-sec="bots">Bots and seed</button>
+    <button type="button" data-sec="train">Bot training</button>
     <button type="button" data-sec="hang">Hangouts</button>
     <button type="button" data-sec="subs">Revenue</button>
     <button type="button" data-sec="cfg">Content and config</button>
@@ -435,6 +444,13 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     <button type="button" class="tab" data-view="bots-behaviour" data-mock>Behaviour</button>
     <button type="button" class="tab" data-view="bots-phase-out" data-mock>Phase-out</button>
     <button type="button" class="tab" data-view="bots-activity" data-mock>Activity</button>
+  </div>
+  <div class="nav sb" data-subnav="train" aria-label="Bot training pages">
+    <button type="button" class="tab" data-view="train-kb">Q&amp;A</button>
+    <button type="button" class="tab" data-view="train-style">Languages and style</button>
+    <button type="button" class="tab" data-view="train-time">When to reply</button>
+    <button type="button" class="tab" data-view="train-chat">Training chat</button>
+    <button type="button" class="tab" data-view="train-test">Tests</button>
   </div>
   <div class="nav sb" data-subnav="hang" aria-label="Hangouts pages"><button type="button" class="tab" data-view="hangouts">Plans</button></div>
   <div class="nav sb" data-subnav="subs" aria-label="Revenue pages">
@@ -699,6 +715,141 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
         </div>
         <p class="note">These are templates with placeholders. Have a lawyer review and complete them before launch.</p>
       </div>
+    </div>
+
+    <!-- Bot training (permission 'bots'): admin_bot_training, admin_save_bot_kb, admin_save_bot_settings, admin_bot_try. -->
+    <div id="view-train-kb" class="hidden">
+      <div class="head"><div><h2>Q&amp;A knowledge base</h2>
+        <p class="sub">Teach the bot what to say. Each language gets its own trigger phrases and reply variants.</p></div>
+        <div class="row"><button class="btn primary" id="kbNew">New question and answer</button><button class="btn" id="kbCopy">Copy KB as JSON</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <p class="note">Automated profiles are always labelled “Automated profile”, tell the truth if asked whether they are real, and never ask for money or personal details. These rules are built in and cannot be switched off.</p>
+      <div class="grid g4" id="trKpis" style="margin-bottom:12px"></div>
+      <div class="toolbar">
+        <input type="text" id="kbSearch" placeholder="Search intents, triggers and replies…" aria-label="Search Q&amp;A">
+        <select id="kbStatus" aria-label="Status"><option value="">Any status</option><option value="on">On</option><option value="off">Off</option></select>
+      </div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Intent</th><th>Languages</th><th>Triggers</th><th>Variants</th><th>Status</th></tr></thead>
+        <tbody id="kbRows"></tbody>
+      </table></div>
+      <form class="card pad" id="kbImport" style="margin-top:12px">
+        <h3>Import examples</h3>
+        <p class="sub">Paste a conversation (lines starting with “User:” and “Bot:”). Each pair becomes a trigger and reply in a new intent.</p>
+        <label for="kbImpLang">Language</label><select id="kbImpLang"></select>
+        <label for="kbImpText">Conversation</label><textarea id="kbImpText" rows="5" placeholder="User: नमस्ते&#10;Bot: नमस्ते! मैं एक स्वचालित प्रोफ़ाइल हूँ। बताइए, कैसे मदद करूँ?"></textarea>
+        <div class="row" style="margin-top:12px"><button class="btn primary">Import</button></div>
+      </form>
+    </div>
+
+    <div id="view-train-style" class="hidden">
+      <div class="head"><div><h2>Languages and style</h2>
+        <p class="sub">Warm, natural and multilingual, and always upfront about being automated.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <form id="styleForm">
+        <div class="grid g3">
+          <div class="card pad"><h3>Languages</h3>
+            <div class="chips" style="margin-top:10px" id="stLangs"></div>
+            <label for="stDefault">Default language</label><select id="stDefault"></select>
+            <label class="tog" style="margin-top:12px"><input type="checkbox" id="stMirror"> Reply in the language the user writes in</label>
+            <p class="sub" style="font-size:12.5px;margin-top:4px">Detects English, Hindi, Hinglish (Roman Hindi) and Marathi.</p>
+            <label for="stThr">Match sensitivity <span class="muted" style="font-weight:500" id="stThrVal"></span></label>
+            <input type="range" id="stThr" min="0.2" max="0.9" step="0.05">
+            <p class="sub" style="font-size:12.5px">0.5 = balanced. Lower answers looser matches; higher needs a closer match, otherwise the fallback reply is used.</p>
+          </div>
+          <div class="card pad"><h3>Persona and disclosure</h3>
+            <dl style="margin-top:10px">
+              <dt>Label</dt><dd>“Automated profile” on every bot in the app <span class="pill muted">Locked on</span></dd>
+              <dt>Who it can talk to</dt><dd>All members (labelled) <span class="pill muted">Locked</span></dd>
+            </dl>
+            <label class="tog" style="margin-top:14px"><input type="checkbox" id="stName"> Use the person’s name</label><br>
+            <label class="tog" style="margin-top:8px"><input type="checkbox" id="stEmoji"> Emoji</label>
+            <p class="sub" style="font-size:12.5px;margin-top:8px">Name and emoji apply to every built-in reply: {name} is filled in or dropped, and emoji are kept or stripped.</p>
+          </div>
+          <div class="card pad"><h3>Away messages (outside active hours)</h3><div id="stAway"></div></div>
+          <div class="card pad"><h3>Closing line after the reply limit</h3>
+            <p class="sub" style="font-size:12.5px">Sent once when a chat reaches the reply limit set under “When to reply”.</p>
+            <div id="stHandoff"></div></div>
+        </div>
+        <p class="note info">Labelled automated profiles reply only when a member starts the chat, and the label is always visible.</p>
+        <div class="row"><button class="btn primary">Save languages and style</button><span class="muted" id="stUpdated"></span></div>
+      </form>
+    </div>
+
+    <div id="view-train-time" class="hidden">
+      <div class="head"><div><h2>When to reply</h2>
+        <p class="sub">Timing and limits so replies are helpful, not spammy.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <form id="timeForm">
+        <div class="grid g3">
+          <div class="card pad"><h3>Reply timing</h3>
+            <label for="tmMin">Minimum delay (seconds)</label><input type="number" id="tmMin" min="0" max="3600" step="1" required>
+            <label for="tmMax">Maximum delay (seconds)</label><input type="number" id="tmMax" min="0" max="3600" step="1" required>
+            <label for="tmCool">Minimum seconds between bot messages</label><input type="number" id="tmCool" min="0" max="3600" step="1" required>
+          </div>
+          <div class="card pad"><h3>Active hours (IST)</h3>
+            <label for="tmFrom">Start hour (0 to 23)</label><input type="number" id="tmFrom" min="0" max="23" step="1" required>
+            <label for="tmTo">End hour (0 to 23)</label><input type="number" id="tmTo" min="0" max="23" step="1" required>
+            <label class="tog" style="margin-top:14px"><input type="checkbox" id="tmQuiet"> Send an away message outside active hours</label>
+          </div>
+          <div class="card pad"><h3>Limits</h3>
+            <label for="tmPerDay">Max replies per member per day</label><input type="number" id="tmPerDay" min="1" max="500" step="1" required>
+            <label for="tmHandoff">Stop after N replies in a chat (a closing line is sent)</label><input type="number" id="tmHandoff" min="1" max="500" step="1" required>
+            <label class="tog" style="margin-top:14px"><input type="checkbox" id="tmInitiate" disabled> Allow the bot to start conversations</label>
+            <p class="sub" style="font-size:12.5px;margin-top:4px">Off. Bots only reply to people who message them.</p>
+          </div>
+        </div>
+        <div class="card pad" style="margin-top:12px"><h3>Reply rules</h3>
+          <div class="scroll" style="margin-top:10px"><table><thead><tr><th>Situation</th><th>What happens</th></tr></thead><tbody id="tmRules"></tbody></table></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn primary">Save reply timing</button><span class="muted" id="tmUpdated"></span></div>
+      </form>
+    </div>
+
+    <div id="view-train-chat" class="hidden">
+      <div class="head"><div><h2>Training chat</h2>
+        <p class="sub">Play the user, see the reply, then correct it. Every correction trains the bot. Nothing here is sent to a member.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="card pad">
+        <div class="formgrid">
+          <div><label for="tcName">Your name (the user)</label><input type="text" id="tcName" value="Rohan" maxlength="40" autocomplete="off"></div>
+          <div><label for="tcLang">User language</label><select id="tcLang"><option>Auto</option><option>English</option><option>Hindi</option><option>Hinglish</option><option>Marathi</option></select></div>
+          <div><label for="tcHour">Pretend the time is (IST)</label><select id="tcHour"></select></div>
+        </div>
+        <div class="tchat" id="tcMsgs" aria-live="polite"></div>
+        <form class="row" id="tcForm">
+          <input type="text" id="tcIn" placeholder="Type a message as the user" style="flex:1 1 220px" aria-label="Message as the user" autocomplete="off">
+          <button class="btn primary">Send</button><button type="button" class="btn" id="tcReset">Reset</button>
+        </form>
+      </div>
+      <div class="card pad" style="margin-top:12px"><h3>Coach mode: write the ideal reply</h3><div id="tcCoach"></div></div>
+    </div>
+
+    <div id="view-train-test" class="hidden">
+      <div class="head"><div><h2>Tests and coverage</h2>
+        <p class="sub">Check that the bot answers correctly in every language. Tests are kept in this browser.</p></div>
+        <div class="row"><button class="btn primary" id="tsRun">Run all tests</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="card pad" style="margin-bottom:12px"><h3>Language coverage</h3>
+        <p class="sub" style="font-size:12.5px">Share of intents with a reply in each language.</p>
+        <div id="tsCov" style="margin-top:10px"></div></div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Message</th><th>Expected</th><th>Detected</th><th>Result</th><th></th></tr></thead>
+        <tbody id="tsRows"></tbody>
+      </table></div>
+      <p class="muted" id="tsSummary" style="margin-top:10px"></p>
+      <form class="card pad" id="tsAdd" style="margin-top:12px"><h3>Add a test</h3>
+        <div class="formgrid">
+          <div><label for="tsMsg">Message</label><input type="text" id="tsMsg" placeholder="e.g. kya tum bot ho" maxlength="300" autocomplete="off"></div>
+          <div><label for="tsExp">Should match intent</label><select id="tsExp"></select></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn primary">Add test</button></div>
+      </form>
+      <div class="head" style="margin-top:18px"><div><h3>Unanswered questions</h3>
+        <p class="sub">Messages the bot had no answer for (it used the fallback reply). Teach it, or clear the list.</p></div>
+        <button class="btn small danger" id="unClear">Clear all</button></div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Message</th><th>Language</th><th>Times</th><th>Last</th><th></th></tr></thead>
+        <tbody id="unRows"></tbody>
+      </table></div>
     </div>
 
     <!-- Revenue (permission 'billing'; migration 025). -->
@@ -1102,6 +1253,7 @@ const ROLE_INFO = {
   analyst: 'The overview and members list, read-only.' };
 // Which permission opens each section.
 const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', hangouts: 'bots', reports: 'moderate', photos: 'moderate',
+  'train-kb': 'bots', 'train-style': 'bots', 'train-time': 'bots', 'train-chat': 'bots', 'train-test': 'bots',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team',
   'subs-plans': 'billing', 'subs-promos': 'billing', 'subs-transactions': 'billing', 'subs-iap': 'billing', 'subs-reports': 'billing',
   legal: null };
@@ -1196,7 +1348,8 @@ function show(view) {
   return ({ overview: loadOverview, leads: loadMembers, gen: loadGenerator, bots: loadBots, hangouts: loadHangouts, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
      audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: () => {},
      'subs-plans': loadPrices, 'subs-promos': loadPromos, 'subs-transactions': loadTransactions, 'subs-iap': loadProducts,
-     'subs-reports': loadRevenue })[view]();
+     'subs-reports': loadRevenue, 'train-kb': loadTrainKb, 'train-style': loadTrainStyle, 'train-time': loadTrainTime,
+     'train-chat': loadTrainChat, 'train-test': loadTrainTest })[view]();
 }
 window.addEventListener('hashchange', () => {
   const v = decodeURIComponent(location.hash.slice(1));
@@ -3102,6 +3255,396 @@ function renderRevenue(d) {
   $('#revCountries').innerHTML = barList(d.by_country, asMoney);
   $('#revPlans').innerHTML = barList(rename(s.by_plan, PLAN_NAMES), { empty: 'No active paid plans.' });
 }
+
+// ---------- Bot training ----------
+// Everything the bots say comes from admin_bot_training: the knowledge base (one
+// intent = trigger phrases + reply variants per language), the settings and the
+// questions nobody answered. Languages are fixed on the backend.
+const TR_LANGS = ['English', 'Hindi', 'Hinglish', 'Marathi'];
+const TR_DISCLOSE = /(automated|\bbot\b|robot|\bAI\b|स्वचालित|स्वयंचलित|ऑटोमेटेड|बॉट)/i;
+let tr = null;          // { settings, kb, unanswered, stats } from the last load
+let kbLang = 'English'; // the language tab open in the Q&A pop-up
+async function loadTraining() {
+  const { data, error } = await sb.rpc('admin_bot_training');
+  if (error) { fail(error); return false; }
+  tr = { settings: data?.settings || {}, kb: Array.isArray(data?.kb) ? data.kb : [],
+    unanswered: Array.isArray(data?.unanswered) ? data.unanswered : [], stats: data?.stats || {} };
+  return true;
+}
+const splitList = s => String(s || '').split(/[,\n]/).map(x => x.trim()).filter(Boolean);
+const splitLines = s => String(s || '').split('\n').map(x => x.trim()).filter(Boolean);
+const uniq = a => a.filter((x, i) => a.indexOf(x) === i);
+const kbSorted = () => [...tr.kb].sort((a, b) => num(a.position) - num(b.position) || String(a.intent).localeCompare(String(b.intent)));
+const kbLangs = k => TR_LANGS.filter(l => String(k.replies?.[l] || '').trim());
+const trigCount = k => TR_LANGS.reduce((n, l) => n + splitList(k.triggers?.[l]).length, 0);
+const varCount = k => TR_LANGS.reduce((n, l) => n + splitLines(k.replies?.[l]).length, 0);
+const intentSlug = s => String(s || '').toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+const nextLearned = () => { let n = tr.kb.length; while (tr.kb.some(k => k.intent === 'learned_' + n)) n++; return 'learned_' + n; };
+// New intents go after the existing ones but before the fallback, like the list shows them.
+const nextPosition = () => Math.max(0, ...tr.kb.filter(k => k.intent !== 'fallback').map(k => num(k.position))) + 1;
+const langText = (o, l) => String(o?.[l] || '').trim();
+const refreshTraining = () => { if (current.startsWith('train-')) show(current); };
+
+// Q&A
+async function loadTrainKb() { if (await loadTraining()) renderKb(); }
+function renderKb() {
+  const s = tr.stats;
+  $('#trKpis').innerHTML = [['Replies today', s.replies_today], ['Waiting to reply', s.pending_replies],
+    ['Waiting to match', s.pending_matches], ['Members who said stop', s.stopped]]
+    .map(([k, v]) => `<div class="kpi"><span>${esc(k)}</span><b>${fmtN(v)}</b></div>`).join('');
+  const q = $('#kbSearch').value.trim().toLowerCase(), st = $('#kbStatus').value;
+  const rows = kbSorted().filter(k => (!st || (st === 'on') === !!k.enabled)
+    && (!q || [k.intent, ...Object.values(k.triggers || {}), ...Object.values(k.replies || {})].join(' ').toLowerCase().includes(q)));
+  $('#kbRows').innerHTML = rows.map(k => `<tr data-kb="${esc(k.intent)}">
+    <td><b style="color:var(--text)">${esc(k.intent)}</b>${k.protected ? ' <span class="pill">Protected</span>' : ''}</td>
+    <td>${kbLangs(k).join(', ') || '—'}</td><td>${k.intent === 'fallback' ? '—' : trigCount(k)}</td><td>${varCount(k)}</td>
+    <td><span class="pill ${k.enabled ? 'ok' : 'warn'}">${k.enabled ? 'On' : 'Off'}</span></td></tr>`).join('')
+    || `<tr><td colspan="5" class="muted">${tr.kb.length ? 'Nothing matches.' : 'No questions and answers yet.'}</td></tr>`;
+  $('#kbImpLang').innerHTML = TR_LANGS.map(l => `<option ${l === (tr.settings.default_lang || 'English') ? 'selected' : ''}>${l}</option>`).join('');
+}
+$('#kbSearch').oninput = () => tr && renderKb();
+$('#kbStatus').onchange = () => tr && renderKb();
+$('#kbRows').onclick = e => {
+  const r = e.target.closest('[data-kb]'), k = r && tr?.kb.find(x => x.intent === r.dataset.kb);
+  if (k) editKb(k);
+};
+$('#kbNew').onclick = () => { if (!tr) return; kbLang = TR_LANGS.includes(tr.settings.default_lang) ? tr.settings.default_lang : 'English';
+  editKb({ intent: '', position: nextPosition(), triggers: {}, replies: {}, enabled: true, protected: false, priority: 0 }, true); };
+$('#kbCopy').onclick = async () => {
+  if (!tr) return;
+  try { await navigator.clipboard.writeText(JSON.stringify(kbSorted(), null, 1)); toast('Copied the knowledge base as JSON'); }
+  catch (e) { toast('Couldn’t copy. Allow clipboard access and try again.'); }
+};
+// All four languages are always sent, so clearing a language's text clears it on the server too.
+const langMap = o => Object.fromEntries(TR_LANGS.map(l => [l, langText(o, l)]));
+function editKb(k, isNew = false) {
+  const ov = $('#overlay');
+  const e = { ...k, triggers: { ...(k.triggers || {}) }, replies: { ...(k.replies || {}) } };
+  const isFallback = e.intent === 'fallback';
+  ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="kbForm">
+    <h2>${isNew ? 'New question and answer' : 'Edit: ' + esc(e.intent)}</h2>
+    ${e.protected ? '<p class="note">Protected: it can be edited but not deleted or switched off. Identity answers must say clearly that this is an automated profile.</p>' : ''}
+    ${isFallback ? '<p class="sub">The fallback is what the bot says when nothing else matches, so it has no trigger phrases.</p>' : ''}
+    ${isNew ? '<label for="kbIntent">Intent name</label><input type="text" id="kbIntent" placeholder="e.g. Opening hours" maxlength="60" autocomplete="off" required><p class="sub" style="font-size:12.5px">Saved as <span class="code" id="kbSlug">…</span> (lowercase letters, numbers and _).</p>' : ''}
+    <label>Language</label><div class="chips" id="kbLangs" role="group" aria-label="Language"></div>
+    <div ${isFallback ? 'class="hidden"' : ''}><label for="kbTrig" id="kbTrigLbl"></label><textarea id="kbTrig" rows="3" placeholder="hi, hello, hey"></textarea></div>
+    <label for="kbReply" id="kbReplyLbl"></label><textarea id="kbReply" rows="4" placeholder="Hi {name}! I’m {bot}, an automated profile."></textarea>
+    <p class="sub" style="font-size:12.5px">One variant per line; the bot picks one. Use {name} for the member and {bot} for the bot, also {city}, {job} and {hobby}.</p>
+    <label class="tog" style="margin-top:12px"><input type="checkbox" id="kbOn" ${e.enabled ? 'checked' : ''} ${e.protected ? 'disabled' : ''}> Enabled</label>
+    <div class="err" id="kbErr"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap">
+      ${!isNew && !e.protected ? '<button type="button" class="btn danger" id="kbDel" style="margin-right:auto">Delete</button>' : ''}
+      <button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save</button></div>
+  </form></div>`;
+  const sync = () => { if (!isFallback) e.triggers[kbLang] = $('#kbTrig', ov).value; e.replies[kbLang] = $('#kbReply', ov).value; };
+  const paintChips = () => {
+    $('#kbLangs', ov).innerHTML = TR_LANGS.map(l => `<button type="button" class="chip ${l === kbLang ? 'on' : ''}" data-lang="${l}" aria-pressed="${l === kbLang}">${l}${langText(e.replies, l) ? ' ✓' : ''}</button>`).join('');
+    ov.querySelectorAll('#kbLangs [data-lang]').forEach(b => b.onclick = () => { sync(); kbLang = b.dataset.lang; paint(); });
+  };
+  const paint = () => {
+    paintChips();
+    $('#kbTrigLbl', ov).textContent = `When the user says… (${kbLang}; separate with commas or new lines)`;
+    $('#kbTrig', ov).value = e.triggers[kbLang] || '';
+    $('#kbReplyLbl', ov).textContent = `Bot replies (${kbLang}; one variant per line)`;
+    $('#kbReply', ov).value = e.replies[kbLang] || '';
+  };
+  paint();
+  $('#kbReply', ov).oninput = () => { sync(); paintChips(); };
+  if (isNew) $('#kbIntent', ov).oninput = () => $('#kbSlug', ov).textContent = intentSlug($('#kbIntent', ov).value) || '…';
+  const close = () => ov.innerHTML = '';
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  $('#kbForm', ov).onsubmit = async ev => {
+    ev.preventDefault(); sync();
+    const err = $('#kbErr', ov), intent = isNew ? intentSlug($('#kbIntent', ov).value) : e.intent;
+    if (!/^[a-z0-9_]{2,40}$/.test(intent)) return err.textContent = 'Name the intent: 2 to 40 letters, numbers or _.';
+    if (isNew && tr.kb.some(x => x.intent === intent)) return err.textContent = `“${intent}” already exists. Open it from the list to edit it.`;
+    if (!TR_LANGS.some(l => splitLines(e.replies[l]).length)) return err.textContent = 'Add at least one reply in some language.';
+    if (!isFallback && !TR_LANGS.some(l => splitList(e.triggers[l]).length)) return err.textContent = 'Add at least one trigger phrase.';
+    if (intent === 'are_you_real') {
+      const bad = TR_LANGS.find(l => splitLines(e.replies[l]).some(v => !TR_DISCLOSE.test(v)));
+      if (bad) return err.textContent = `Identity answers (${bad}) must say the profile is automated.`;
+    }
+    const item = { intent, position: num(e.position), triggers: isFallback ? {} : langMap(e.triggers), replies: langMap(e.replies),
+      enabled: e.protected ? !!e.enabled : $('#kbOn', ov).checked, priority: num(e.priority) };
+    const btn = ev.submitter; if (btn) btn.disabled = true;
+    const { error } = await sb.rpc('admin_save_bot_kb', { item });
+    if (btn) btn.disabled = false;
+    if (error) return err.textContent = error.message;
+    close(); toast(`${intent} saved`); refreshTraining();
+  };
+  const del = $('#kbDel', ov);
+  if (del) del.onclick = async () => {
+    if (!confirm(`Delete “${e.intent}”? The bot will stop answering these questions.`)) return;
+    const { error } = await sb.rpc('admin_delete_bot_kb', { p_intent: e.intent });
+    if (error) return fail(error);
+    close(); toast(`${e.intent} deleted`); refreshTraining();
+  };
+}
+// Adds one trigger and one reply (in one language) to an intent, or makes a new one.
+// Returns the intent saved. Keeps the local copy in step so the next call sees it.
+async function upsertExample(intent, lang, message, reply, { clear = true } = {}) {
+  const existing = intent && tr.kb.find(k => k.intent === intent && k.intent !== 'fallback');
+  const t = { ...(existing?.triggers || {}) }, r = { ...(existing?.replies || {}) };
+  const msg = message.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+  t[lang] = uniq([...splitList(t[lang]), msg]).join(', ');
+  r[lang] = uniq([...splitLines(r[lang]), reply.trim()]).join('\n');
+  const item = existing
+    ? { intent: existing.intent, position: num(existing.position), triggers: langMap(t), replies: langMap(r), enabled: !!existing.enabled, priority: num(existing.priority) }
+    : { intent: intent || nextLearned(), position: nextPosition(), triggers: langMap(t), replies: langMap(r), enabled: true, priority: 0 };
+  const { error } = await sb.rpc('admin_save_bot_kb', { item });
+  if (error) throw error;
+  if (existing) Object.assign(existing, item); else tr.kb.push({ ...item, protected: false });
+  // The question is answered now, so drop it from the unanswered list (harmless if it isn't there).
+  if (clear) {
+    await sb.rpc('admin_clear_unanswered', { msg: message });
+    tr.unanswered = tr.unanswered.filter(u => u.message !== message);
+  }
+  return item.intent;
+}
+// "Teach the bot": from an unanswered question or an "Improve this reply" link.
+function teachBot({ message = '', lang = '', reply = '', intent = '' } = {}) {
+  if (!tr) return toast('Open Bot training first');
+  const ov = $('#overlay');
+  const L = TR_LANGS.includes(lang) ? lang : (TR_LANGS.includes(tr.settings.default_lang) ? tr.settings.default_lang : 'English');
+  const targets = kbSorted().filter(k => !k.protected && k.intent !== 'fallback').map(k => k.intent);
+  const pick = targets.includes(intent) ? intent : 'new';
+  ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="teachForm">
+    <h2>Teach the bot</h2>
+    <p class="sub">Add this as a trigger phrase and reply.</p>
+    <div class="row2">
+      <div><label for="thIntent">Add to</label><select id="thIntent"><option value="new">New intent</option>${targets.map(i => `<option ${i === pick ? 'selected' : ''}>${esc(i)}</option>`).join('')}</select></div>
+      <div id="thNameWrap" class="${pick === 'new' ? '' : 'hidden'}"><label for="thName">New intent name</label><input type="text" id="thName" value="${esc(nextLearned())}" maxlength="60" autocomplete="off"></div>
+    </div>
+    <label for="thLang">Language</label><select id="thLang">${TR_LANGS.map(l => `<option ${l === L ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <label for="thMsg">When the user says…</label><input type="text" id="thMsg" value="${esc(message)}" maxlength="300" required>
+    <label for="thText">The bot should reply</label><textarea id="thText" rows="3" required>${esc(reply)}</textarea>
+    <div class="err" id="thErr"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+      <button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save to knowledge base</button></div>
+  </form></div>`;
+  const close = () => ov.innerHTML = '';
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  $('#thIntent', ov).onchange = () => $('#thNameWrap', ov).classList.toggle('hidden', $('#thIntent', ov).value !== 'new');
+  $('#teachForm', ov).onsubmit = async ev => {
+    ev.preventDefault();
+    const err = $('#thErr', ov), msg = $('#thMsg', ov).value.trim(), text = $('#thText', ov).value.trim();
+    if (!msg || !text) return err.textContent = 'Add the question and the reply.';
+    let intent = $('#thIntent', ov).value;
+    if (intent === 'new') {
+      intent = intentSlug($('#thName', ov).value) || nextLearned();
+      if (!/^[a-z0-9_]{2,40}$/.test(intent)) return err.textContent = 'Name the intent: 2 to 40 letters, numbers or _.';
+      if (tr.kb.some(k => k.intent === intent && (k.protected || k.intent === 'fallback'))) return err.textContent = 'That name is a protected intent. Choose another.';
+    }
+    const btn = ev.submitter; if (btn) btn.disabled = true;
+    try { await upsertExample(intent, $('#thLang', ov).value, msg, text); }
+    catch (x) { if (btn) btn.disabled = false; return err.textContent = x.message || 'Couldn’t save'; }
+    close(); toast('Bot trained: ' + intent); refreshTraining();
+  };
+}
+$('#kbImport').onsubmit = async e => {
+  e.preventDefault();
+  if (!tr) return;
+  const L = $('#kbImpText').value.split('\n'), pairs = [];
+  for (let i = 0; i < L.length; i++) {
+    const u = L[i].match(/^\s*(user|u)\s*:\s*(.+)$/i), b = (L[i + 1] || '').match(/^\s*(bot|b|assistant)\s*:\s*(.+)$/i);
+    if (u && b) { pairs.push([u[2].trim(), b[2].trim()]); i++; }
+  }
+  if (!pairs.length) return toast('No “User:” and “Bot:” pairs found');
+  const lang = $('#kbImpLang').value, btn = e.submitter; if (btn) btn.disabled = true;
+  let n = 0;
+  try { for (const [q, a] of pairs) { await upsertExample(null, lang, q, a, { clear: false }); n++; } }
+  catch (x) { fail(x); }
+  if (btn) btn.disabled = false;
+  if (n) { $('#kbImpText').value = ''; toast(`Imported ${n} example${n === 1 ? '' : 's'}`); }
+  refreshTraining();
+};
+
+// Languages and style
+const stField = (box, key, s, obj) => `<label for="${box}-${key}">${key}</label><input type="text" id="${box}-${key}" data-${box}="${key}" value="${esc(obj?.[key] || '')}" maxlength="300">`;
+const paintThr = () => $('#stThrVal').textContent = '(' + (+$('#stThr').value).toFixed(2) + ')';
+$('#stThr').oninput = paintThr;
+$('#stLangs').innerHTML = TR_LANGS.map(l => `<span class="chip on" style="cursor:default">${l}</span>`).join('');
+async function loadTrainStyle() {
+  if (!await loadTraining()) return;
+  const s = tr.settings;
+  $('#stDefault').innerHTML = TR_LANGS.map(l => `<option ${l === s.default_lang ? 'selected' : ''}>${l}</option>`).join('');
+  $('#stMirror').checked = !!s.mirror; $('#stName').checked = !!s.use_name; $('#stEmoji').checked = !!s.use_emoji;
+  $('#stThr').value = Math.min(0.9, Math.max(0.2, (num(s.threshold) || 50) / 100)); paintThr();
+  $('#stAway').innerHTML = TR_LANGS.map(l => stField('away', l, s, s.away)).join('');
+  $('#stHandoff').innerHTML = TR_LANGS.map(l => stField('handoff', l, s, s.handoff_text)).join('');
+  $('#stUpdated').textContent = s.updated_at ? 'Last saved ' + fmtTime(s.updated_at) : '';
+}
+async function saveBotSettings(item, msg, btn) {
+  if (btn) btn.disabled = true;
+  const { error } = await sb.rpc('admin_save_bot_settings', { item });
+  if (btn) btn.disabled = false;
+  if (error) return fail(error);
+  toast(msg); refreshTraining();
+}
+$('#styleForm').onsubmit = e => {
+  e.preventDefault();
+  const grab = k => Object.fromEntries([...document.querySelectorAll(`[data-${k}]`)].map(i => [i.dataset[k], i.value.trim()]));
+  saveBotSettings({ default_lang: $('#stDefault').value, mirror: $('#stMirror').checked, threshold: Math.round(+$('#stThr').value * 100),
+    use_name: $('#stName').checked, use_emoji: $('#stEmoji').checked, away: grab('away'), handoff_text: grab('handoff') },
+    'Languages and style saved', e.submitter);
+};
+
+// When to reply
+const TM_FIELDS = { tmMin: 'min_delay', tmMax: 'max_delay', tmCool: 'cool_seconds', tmFrom: 'from_hour', tmTo: 'to_hour', tmPerDay: 'per_day', tmHandoff: 'handoff' };
+function renderRules() {
+  const v = id => num($('#' + id).value), quiet = $('#tmQuiet').checked;
+  const h = n => `${String(v(n)).padStart(2, '0')}:00`;
+  const rows = [['Self-harm, abuse or feeling unsafe', 'Replies at once with the protected safety answer'],
+    ['“Are you real / a bot?”', 'Answers honestly that it is automated'],
+    ['Money, UPI, OTP or payment details', 'Declines politely and warns about scams'],
+    ['Asking to meet or for contact details', 'Keeps the chat in the app'],
+    ['“Stop”', 'Stops messaging that member immediately'],
+    ['Normal question', `Replies after ${v('tmMin')} to ${v('tmMax')} seconds, at least ${v('tmCool')} seconds after its last message`],
+    [`Outside ${h('tmFrom')} to ${h('tmTo')} IST`, quiet ? 'Away message (set under Languages and style)' : 'Replies normally'],
+    [`After ${v('tmPerDay')} replies to a member in a day`, 'Stays quiet until the next day'],
+    [`After ${v('tmHandoff')} replies in a chat`, 'Sends the closing line and stops'],
+    ['Starting a conversation', 'Never. Bots only reply']];
+  $('#tmRules').innerHTML = rows.map(([a, b]) => `<tr style="cursor:default"><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join('');
+}
+async function loadTrainTime() {
+  if (!await loadTraining()) return;
+  const s = tr.settings;
+  Object.entries(TM_FIELDS).forEach(([id, k]) => $('#' + id).value = num(s[k]));
+  $('#tmQuiet').checked = !!s.quiet; $('#tmInitiate').checked = false;
+  $('#tmUpdated').textContent = s.updated_at ? 'Last saved ' + fmtTime(s.updated_at) : '';
+  renderRules();
+}
+$('#timeForm').oninput = renderRules;
+$('#timeForm').onsubmit = e => {
+  e.preventDefault();
+  const item = Object.fromEntries(Object.entries(TM_FIELDS).map(([id, k]) => [k, num($('#' + id).value)]));
+  if (item.max_delay < item.min_delay) return toast('The maximum delay must be at least the minimum');
+  item.quiet = $('#tmQuiet').checked;
+  saveBotSettings(item, 'Reply timing saved', e.submitter);
+};
+
+// Training chat: admin_bot_try answers as the bot would, without sending anything.
+const tc = { msgs: [], busy: false };
+$('#tcHour').innerHTML = '<option value="">Now</option>' + Array.from({ length: 24 }, (_, h) => `<option value="${h}">${String(h).padStart(2, '0')}:00</option>`).join('');
+async function loadTrainChat() { if (await loadTraining()) renderChat(); }
+function renderChat() {
+  const box = $('#tcMsgs');
+  box.innerHTML = (tc.msgs.map((x, i) => x.role === 'user' ? `<div class="msg me">${esc(x.text)}</div>`
+    : x.role === 'sys' ? `<p class="sub" style="text-align:center">${esc(x.text)}</p>`
+    : `<div class="msg"><span class="pill ok" style="margin-right:6px">Automated profile</span>${esc(x.text)}
+       <div class="meta">${x.bot ? 'as ' + esc(x.bot) + ' · ' : ''}${esc(x.intent)} · ${esc(x.lang)} · match ${x.score}% · would send after ${x.delay}s${x.stops ? ' · then stops' : ''}${x.active === false ? ' · replies paused, nothing would be sent' : ''} · <a href="#" data-teach="${i}">Improve this reply</a></div></div>`).join('')
+    + (tc.busy ? '<p class="sub">typing…</p>' : '')) || '<p class="sub">Say something in Hindi, English, Hinglish or Marathi.</p>';
+  box.scrollTop = box.scrollHeight;
+  const last = [...tc.msgs].reverse().find(x => x.role === 'user');
+  const lastBot = [...tc.msgs].reverse().find(x => x.role === 'bot');
+  const L = TR_LANGS.includes(lastBot?.lang) ? lastBot.lang : (tr?.settings.default_lang || 'English');
+  $('#tcCoach').innerHTML = last ? `<p class="sub">Last user message: “${esc(last.text)}”</p>
+    <label for="tcCoachLang">Language</label><select id="tcCoachLang">${TR_LANGS.map(l => `<option ${l === L ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <label for="tcCoachText">Your ideal reply</label><textarea id="tcCoachText" rows="3"></textarea>
+    <div class="row" style="margin-top:12px"><button type="button" class="btn primary" id="tcCoachSave">Save as training example</button></div>`
+    : '<p class="sub">Send a message first.</p>';
+  const save = $('#tcCoachSave');
+  if (save) save.onclick = async () => {
+    const text = $('#tcCoachText').value.trim();
+    if (!text) return toast('Write the reply first');
+    save.disabled = true;
+    try { const i = await upsertExample(null, $('#tcCoachLang').value, last.text, text); toast('Bot trained: ' + i); $('#tcCoachText').value = ''; }
+    catch (x) { fail(x); }
+    save.disabled = false;
+  };
+}
+$('#tcMsgs').onclick = e => {
+  const a = e.target.closest('[data-teach]');
+  if (!a) return;
+  e.preventDefault();
+  const x = tc.msgs[+a.dataset.teach];
+  teachBot({ message: x.q, lang: x.lang, reply: ['fallback', 'away'].includes(x.intent) ? '' : x.text, intent: x.intent });
+};
+$('#tcForm').onsubmit = async e => {
+  e.preventDefault();
+  const v = $('#tcIn').value.trim();
+  if (!v || tc.busy) return;
+  $('#tcIn').value = '';
+  tc.msgs.push({ role: 'user', text: v }); tc.busy = true; renderChat();
+  const hour = $('#tcHour').value;
+  const { data, error } = await sb.rpc('admin_bot_try', { message: v, bot_id: null, lang: $('#tcLang').value,
+    at_hour: hour === '' ? null : +hour, member_name: $('#tcName').value.trim() || 'Rohan' });
+  tc.busy = false;
+  if (error) { tc.msgs.push({ role: 'sys', text: 'Couldn’t get a reply: ' + (error.message || 'something went wrong') }); return renderChat(); }
+  const d = data || {}; let score = num(d.score); if (score > 0 && score <= 1) score *= 100;
+  tc.msgs.push({ role: 'bot', text: d.reply || '…', intent: d.intent || '—', lang: d.lang || '—', score: Math.round(score),
+    delay: Math.round(num(d.delay)), stops: !!d.stops, active: d.active, bot: d.bot, q: v });
+  renderChat();
+  $('#tcIn').focus();
+};
+$('#tcReset').onclick = () => { tc.msgs = []; tc.busy = false; renderChat(); };
+
+// Tests and coverage. Tests live in this browser only.
+const TESTS_KEY = 'everlane-admin-bot-tests';
+let tests = [], testResults = {};
+try { const t = JSON.parse(localStorage.getItem(TESTS_KEY) || '[]'); if (Array.isArray(t)) tests = t.filter(x => x && x.message && x.expected); } catch (e) {}
+const saveTests = () => { try { localStorage.setItem(TESTS_KEY, JSON.stringify(tests)); } catch (e) {} };
+async function loadTrainTest() { if (await loadTraining()) renderTests(); }
+function renderTests() {
+  const n = tr.kb.length;
+  $('#tsCov').innerHTML = TR_LANGS.map(l => { const v = n ? Math.round(100 * tr.kb.filter(k => kbLangs(k).includes(l)).length / n) : 0;
+    return `<div class="bl"><span>${l}</span><div class="bar" role="img" aria-label="${l}: ${v}%"><i style="width:${v}%"></i></div><b>${v}%</b></div>`; }).join('');
+  $('#tsRows').innerHTML = tests.map((t, i) => { const r = testResults[t.message];
+    return `<tr style="cursor:default"><td>${esc(t.message)}</td><td><span class="code">${esc(t.expected)}</span></td><td>${r ? `<span class="code">${esc(r.intent)}</span>` : '—'}</td>
+      <td>${r ? (r.ok ? '<span class="pill ok">Pass</span>' : '<span class="pill bad">Fail</span>') : '—'}</td>
+      <td style="white-space:nowrap"><button type="button" class="btn small danger" data-tsrm="${i}">Remove</button></td></tr>`; }).join('')
+    || '<tr><td colspan="5" class="muted">No tests yet. Add one below.</td></tr>';
+  $('#tsExp').innerHTML = kbSorted().map(k => `<option>${esc(k.intent)}</option>`).join('');
+  $('#unRows').innerHTML = tr.unanswered.map((u, i) => `<tr style="cursor:default"><td style="overflow-wrap:anywhere">${esc(u.message)}</td><td>${esc(u.lang || '—')}</td>
+    <td>${fmtN(u.times || 1)}</td><td style="white-space:nowrap">${fmtTime(u.last_at)}</td>
+    <td style="white-space:nowrap"><button type="button" class="btn small" data-teach-un="${i}">Teach</button> <button type="button" class="btn small danger" data-clear-un="${i}">Clear</button></td></tr>`).join('')
+    || '<tr><td colspan="5" class="muted">Nothing unanswered. Every message matched a question and answer.</td></tr>';
+}
+$('#tsRows').onclick = e => {
+  const b = e.target.closest('[data-tsrm]');
+  if (!b) return;
+  tests.splice(+b.dataset.tsrm, 1); saveTests(); renderTests();
+};
+$('#tsAdd').onsubmit = e => {
+  e.preventDefault();
+  const message = $('#tsMsg').value.trim(), expected = $('#tsExp').value;
+  if (!message || !expected) return toast('Type a message and pick the intent');
+  tests.push({ message, expected }); saveTests(); $('#tsMsg').value = ''; renderTests();
+};
+$('#tsRun').onclick = async () => {
+  if (!tr) return;
+  if (!tests.length) return toast('Add a test first');
+  const b = $('#tsRun'); b.disabled = true; $('#tsSummary').textContent = 'Running…';
+  // Pretend it is inside active hours, so the away message doesn't fail every test at night.
+  const s = tr.settings, from = num(s.from_hour), to = num(s.to_hour), hour = from < to ? Math.floor((from + to) / 2) : 12;
+  testResults = {}; let passed = 0;
+  for (const t of tests) {
+    const { data, error } = await sb.rpc('admin_bot_try', { message: t.message, bot_id: null, lang: 'Auto', at_hour: hour, member_name: 'Test' });
+    const intent = error ? 'error' : (data?.intent || '—');
+    testResults[t.message] = { intent, ok: !error && intent === t.expected };
+    if (testResults[t.message].ok) passed++;
+    renderTests();
+  }
+  b.disabled = false;
+  $('#tsSummary').textContent = `${passed} of ${tests.length} passed · ${fmtTime(new Date())}`;
+  toast(`${passed} of ${tests.length} tests passed`);
+};
+$('#unRows').onclick = async e => {
+  const t = e.target.closest('[data-teach-un]'), c = e.target.closest('[data-clear-un]');
+  if (t) { const u = tr.unanswered[+t.dataset.teachUn]; return teachBot({ message: u.message, lang: u.lang }); }
+  if (!c) return;
+  const u = tr.unanswered[+c.dataset.clearUn];
+  const { error } = await sb.rpc('admin_clear_unanswered', { msg: u.message });
+  if (error) return fail(error);
+  tr.unanswered.splice(+c.dataset.clearUn, 1); renderTests();
+};
+$('#unClear').onclick = async () => {
+  if (!tr?.unanswered.length) return toast('Nothing to clear');
+  if (!confirm('Clear the whole unanswered list?')) return;
+  const { error } = await sb.rpc('admin_clear_unanswered', { msg: null });
+  if (error) return fail(error);
+  tr.unanswered = []; renderTests(); toast('Cleared');
+};
 
 // ---------- Team ----------
 const roleOptions = selected => Object.entries(ROLES).map(([k, v]) => `<option value="${k}" ${k === selected ? 'selected' : ''}>${v}</option>`).join('');

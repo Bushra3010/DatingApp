@@ -24,8 +24,8 @@ const privacyPolicySections = <(String, String)>[
     'We only use your location at the level of a city.\n\n• Your city: you pick it from a list. If you tap "use my current location", your device works out the nearest listed city and only that city is saved. We do not store your exact coordinates for this.\n• Distance: distances to other people are calculated from city centres, not from where you actually are.\n• Crossed paths (optional): if you turn this on, the app saves the roughly 1 km area you are in, with the date, so it can show people who were in the same area on the same day. It is off until you share your area, older areas are deleted after 30 days, and you can clear all of them at any time.\n• Hangouts: other members see a plan\'s general area. The exact venue is shown only to the host and to guests the host has accepted.',
   ),
   (
-    'Sample profiles',
-    'Alongside real members, Everlane runs some sample profiles that we create ourselves. They are labelled "Sample profile" in the app. They are not real people: their replies are automatic, and they may like you, match with you or accept a Hangouts request automatically. Messages you send to a sample profile are stored like any other message so the conversation works, and are handled under this policy. Please do not share personal details with them or arrange to meet them.',
+    'Automated profiles',
+    'Alongside real members, Everlane runs some automated profiles that we create ourselves. They are labelled "Automated profile" in the app. They are not real people: their replies are automatic, and they may like you back or match with you automatically. They never host or join Hangouts, never arrange to meet, and never ask for money or contact details. Messages you send to an automated profile are stored like any other message so the conversation works, and are handled under this policy. Please do not share personal details with them.',
   ),
   (
     'How we use your information',
@@ -100,8 +100,8 @@ const termsSections = <(String, String)>[
     'You own the photos, text, voice recordings and messages you post ("your content"). You give Everlane a non-exclusive, royalty-free, worldwide licence to store, display, copy, resize and share your content within the service, only to run and improve Everlane. The licence ends when you delete the content or your account, except for copies kept for safety or legal reasons as described in the Privacy Policy, and messages already delivered to others.\n\nYou confirm you have the right to post your content and that it follows these Terms. We may remove any content that we believe breaks them.',
   ),
   (
-    'Sample profiles',
-    'Everlane shows some sample profiles that we create ourselves. They are labelled "Sample profile", are not real people, and reply automatically. They may like you, match with you or accept a Hangouts request automatically. Do not share personal details with them or try to meet them. Likes, matches or messages from sample profiles are not interest from real members.',
+    'Automated profiles',
+    'Everlane shows some automated profiles that we create ourselves. They are labelled "Automated profile", are not real people, and reply automatically. They may like you back or match with you automatically, but never host or join Hangouts and never arrange to meet. Do not share personal details with them. Likes, matches or messages from automated profiles are not interest from real members.',
   ),
   (
     'Premium plans and payments',
