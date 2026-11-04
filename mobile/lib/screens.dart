@@ -89,9 +89,34 @@ class DiscoverScreen extends StatelessWidget {
       );
     }
     final person = people.first;
+    final card = GlobalObjectKey<SwipeCardState>(person);
+
+    /// The buttons send the card off the same way a swipe does.
     void like() {
+      if (store.outOfLikes) {
+        showOutOfLikes(context, store);
+        return;
+      }
       HapticFeedback.lightImpact();
-      showLikeComposer(context, store, person, 'photo');
+      final swipe = card.currentState;
+      if (swipe == null) {
+        showLikeComposer(context, store, person, 'photo');
+      } else {
+        swipe.flyOut(right: true, then: () {
+          if (context.mounted) showLikeComposer(context, store, person, 'photo');
+        });
+      }
+    }
+
+    void passTap() {
+      final swipe = card.currentState;
+      if (swipe == null) {
+        pass(context, person);
+      } else {
+        swipe.flyOut(right: false, then: () {
+          if (context.mounted) pass(context, person);
+        });
+      }
     }
 
     void details() => Navigator.push(
@@ -116,7 +141,7 @@ class DiscoverScreen extends StatelessWidget {
           child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: SwipeCard(
-                  key: ValueKey('swipe-${person.id}'),
+                  key: card,
                   onLike: () => swipeLike(context, person),
                   onPass: () => pass(context, person),
                   child: _PersonCard(
@@ -124,7 +149,7 @@ class DiscoverScreen extends StatelessWidget {
                       onOpen: details,
                       onMore: () => showSafety(context, store, person),
                       onBoost: () => showBoost(context, store),
-                      onPass: () => pass(context, person),
+                      onPass: passTap,
                       onLike: like,
                       onSpark: () => showSpark(context, store, person),
                       onUndo: store.canUndo ? () => undoPass(context) : null,
@@ -190,6 +215,7 @@ class _RoundAction extends StatelessWidget {
 }
 
 /// Drag the card right to like or left to pass. Short drags spring back.
+/// Each new card eases in; [SwipeCardState.flyOut] lets buttons send it off.
 class SwipeCard extends StatefulWidget {
   const SwipeCard(
       {super.key,
@@ -202,21 +228,35 @@ class SwipeCard extends StatefulWidget {
   final bool Function() onLike;
   final VoidCallback onPass;
   @override
-  State<SwipeCard> createState() => _SwipeCardState();
+  State<SwipeCard> createState() => SwipeCardState();
 }
 
-class _SwipeCardState extends State<SwipeCard>
-    with SingleTickerProviderStateMixin {
+class SwipeCardState extends State<SwipeCard> with TickerProviderStateMixin {
   late final controller = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 420))
     ..addListener(() => setState(() => dx = animation.value));
+  late final enter = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 320))
+    ..forward();
   Animation<double> animation = const AlwaysStoppedAnimation(0);
   double dx = 0;
+  double width = 0;
+  bool leaving = false;
 
   @override
   void dispose() {
     controller.dispose();
+    enter.dispose();
     super.dispose();
+  }
+
+  /// Sends the card off to the right (like) or left (pass), then runs [then].
+  Future<void> flyOut({required bool right, required VoidCallback then}) async {
+    if (leaving) return;
+    leaving = true;
+    await animateTo((right ? 1.5 : -1.5) * width);
+    if (mounted) then();
+    leaving = false;
   }
 
   Future<void> animateTo(double target) {
@@ -240,13 +280,25 @@ class _SwipeCardState extends State<SwipeCard>
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+        width = c.maxWidth;
         final progress = (dx / (c.maxWidth * .3)).clamp(-1.0, 1.0);
+        final rise = CurvedAnimation(parent: enter, curve: Curves.easeOutBack);
         return GestureDetector(
-            onHorizontalDragStart: (_) => controller.stop(),
-            onHorizontalDragUpdate: (d) => setState(() => dx += d.delta.dx),
-            onHorizontalDragEnd: (d) =>
-                release(c.maxWidth, d.velocity.pixelsPerSecond.dx),
-            child: Transform.translate(
+            onHorizontalDragStart: (_) {
+              if (!leaving) controller.stop();
+            },
+            onHorizontalDragUpdate: (d) {
+              if (!leaving) setState(() => dx += d.delta.dx);
+            },
+            onHorizontalDragEnd: (d) {
+              if (!leaving) release(c.maxWidth, d.velocity.pixelsPerSecond.dx);
+            },
+            // The next card rises gently from behind the one that left.
+            child: FadeTransition(
+                opacity: enter,
+                child: ScaleTransition(
+                    scale: Tween(begin: .92, end: 1.0).animate(rise),
+                    child: Transform.translate(
                 offset: Offset(dx, 0),
                 // A slight 3D turn, like lifting a magazine page.
                 child: Transform(
@@ -269,7 +321,7 @@ class _SwipeCardState extends State<SwipeCard>
                             color: EverlaneColors.pass,
                             opacity: -progress,
                             alignment: Alignment.topRight),
-                    ]))));
+                    ]))))));
       });
 }
 
@@ -1868,25 +1920,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(color: EverlaneColors.muted, fontSize: 14)),
               ]),
           ])),
-      const SizedBox(height: 10),
-      Center(
-          child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                  color: store.myProfilePosted
-                      ? EverlaneColors.boost.withValues(alpha: .15)
-                      : EverlaneColors.blush,
-                  borderRadius: BorderRadius.circular(30)),
-              child: Text(
-                  store.myProfilePosted
-                      ? 'Live in the preview'
-                      : 'Draft, not posted',
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: store.myProfilePosted
-                          ? EverlaneColors.boost
-                          : EverlaneColors.like)))),
       const SizedBox(height: 18),
       Center(
           child: SizedBox(

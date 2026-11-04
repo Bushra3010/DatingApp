@@ -345,16 +345,68 @@ class _HangoutCard extends StatelessWidget {
       if (h.distanceKm != null && !h.mine)
         h.distanceKm! <= 5 ? 'Nearby' : '${h.distanceKm} km away',
     ].where((s) => s.isNotEmpty).join(' · ');
+    final accent = _kindColor(h.kind);
+    final taken = (h.spots - h.spotsLeft).clamp(0, h.spots);
     return Container(
-        padding: const EdgeInsets.all(18),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
             color: EverlaneColors.card,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
                 color: h.mine
                     ? EverlaneColors.deep.withValues(alpha: .6)
-                    : EverlaneColors.line)),
+                    : EverlaneColors.line),
+            boxShadow: [
+              BoxShadow(
+                  color: accent.withValues(alpha: .12),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10))
+            ]),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // The plan's kind and date, in its own colour.
+          Container(
+              padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                accent.withValues(alpha: .28),
+                accent.withValues(alpha: .06),
+              ])),
+              child: Row(children: [
+                Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                        color: accent.withValues(alpha: .22),
+                        borderRadius: BorderRadius.circular(13)),
+                    child: Icon(h.kind.icon, color: accent, size: 21)),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(
+                          h.official
+                              ? '${h.kind.label.toUpperCase()} · EVERLANE EVENT'
+                              : h.kind.label.toUpperCase(),
+                          style: TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 1.6,
+                              fontWeight: FontWeight.w800,
+                              color: accent)),
+                      const SizedBox(height: 3),
+                      Text(h.when,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                    ])),
+                _DateBlock(date: h.startsAt, color: accent),
+              ])),
+          Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
           Row(children: [
             host == null
                 ? Container(
@@ -379,14 +431,26 @@ class _HangoutCard extends StatelessWidget {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  Text(host == null
-                      ? 'You'
-                      : host.age > 0 ? '${host.name}, ${host.age}' : host.name,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Row(children: [
+                    Flexible(
+                        child: Text(
+                            host == null
+                                ? 'You'
+                                : host.age > 0
+                                    ? '${host.name}, ${host.age}'
+                                    : host.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700))),
+                    if (host?.verified ?? false) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.verified_rounded,
+                          size: 15, color: Color(0xFF60A5FA)),
+                    ],
+                  ]),
                   Text(
                       h.official
-                          ? '${h.kind.label} · Everlane event, hosted by the team'
-                          : '${h.kind.label}, hosted by $hostName',
+                          ? 'Hosted by the Everlane team'
+                          : 'Hosted by $hostName',
                       style: TextStyle(
                           fontSize: 11,
                           color: h.official
@@ -399,21 +463,13 @@ class _HangoutCard extends StatelessWidget {
                     : h.spotsLeft == 1
                         ? '1 spot left'
                         : '${h.spotsLeft} spots left',
-                EverlaneColors.star),
+                h.spotsLeft == 0 ? EverlaneColors.pass : EverlaneColors.star),
           ]),
           const SizedBox(height: 14),
           Text(h.title,
-              style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -.4)),
-          const SizedBox(height: 8),
-          Row(children: [
-            Icon(Icons.event_rounded, size: 15, color: EverlaneColors.lavender),
-            const SizedBox(width: 6),
-            Text(h.when, style: const TextStyle(fontSize: 13)),
-          ]),
-          const SizedBox(height: 4),
+              style: EverlaneFonts.playfair(
+                  size: 21, weight: FontWeight.w700, color: EverlaneColors.plum)),
+          const SizedBox(height: 10),
           Row(children: [
             Icon(Icons.place_outlined, size: 15, color: EverlaneColors.lavender),
             const SizedBox(width: 6),
@@ -434,6 +490,21 @@ class _HangoutCard extends StatelessWidget {
                 style: TextStyle(fontSize: 13, color: EverlaneColors.muted)),
           ],
           const SizedBox(height: 14),
+          // How full the plan is.
+          Row(children: [
+            Expanded(
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                        value: h.spots == 0 ? 0 : taken / h.spots,
+                        minHeight: 6,
+                        backgroundColor: EverlaneColors.line,
+                        color: accent))),
+            const SizedBox(width: 10),
+            Text(taken == 0 ? 'Be the first' : '$taken of ${h.spots} going',
+                style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+          ]),
+          const SizedBox(height: 16),
           if (h.mine) ...[
             if (requests.isEmpty)
               Text(
@@ -535,8 +606,51 @@ class _HangoutCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(16))),
                     child: const Text('Message host')),
             ]),
+                  ])),
         ]));
   }
+}
+
+/// A colour per kind of plan, used for the card's band and progress bar.
+Color _kindColor(HangoutKind kind) => switch (kind) {
+      HangoutKind.dinner => EverlaneColors.star,
+      HangoutKind.movie => EverlaneColors.lavender,
+      HangoutKind.coffee => const Color(0xFFD9A47A),
+      HangoutKind.drinks => EverlaneColors.like,
+      HangoutKind.outdoors => EverlaneColors.boost,
+    };
+
+/// A small calendar tile: day of the month over the short month name.
+class _DateBlock extends StatelessWidget {
+  const _DateBlock({required this.date, required this.color});
+  final DateTime date;
+  final Color color;
+  static const _months = [
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+  ];
+  @override
+  Widget build(BuildContext context) => Container(
+      width: 48,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+          color: EverlaneColors.paper,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: .45))),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text('${date.day}',
+            style: TextStyle(
+                fontSize: 18,
+                height: 1.1,
+                fontWeight: FontWeight.w800,
+                color: EverlaneColors.plum)),
+        Text(_months[date.month - 1],
+            style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w700,
+                color: color)),
+      ]));
 }
 
 Future<void> hostPlan(BuildContext context, PreviewStore store) =>
