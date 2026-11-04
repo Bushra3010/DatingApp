@@ -283,13 +283,15 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                           .openDrawer(),
                                       icon: _Avatar(name: store.myName)),
                                   const Spacer(),
-                                  IconButton(
-                                      tooltip: 'Filter profiles',
-                                      onPressed: () =>
-                                          showFilters(context, store),
-                                      icon: Icon(Icons.tune_rounded,
-                                          color: EverlaneColors.muted,
-                                          size: 25)),
+                                  // Preferences only apply to Discover.
+                                  if (selected == 0)
+                                    IconButton(
+                                        tooltip: 'Filter profiles',
+                                        onPressed: () =>
+                                            showFilters(context, store),
+                                        icon: Icon(Icons.tune_rounded,
+                                            color: EverlaneColors.muted,
+                                            size: 25)),
                                 ])),
                           ])),
                       body: IndexedStack(index: selected, children: [
