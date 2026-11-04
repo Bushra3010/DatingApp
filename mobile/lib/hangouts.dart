@@ -3,6 +3,7 @@ import 'cities.dart';
 import 'models.dart';
 import 'screens.dart';
 import 'theme.dart';
+import 'voice.dart';
 import 'widgets.dart';
 
 /// "What do you want to do?" choices on the Ready to Hangout screen.
@@ -202,6 +203,9 @@ class HangoutsScreen extends StatefulWidget {
 class _HangoutsScreenState extends State<HangoutsScreen> {
   HangoutKind? filter;
 
+  /// "Find a +1": only plans built around this kind of event.
+  HangoutEvent? event;
+
   @override
   void initState() {
     super.initState();
@@ -215,6 +219,7 @@ class _HangoutsScreenState extends State<HangoutsScreen> {
         final store = widget.store;
         final plans = store.hangouts
             .where((h) => filter == null || h.kind == filter)
+            .where((h) => event == null || h.event == event)
             .toList();
         final mine = plans.where((h) => h.mine).toList();
         final others = plans.where((h) => !h.mine).toList();
@@ -284,6 +289,47 @@ class _HangoutsScreenState extends State<HangoutsScreen> {
                                   onSelected: (_) =>
                                       setState(() => filter = kind))),
                       ])),
+                  const SizedBox(height: 14),
+                  Row(children: [
+                    Icon(Icons.confirmation_number_outlined,
+                        size: 16, color: EverlaneColors.like),
+                    const SizedBox(width: 6),
+                    const Text('Find a +1',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                        child: Text('Spare tickets, looking for company',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 12, color: EverlaneColors.muted))),
+                  ]),
+                  const SizedBox(height: 8),
+                  SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(children: [
+                        for (final e in HangoutEvent.values)
+                          Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: ChoiceChip(
+                                  avatar: Icon(e.icon,
+                                      size: 16,
+                                      color: event == e
+                                          ? Colors.white
+                                          : EverlaneColors.like),
+                                  label: Text(e.label),
+                                  selected: event == e,
+                                  showCheckmark: false,
+                                  selectedColor: EverlaneColors.like,
+                                  backgroundColor: EverlaneColors.card,
+                                  side: BorderSide(color: EverlaneColors.line),
+                                  labelStyle: TextStyle(
+                                      color: event == e
+                                          ? Colors.white
+                                          : EverlaneColors.plum),
+                                  // Tap again to clear.
+                                  onSelected: (_) => setState(
+                                      () => event = event == e ? null : e))),
+                      ])),
                   const SizedBox(height: 18),
                   if (store.hangoutsLoading && plans.isEmpty)
                     const Padding(
@@ -302,8 +348,10 @@ class _HangoutsScreenState extends State<HangoutsScreen> {
                   ],
                   if (!store.hangoutsLoading && plans.isEmpty)
                     EmptyState(
-                        icon: filter?.icon ?? Icons.groups_outlined,
-                        title: 'Nothing planned nearby yet.',
+                        icon: event?.icon ?? filter?.icon ?? Icons.groups_outlined,
+                        title: event != null
+                            ? 'No spare ${event!.label.toLowerCase()} tickets right now.'
+                            : 'Nothing planned nearby yet.',
                         detail:
                             'Be the first: host a plan and see who joins. You can also widen your distance in preferences.'),
                   for (final h in others)
@@ -345,16 +393,90 @@ class _HangoutCard extends StatelessWidget {
       if (h.distanceKm != null && !h.mine)
         h.distanceKm! <= 5 ? 'Nearby' : '${h.distanceKm} km away',
     ].where((s) => s.isNotEmpty).join(' · ');
+    final accent = _kindColor(h.kind);
+    final taken = (h.spots - h.spotsLeft).clamp(0, h.spots);
+    // Once someone is accepted the plan no longer expires.
+    final locked =
+        h.status == 'accepted' || requests.any((r) => r.status == 'accepted');
+    final endsIn = h.official || locked ? null : timeLeft(h.expiresAt);
+    final lockLeft = h.status == 'accepted'
+        ? timeLeft(h.acceptedAt?.add(hangoutLockWindow))
+        : null;
     return Container(
-        padding: const EdgeInsets.all(18),
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
             color: EverlaneColors.card,
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
             border: Border.all(
                 color: h.mine
                     ? EverlaneColors.deep.withValues(alpha: .6)
-                    : EverlaneColors.line)),
+                    : EverlaneColors.line),
+            boxShadow: [
+              BoxShadow(
+                  color: accent.withValues(alpha: .12),
+                  blurRadius: 24,
+                  offset: const Offset(0, 10))
+            ]),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // The plan's kind and date, in its own colour.
+          Container(
+              padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [
+                accent.withValues(alpha: .28),
+                accent.withValues(alpha: .06),
+              ])),
+              child: Row(children: [
+                Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                        color: accent.withValues(alpha: .22),
+                        borderRadius: BorderRadius.circular(13)),
+                    child: Icon(h.event?.icon ?? h.kind.icon,
+                        color: accent, size: 21)),
+                const SizedBox(width: 12),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text(
+                          h.official
+                              ? '${h.kind.label.toUpperCase()} · EVERLANE EVENT'
+                              : h.event != null
+                                  ? '+1 · ${h.event!.label.toUpperCase()}'
+                                  : h.kind.label.toUpperCase(),
+                          style: TextStyle(
+                              fontSize: 11,
+                              letterSpacing: 1.6,
+                              fontWeight: FontWeight.w800,
+                              color: accent)),
+                      const SizedBox(height: 3),
+                      Text(h.when,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      if (endsIn != null) ...[
+                        const SizedBox(height: 4),
+                        Row(children: [
+                          Icon(Icons.hourglass_bottom_rounded,
+                              size: 13, color: EverlaneColors.muted),
+                          const SizedBox(width: 4),
+                          Text('Post ends in $endsIn',
+                              style: TextStyle(
+                                  fontSize: 11.5,
+                                  color: EverlaneColors.muted)),
+                        ]),
+                      ],
+                    ])),
+                _DateBlock(date: h.startsAt, color: accent),
+              ])),
+          Padding(
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
           Row(children: [
             host == null
                 ? Container(
@@ -379,14 +501,26 @@ class _HangoutCard extends StatelessWidget {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  Text(host == null
-                      ? 'You'
-                      : host.age > 0 ? '${host.name}, ${host.age}' : host.name,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
+                  Row(children: [
+                    Flexible(
+                        child: Text(
+                            host == null
+                                ? 'You'
+                                : host.age > 0
+                                    ? '${host.name}, ${host.age}'
+                                    : host.name,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700))),
+                    if (host?.verified ?? false) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.verified_rounded,
+                          size: 15, color: Color(0xFF60A5FA)),
+                    ],
+                  ]),
                   Text(
                       h.official
-                          ? '${h.kind.label} · Everlane event, hosted by the team'
-                          : '${h.kind.label}, hosted by $hostName',
+                          ? 'Hosted by the Everlane team'
+                          : 'Hosted by $hostName',
                       style: TextStyle(
                           fontSize: 11,
                           color: h.official
@@ -399,21 +533,13 @@ class _HangoutCard extends StatelessWidget {
                     : h.spotsLeft == 1
                         ? '1 spot left'
                         : '${h.spotsLeft} spots left',
-                EverlaneColors.star),
+                h.spotsLeft == 0 ? EverlaneColors.pass : EverlaneColors.star),
           ]),
           const SizedBox(height: 14),
           Text(h.title,
-              style: const TextStyle(
-                  fontSize: 19,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -.4)),
-          const SizedBox(height: 8),
-          Row(children: [
-            Icon(Icons.event_rounded, size: 15, color: EverlaneColors.lavender),
-            const SizedBox(width: 6),
-            Text(h.when, style: const TextStyle(fontSize: 13)),
-          ]),
-          const SizedBox(height: 4),
+              style: EverlaneFonts.playfair(
+                  size: 21, weight: FontWeight.w700, color: EverlaneColors.plum)),
+          const SizedBox(height: 10),
           Row(children: [
             Icon(Icons.place_outlined, size: 15, color: EverlaneColors.lavender),
             const SizedBox(width: 6),
@@ -433,7 +559,30 @@ class _HangoutCard extends StatelessWidget {
             Text('Hoping to meet: ${h.lookingFor}',
                 style: TextStyle(fontSize: 13, color: EverlaneColors.muted)),
           ],
+          if (h.prompt.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _Icebreaker(prompt: h.prompt, color: accent),
+          ],
+          if (lockLeft != null) ...[
+            const SizedBox(height: 12),
+            _LockIn(left: lockLeft),
+          ],
           const SizedBox(height: 14),
+          // How full the plan is.
+          Row(children: [
+            Expanded(
+                child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                        value: h.spots == 0 ? 0 : taken / h.spots,
+                        minHeight: 6,
+                        backgroundColor: EverlaneColors.line,
+                        color: accent))),
+            const SizedBox(width: 10),
+            Text(taken == 0 ? 'Be the first' : '$taken of ${h.spots} going',
+                style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+          ]),
+          const SizedBox(height: 16),
           if (h.mine) ...[
             if (requests.isEmpty)
               Text(
@@ -443,8 +592,11 @@ class _HangoutCard extends StatelessWidget {
                   style: TextStyle(fontSize: 13, color: EverlaneColors.muted)),
             for (final r in requests)
               Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Row(children: [
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                  Row(children: [
                     Portrait(r.person, height: 32, width: 32, radius: 16),
                     const SizedBox(width: 10),
                     Expanded(
@@ -471,7 +623,22 @@ class _HangoutCard extends StatelessWidget {
                     ] else
                       Icon(Icons.check_circle_rounded,
                           color: EverlaneColors.boost, size: 20),
-                  ])),
+                  ]),
+                  // Their answer to your icebreaker: listen before accepting.
+                  if (r.voiceUrl.isNotEmpty && r.status == 'pending') ...[
+                    const SizedBox(height: 8),
+                    VoicePrompt(
+                        id: r.person.id,
+                        seconds: r.voiceSeconds,
+                        url: r.voiceUrl),
+                  ],
+                  if (r.status == 'accepted' &&
+                      timeLeft(r.acceptedAt?.add(hangoutLockWindow)) != null) ...[
+                    const SizedBox(height: 8),
+                    _LockIn(
+                        left: timeLeft(r.acceptedAt?.add(hangoutLockWindow))!),
+                  ],
+                ])),
             Align(
                 alignment: Alignment.centerLeft,
                 child: TextButton(
@@ -500,25 +667,31 @@ class _HangoutCard extends StatelessWidget {
               FilledButton(
                   onPressed: h.status != null || h.spotsLeft == 0
                       ? null
-                      : () {
-                          store.requestToJoin(h);
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          showNotice(context, 'Request sent to ${host!.name}');
-                        },
+                      : () => _join(context, store, h),
                   style: FilledButton.styleFrom(
                       backgroundColor: EverlaneColors.like,
                       minimumSize: const Size(0, 42),
                       padding: const EdgeInsets.symmetric(horizontal: 18)),
-                  child: Text(switch (h.status) {
-                    'pending' => 'Requested',
-                    'accepted' => 'You’re in ✓',
-                    'declined' => 'Not this time',
-                    _ => h.spotsLeft == 0 ? 'Full' : 'Request to join',
-                  })),
-              // Real members can chat once the host accepts (that matches
-              // you); the demo lets you message straight away.
-              if (!h.official &&
-                  (h.status == 'accepted' || !(host?.remote ?? false)))
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    if (h.status == null &&
+                        h.prompt.isNotEmpty &&
+                        h.spotsLeft > 0) ...[
+                      const Icon(Icons.mic_rounded, size: 18),
+                      const SizedBox(width: 6),
+                    ],
+                    Text(switch (h.status) {
+                      'pending' => 'Requested',
+                      'accepted' => 'You’re in ✓',
+                      'declined' => 'Not this time',
+                      _ => h.spotsLeft == 0
+                          ? 'Full'
+                          : h.prompt.isNotEmpty
+                              ? 'Answer to join'
+                              : 'Request to join',
+                    }),
+                  ])),
+              // No typed openers: chat opens once the host accepts you.
+              if (!h.official && h.status == 'accepted')
                 OutlinedButton(
                     onPressed: () => Navigator.push(
                         context,
@@ -526,17 +699,130 @@ class _HangoutCard extends StatelessWidget {
                             builder: (_) => ChatScreen(
                                 store: store,
                                 chat: store.chatWith(host!),
-                                draft: h.status == 'accepted'
-                                    ? ''
-                                    : 'Hi, I’m interested in “${h.title}”. Is there still room?'))),
+                                draft: ''))),
                     style: OutlinedButton.styleFrom(
                         minimumSize: const Size(0, 42),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16))),
                     child: const Text('Message host')),
             ]),
+                  ])),
         ]));
   }
+}
+
+/// Asks to join [h]: plans with an icebreaker are answered by voice first.
+Future<void> _join(BuildContext context, PreviewStore store, Hangout h) async {
+  final hostName = h.host?.name ?? 'The host';
+  VoiceAnswer? answer;
+  if (h.prompt.isNotEmpty) {
+    answer = await recordHangoutAnswer(context, h.prompt, hostName);
+    if (answer == null) return;
+  }
+  await store.requestToJoin(h,
+      voice: answer?.wav, voiceSeconds: answer?.seconds ?? 0);
+  if (!context.mounted || h.status == null) return;
+  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  showNotice(context, 'Request sent to $hostName');
+}
+
+/// The host's icebreaker, which people answer with a voice note.
+class _Icebreaker extends StatelessWidget {
+  const _Icebreaker({required this.prompt, required this.color});
+  final String prompt;
+  final Color color;
+  @override
+  Widget build(BuildContext context) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      decoration: BoxDecoration(
+          color: color.withValues(alpha: .08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color.withValues(alpha: .3))),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Icon(Icons.record_voice_over_rounded, size: 18, color: color),
+        const SizedBox(width: 10),
+        Expanded(
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+              Text('ICEBREAKER · ANSWER BY VOICE',
+                  style: TextStyle(
+                      fontSize: 10,
+                      letterSpacing: 1.2,
+                      fontWeight: FontWeight.w800,
+                      color: EverlaneColors.muted)),
+              const SizedBox(height: 3),
+              Text(prompt,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600, height: 1.35)),
+            ])),
+      ]));
+}
+
+/// The 2-hour window after acceptance to settle the time and place.
+class _LockIn extends StatelessWidget {
+  const _LockIn({required this.left});
+  final String left;
+  @override
+  Widget build(BuildContext context) => Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+          color: EverlaneColors.boost.withValues(alpha: .12),
+          borderRadius: BorderRadius.circular(12)),
+      child: Row(children: [
+        Icon(Icons.timer_outlined, size: 16, color: EverlaneColors.boost),
+        const SizedBox(width: 8),
+        Expanded(
+            child: Text('Lock in the time and place in chat · $left left',
+                style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600,
+                    color: EverlaneColors.boost))),
+      ]));
+}
+
+/// A colour per kind of plan, used for the card's band and progress bar.
+Color _kindColor(HangoutKind kind) => switch (kind) {
+      HangoutKind.dinner => EverlaneColors.star,
+      HangoutKind.movie => EverlaneColors.lavender,
+      HangoutKind.coffee => const Color(0xFFD9A47A),
+      HangoutKind.drinks => EverlaneColors.like,
+      HangoutKind.outdoors => EverlaneColors.boost,
+    };
+
+/// A small calendar tile: day of the month over the short month name.
+class _DateBlock extends StatelessWidget {
+  const _DateBlock({required this.date, required this.color});
+  final DateTime date;
+  final Color color;
+  static const _months = [
+    'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN',
+    'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC',
+  ];
+  @override
+  Widget build(BuildContext context) => Container(
+      width: 48,
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      decoration: BoxDecoration(
+          color: EverlaneColors.paper,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: .45))),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Text('${date.day}',
+            style: TextStyle(
+                fontSize: 18,
+                height: 1.1,
+                fontWeight: FontWeight.w800,
+                color: EverlaneColors.plum)),
+        Text(_months[date.month - 1],
+            style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w700,
+                color: color)),
+      ]));
 }
 
 Future<void> hostPlan(BuildContext context, PreviewStore store) =>
@@ -550,8 +836,17 @@ class _HostPlanForm extends StatefulWidget {
   State<_HostPlanForm> createState() => _HostPlanFormState();
 }
 
+/// Starting points for a plan's icebreaker.
+const _icebreakers = [
+  'Coldplay or Diljit?',
+  'Best late-night chai spot in town?',
+  'Mountains or beaches, and why?',
+  'What’s a dish you could eat every day?',
+];
+
 class _HostPlanFormState extends State<_HostPlanForm> {
   var kind = HangoutKind.coffee;
+  HangoutEvent? event;
   var spots = 2;
   var posting = false;
   late DateTime day = _today();
@@ -561,6 +856,7 @@ class _HostPlanFormState extends State<_HostPlanForm> {
   final venue = TextEditingController();
   final note = TextEditingController();
   final lookingFor = TextEditingController();
+  final prompt = TextEditingController();
   late final city = TextEditingController(text: widget.store.myCity);
 
   static DateTime _today() {
@@ -573,7 +869,7 @@ class _HostPlanFormState extends State<_HostPlanForm> {
 
   @override
   void dispose() {
-    for (final c in [title, area, venue, note, lookingFor, city]) {
+    for (final c in [title, area, venue, note, lookingFor, prompt, city]) {
       c.dispose();
     }
     super.dispose();
@@ -620,7 +916,10 @@ class _HostPlanFormState extends State<_HostPlanForm> {
           venue: venue.text.trim(),
           note: note.text.trim(),
           lookingFor: lookingFor.text.trim(),
-          spots: spots));
+          spots: spots,
+          prompt: prompt.text.trim(),
+          event: event,
+          expiresAt: DateTime.now().add(hangoutLifetime)));
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (mounted) showNotice(context, 'Couldn’t post your plan. Try again.');
@@ -718,6 +1017,40 @@ class _HostPlanFormState extends State<_HostPlanForm> {
           decoration: const InputDecoration(
               labelText: 'Who are you hoping to meet? (optional)',
               hintText: 'e.g. Film lovers, easy-going people')),
+      const Text('Icebreaker', style: TextStyle(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 4),
+      Text('People answer it with a voice note of up to $maxHangoutVoiceSeconds seconds to ask to join. No typed “hi”.',
+          style: TextStyle(fontSize: 12, color: EverlaneColors.muted, height: 1.4)),
+      const SizedBox(height: 8),
+      TextField(
+          controller: prompt,
+          onChanged: (_) => setState(() {}),
+          maxLength: 120,
+          textCapitalization: TextCapitalization.sentences,
+          decoration: const InputDecoration(
+              hintText: 'Ask something fun to answer out loud',
+              prefixIcon: Icon(Icons.record_voice_over_outlined))),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final q in _icebreakers)
+          ActionChip(
+              label: Text(q, style: const TextStyle(fontSize: 12)),
+              onPressed: () => setState(() => prompt.text = q)),
+      ]),
+      const SizedBox(height: 16),
+      const Text('Got a spare ticket? (optional)',
+          style: TextStyle(fontWeight: FontWeight.w700)),
+      const SizedBox(height: 8),
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final e in HangoutEvent.values)
+          ChoiceChip(
+              avatar: Icon(e.icon, size: 16),
+              label: Text(e.label),
+              selected: event == e,
+              showCheckmark: false,
+              // Tap again to clear.
+              onSelected: (_) => setState(() => event = event == e ? null : e)),
+      ]),
+      const SizedBox(height: 12),
       Row(children: [
         const Expanded(child: Text('Spots')),
         IconButton(
@@ -731,12 +1064,18 @@ class _HostPlanFormState extends State<_HostPlanForm> {
             icon: const Icon(Icons.add_circle_outline)),
       ]),
       const SizedBox(height: 6),
+      Text('Your post stays up for 24 hours. If you haven’t accepted anyone by then, it comes down.',
+          style: TextStyle(fontSize: 12, color: EverlaneColors.muted, height: 1.4)),
+      const SizedBox(height: 4),
       Text('Meet in a public place and tell a friend where you’ll be.',
           style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
       const SizedBox(height: 14),
       GradientButton(
           label: posting ? 'Posting…' : 'Post plan',
-          onTap: posting || title.text.trim().isEmpty || area.text.trim().isEmpty
+          onTap: posting ||
+                  title.text.trim().isEmpty ||
+                  area.text.trim().isEmpty ||
+                  prompt.text.trim().isEmpty
               ? null
               : post),
     ]);

@@ -114,6 +114,11 @@ class ProfileBackend {
     return path;
   }
 
+  /// Keeps the plan picked in the app while payments aren't live
+  /// (see migration 034).
+  Future<void> choosePreviewPlan(String plan) =>
+      client.rpc('choose_preview_plan', params: {'p_plan': plan});
+
   /// Uploads a live-selfie burst into the private "verifications" bucket
   /// and queues it for an admin to review.
   Future<void> submitVerification(List<Uint8List> frames) async {
@@ -245,15 +250,23 @@ class ProfileBackend {
         'note': h.note,
         'looking_for': h.lookingFor,
         'spots': h.spots,
+        'prompt': h.prompt,
+        'event_tag': h.event?.name ?? '',
       });
 
   Future<void> cancelHangout(String id) =>
       client.rpc('cancel_hangout', params: {'plan': id});
 
   /// Returns your request's status: 'pending', or 'accepted' straight away
-  /// for a sample profile's plan.
-  Future<String?> requestHangout(String id) async =>
-      await client.rpc('request_hangout', params: {'plan': id}) as String?;
+  /// for a sample profile's plan. Plans with an icebreaker need the voice
+  /// answer's storage path (see migration 035).
+  Future<String?> requestHangout(String id,
+          {String voicePath = '', int voiceSeconds = 0}) async =>
+      await client.rpc('request_hangout', params: {
+        'plan': id,
+        'voice_path': voicePath,
+        'voice_seconds': voiceSeconds,
+      }) as String?;
 
   Future<List<Map<String, dynamic>>> hangoutRequestsMine() async =>
       _rows(await client.rpc('hangout_requests_mine'));

@@ -289,6 +289,34 @@ enum HangoutKind {
   final IconData icon;
 }
 
+/// Tags for plans built around an event, so people with a spare ticket
+/// can find a +1 (see migration 035).
+enum HangoutEvent {
+  concert('Concert', Icons.music_note_rounded),
+  sports('IPL / Sports', Icons.sports_cricket_rounded),
+  comedy('Stand-up', Icons.theater_comedy_rounded),
+  movie('Movie', Icons.local_movies_rounded);
+
+  const HangoutEvent(this.label, this.icon);
+  final String label;
+  final IconData icon;
+
+  static HangoutEvent? fromName(String? name) {
+    for (final e in values) {
+      if (e.name == name) return e;
+    }
+    return null;
+  }
+}
+
+/// How long a member's plan stays up without an accepted guest, and how
+/// long an accepted pair has to lock in the time and place.
+const hangoutLifetime = Duration(hours: 24);
+const hangoutLockWindow = Duration(hours: 2);
+
+/// Longest voice note when answering a plan's icebreaker.
+const maxHangoutVoiceSeconds = 20;
+
 /// A plan someone hosts and others ask to join. A null [host] means you.
 class Hangout {
   Hangout(
@@ -307,7 +335,11 @@ class Hangout {
       this.distanceKm,
       this.status,
       this.pendingRequests = 0,
-      this.official = false})
+      this.official = false,
+      this.prompt = '',
+      this.event,
+      this.expiresAt,
+      this.acceptedAt})
       : spotsLeft = spotsLeft ?? spots;
 
   /// From a `hangouts_near` row (see migration 020).
@@ -347,8 +379,24 @@ class Hangout {
         distanceKm: (r['distance_km'] as num?)?.toInt(),
         status: r['my_status'] as String?,
         pendingRequests: (r['pending_requests'] as num?)?.toInt() ?? 0,
-        official: r['host_official'] as bool? ?? false);
+        official: r['host_official'] as bool? ?? false,
+        prompt: r['prompt'] as String? ?? '',
+        event: HangoutEvent.fromName(r['event_tag'] as String?),
+        expiresAt: DateTime.tryParse(r['expires_at'] as String? ?? '')?.toLocal(),
+        acceptedAt:
+            DateTime.tryParse(r['my_accepted_at'] as String? ?? '')?.toLocal());
   }
+
+  /// The host's icebreaker; asking to join means answering it out loud.
+  final String prompt;
+  final HangoutEvent? event;
+
+  /// When the plan drops off the feed if nobody is accepted; null for the
+  /// team's plans, which don't expire.
+  final DateTime? expiresAt;
+
+  /// When the host accepted you, which starts the 2-hour lock-in window.
+  DateTime? acceptedAt;
 
   final String id, title, area, city, venue, note, lookingFor;
 
@@ -391,12 +439,25 @@ String whenLabel(DateTime t) {
   return '$day, $time';
 }
 
-/// Someone asking to join one of your plans.
+/// Someone asking to join one of your plans, with their voice answer.
 class HangoutRequest {
-  HangoutRequest(this.hangoutId, this.person, this.status);
+  HangoutRequest(this.hangoutId, this.person, this.status,
+      {this.voiceUrl = '', this.voiceSeconds = 0, this.acceptedAt});
   final String hangoutId;
   final Person person;
+  final String voiceUrl;
+  final int voiceSeconds;
   String status;
+  DateTime? acceptedAt;
+}
+
+/// "5h 12m" or "38m": how long is left until [t], or null once it's passed.
+String? timeLeft(DateTime? t) {
+  if (t == null) return null;
+  final d = t.difference(DateTime.now());
+  if (d.isNegative) return null;
+  final h = d.inHours, m = d.inMinutes % 60;
+  return h > 0 ? '${h}h ${m}m' : '${d.inMinutes.clamp(1, 59)}m';
 }
 
 DateTime _at(int days, int hour, [int minute = 0]) {
@@ -404,59 +465,76 @@ DateTime _at(int days, int hour, [int minute = 0]) {
   return DateTime(n.year, n.month, n.day + days, hour, minute);
 }
 
-List<Hangout> demoHangouts() => [
-      Hangout(
-          id: 'h1',
-          host: demoPeople[0],
-          kind: HangoutKind.coffee,
-          title: 'Filter coffee and a bookstore',
-          startsAt: _at(1, 10, 30),
-          area: 'Church Street',
-          city: 'Bengaluru',
-          note: 'Slow morning, good books, no rush.',
-          spots: 2),
-      Hangout(
-          id: 'h2',
-          host: demoPeople[3],
-          kind: HangoutKind.dinner,
-          title: 'Dinner and good conversation',
-          startsAt: _at(0, 20),
-          area: 'Indiranagar',
-          city: 'Bengaluru',
-          note: 'No phones at the table.',
-          lookingFor: 'People who love long conversations',
-          spots: 3),
-      Hangout(
-          id: 'h3',
-          host: demoPeople[2],
-          kind: HangoutKind.movie,
-          title: 'Late show at the cinema',
-          startsAt: _at(2, 21, 30),
-          area: 'Koramangala',
-          city: 'Bengaluru',
-          note: 'Open to any genre. We vote at the door.',
-          spots: 2),
-      Hangout(
-          id: 'h4',
-          host: demoPeople[1],
-          kind: HangoutKind.outdoors,
-          title: 'Sunset walk at Cubbon Park',
-          startsAt: _at(3, 17, 30),
-          area: 'Cubbon Park',
-          city: 'Bengaluru',
-          note: 'Easy pace, followed by chai.',
-          spots: 4),
-      Hangout(
-          id: 'h5',
-          host: demoPeople[2],
-          kind: HangoutKind.drinks,
-          title: 'Rooftop drinks after work',
-          startsAt: _at(4, 19),
-          area: 'MG Road',
-          city: 'Bengaluru',
-          note: 'Small group, big views.',
-          spots: 1),
-    ];
+List<Hangout> demoHangouts() {
+  // Demo plans were posted a few hours ago, so the 24-hour clock shows.
+  DateTime posted(int hoursAgo) =>
+      DateTime.now().subtract(Duration(hours: hoursAgo)).add(hangoutLifetime);
+  return [
+    Hangout(
+        id: 'h1',
+        host: demoPeople[0],
+        kind: HangoutKind.coffee,
+        title: 'Filter coffee and a bookstore',
+        startsAt: _at(1, 10, 30),
+        area: 'Church Street',
+        city: 'Bengaluru',
+        note: 'Slow morning, good books, no rush.',
+        spots: 2,
+        prompt: 'Best late-night chai spot in town?',
+        expiresAt: posted(3)),
+    Hangout(
+        id: 'h2',
+        host: demoPeople[3],
+        kind: HangoutKind.dinner,
+        title: 'Dinner and good conversation',
+        startsAt: _at(0, 20),
+        area: 'Indiranagar',
+        city: 'Bengaluru',
+        note: 'No phones at the table.',
+        lookingFor: 'People who love long conversations',
+        spots: 3,
+        prompt: 'What’s a dish you could eat every single day?',
+        expiresAt: posted(9)),
+    Hangout(
+        id: 'h3',
+        host: demoPeople[2],
+        kind: HangoutKind.movie,
+        title: 'Spare ticket: Coldplay, Saturday',
+        startsAt: _at(2, 19, 30),
+        area: 'DY Patil Stadium',
+        city: 'Mumbai',
+        note: 'I have one extra pass. Come sing along.',
+        spots: 1,
+        prompt: 'Coldplay or Diljit?',
+        event: HangoutEvent.concert,
+        expiresAt: posted(1)),
+    Hangout(
+        id: 'h4',
+        host: demoPeople[1],
+        kind: HangoutKind.outdoors,
+        title: 'Sunset walk at Cubbon Park',
+        startsAt: _at(0, 17, 30),
+        area: 'Cubbon Park',
+        city: 'Bengaluru',
+        note: 'Easy pace, followed by chai.',
+        spots: 4,
+        prompt: 'Mountains or beaches, and why?',
+        expiresAt: posted(14)),
+    Hangout(
+        id: 'h5',
+        host: demoPeople[2],
+        kind: HangoutKind.drinks,
+        title: 'IPL night: RCB vs CSK screening',
+        startsAt: _at(1, 19),
+        area: 'MG Road',
+        city: 'Bengaluru',
+        note: 'Big screen, small group.',
+        spots: 2,
+        prompt: 'Who’s winning the IPL this year?',
+        event: HangoutEvent.sports,
+        expiresAt: posted(6)),
+  ];
+}
 
 class ChatMessage {
   ChatMessage(this.text, {this.mine = false, DateTime? sentAt})
@@ -1438,7 +1516,13 @@ class PreviewStore extends ChangeNotifier {
         ..addAll(results[1].map((r) => HangoutRequest(
             r['hangout'] as String,
             Person.fromCard({...r, 'id': r['member']}, b.photoUrl),
-            r['status'] as String)));
+            r['status'] as String,
+            voiceUrl: (r['voice_path'] as String? ?? '').isEmpty
+                ? ''
+                : b.voiceUrl(r['voice_path'] as String),
+            voiceSeconds: (r['voice_seconds'] as num?)?.toInt() ?? 0,
+            acceptedAt: DateTime.tryParse(r['accepted_at'] as String? ?? '')
+                ?.toLocal())));
     } catch (_) {
       _failed('Couldn’t load Hangouts. Check your connection.');
     } finally {
@@ -1447,16 +1531,23 @@ class PreviewStore extends ChangeNotifier {
     }
   }
 
-  Future<void> requestToJoin(Hangout h) async {
+  /// Asks to join [h]. Plans with an icebreaker need a [voice] answer (a WAV
+  /// of up to 20 seconds); it's uploaded first, then sent with the request.
+  Future<void> requestToJoin(Hangout h,
+      {Uint8List? voice, int voiceSeconds = 0}) async {
     final b = backend;
     h.status = 'pending';
     notifyListeners();
     if (b == null || !b.signedIn || h.host?.remote != true) return;
+    String? path;
     try {
-      h.status = await b.requestHangout(h.id);
+      if (voice != null) path = await b.uploadVoice(voice);
+      h.status = await b.requestHangout(h.id,
+          voicePath: path ?? '', voiceSeconds: voiceSeconds);
       notifyListeners();
     } catch (_) {
       h.status = null;
+      if (path != null) b.deleteVoice(path).ignore();
       _failed('Couldn’t send your request. Try again.');
     }
   }
@@ -1483,6 +1574,7 @@ class PreviewStore extends ChangeNotifier {
     final b = backend;
     if (b == null || !b.signedIn) return;
     r.status = accept ? 'accepted' : 'declined';
+    if (accept) r.acceptedAt = DateTime.now();
     if (!accept) hangoutRequests.remove(r);
     notifyListeners();
     try {
@@ -1508,6 +1600,11 @@ class PreviewStore extends ChangeNotifier {
     plan = next;
     if (!next.atLeast(Plan.plus)) intentFilter.clear();
     notifyListeners();
+    final b = backend;
+    if (b != null && b.signedIn) {
+      b.choosePreviewPlan(next.name).catchError((Object _) => _failed(
+          'Your plan couldn’t be saved, so it will reset when you reload.'));
+    }
   }
 
   void update() => notifyListeners();
@@ -1694,9 +1791,20 @@ class PreviewStore extends ChangeNotifier {
     // A plan set by an admin (support / troubleshooting) wins, until it ends.
     final adminPlan = row['plan'] as String? ?? '';
     final planUntil = DateTime.tryParse(row['plan_until'] as String? ?? '');
+    var adminSet = false;
     if (planUntil == null || planUntil.isAfter(DateTime.now())) {
       for (final p in Plan.values) {
-        if (p.name == adminPlan) plan = p;
+        if (p.name == adminPlan) {
+          plan = p;
+          adminSet = true;
+        }
+      }
+    }
+    // Otherwise the plan picked in the app, while payments aren't live.
+    if (!adminSet) {
+      final picked = row['preview_plan'] as String? ?? '';
+      for (final p in Plan.values) {
+        if (p.name == picked) plan = p;
       }
     }
     myVerified = row['verified'] as bool? ?? false;

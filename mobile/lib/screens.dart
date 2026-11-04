@@ -89,9 +89,34 @@ class DiscoverScreen extends StatelessWidget {
       );
     }
     final person = people.first;
+    final card = GlobalObjectKey<SwipeCardState>(person);
+
+    /// The buttons send the card off the same way a swipe does.
     void like() {
+      if (store.outOfLikes) {
+        showOutOfLikes(context, store);
+        return;
+      }
       HapticFeedback.lightImpact();
-      showLikeComposer(context, store, person, 'photo');
+      final swipe = card.currentState;
+      if (swipe == null) {
+        showLikeComposer(context, store, person, 'photo');
+      } else {
+        swipe.flyOut(right: true, then: () {
+          if (context.mounted) showLikeComposer(context, store, person, 'photo');
+        });
+      }
+    }
+
+    void passTap() {
+      final swipe = card.currentState;
+      if (swipe == null) {
+        pass(context, person);
+      } else {
+        swipe.flyOut(right: false, then: () {
+          if (context.mounted) pass(context, person);
+        });
+      }
     }
 
     void details() => Navigator.push(
@@ -116,7 +141,7 @@ class DiscoverScreen extends StatelessWidget {
           child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: SwipeCard(
-                  key: ValueKey('swipe-${person.id}'),
+                  key: card,
                   onLike: () => swipeLike(context, person),
                   onPass: () => pass(context, person),
                   child: _PersonCard(
@@ -124,7 +149,7 @@ class DiscoverScreen extends StatelessWidget {
                       onOpen: details,
                       onMore: () => showSafety(context, store, person),
                       onBoost: () => showBoost(context, store),
-                      onPass: () => pass(context, person),
+                      onPass: passTap,
                       onLike: like,
                       onSpark: () => showSpark(context, store, person),
                       onUndo: store.canUndo ? () => undoPass(context) : null,
@@ -190,6 +215,7 @@ class _RoundAction extends StatelessWidget {
 }
 
 /// Drag the card right to like or left to pass. Short drags spring back.
+/// Each new card eases in; [SwipeCardState.flyOut] lets buttons send it off.
 class SwipeCard extends StatefulWidget {
   const SwipeCard(
       {super.key,
@@ -202,21 +228,35 @@ class SwipeCard extends StatefulWidget {
   final bool Function() onLike;
   final VoidCallback onPass;
   @override
-  State<SwipeCard> createState() => _SwipeCardState();
+  State<SwipeCard> createState() => SwipeCardState();
 }
 
-class _SwipeCardState extends State<SwipeCard>
-    with SingleTickerProviderStateMixin {
+class SwipeCardState extends State<SwipeCard> with TickerProviderStateMixin {
   late final controller = AnimationController(
       vsync: this, duration: const Duration(milliseconds: 420))
     ..addListener(() => setState(() => dx = animation.value));
+  late final enter = AnimationController(
+      vsync: this, duration: const Duration(milliseconds: 320))
+    ..forward();
   Animation<double> animation = const AlwaysStoppedAnimation(0);
   double dx = 0;
+  double width = 0;
+  bool leaving = false;
 
   @override
   void dispose() {
     controller.dispose();
+    enter.dispose();
     super.dispose();
+  }
+
+  /// Sends the card off to the right (like) or left (pass), then runs [then].
+  Future<void> flyOut({required bool right, required VoidCallback then}) async {
+    if (leaving) return;
+    leaving = true;
+    await animateTo((right ? 1.5 : -1.5) * width);
+    if (mounted) then();
+    leaving = false;
   }
 
   Future<void> animateTo(double target) {
@@ -240,13 +280,25 @@ class _SwipeCardState extends State<SwipeCard>
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(builder: (context, c) {
+        width = c.maxWidth;
         final progress = (dx / (c.maxWidth * .3)).clamp(-1.0, 1.0);
+        final rise = CurvedAnimation(parent: enter, curve: Curves.easeOutBack);
         return GestureDetector(
-            onHorizontalDragStart: (_) => controller.stop(),
-            onHorizontalDragUpdate: (d) => setState(() => dx += d.delta.dx),
-            onHorizontalDragEnd: (d) =>
-                release(c.maxWidth, d.velocity.pixelsPerSecond.dx),
-            child: Transform.translate(
+            onHorizontalDragStart: (_) {
+              if (!leaving) controller.stop();
+            },
+            onHorizontalDragUpdate: (d) {
+              if (!leaving) setState(() => dx += d.delta.dx);
+            },
+            onHorizontalDragEnd: (d) {
+              if (!leaving) release(c.maxWidth, d.velocity.pixelsPerSecond.dx);
+            },
+            // The next card rises gently from behind the one that left.
+            child: FadeTransition(
+                opacity: enter,
+                child: ScaleTransition(
+                    scale: Tween(begin: .92, end: 1.0).animate(rise),
+                    child: Transform.translate(
                 offset: Offset(dx, 0),
                 // A slight 3D turn, like lifting a magazine page.
                 child: Transform(
@@ -269,7 +321,7 @@ class _SwipeCardState extends State<SwipeCard>
                             color: EverlaneColors.pass,
                             opacity: -progress,
                             alignment: Alignment.topRight),
-                    ]))));
+                    ]))))));
       });
 }
 
@@ -769,6 +821,26 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
   var distance = store.distance;
   var verified = store.verifiedOnly;
   final intents = {...store.intentFilter};
+  final screen = context;
+
+  // The sheet's own context is gone once it closes, so the upgrade opens
+  // from the screen underneath.
+  void upgrade(BuildContext sheet, String title, String detail) {
+    Navigator.pop(sheet);
+    if (screen.mounted) {
+      showUpgrade(screen, store, title: title, detail: detail);
+    }
+  }
+
+  void verifiedUpgrade(BuildContext sheet) => upgrade(
+      sheet,
+      'See only the real deal.',
+      'Filter to selfie-verified profiles with Plus, Gold or Platinum.');
+  void intentionsUpgrade(BuildContext sheet) => upgrade(
+      sheet,
+      'Meet people who want what you want.',
+      'Filter by relationship intentions with Plus, Gold or Platinum.');
+
   await showEverlaneSheet(
       context,
       StatefulBuilder(
@@ -816,50 +888,49 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                   const Expanded(child: Text('Selfie-verified profiles')),
                   if (!store.canFilterVerified)
                     TextButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          showUpgrade(context, store,
-                              title: 'See only the real deal.',
-                              detail:
-                                  'Filter to selfie-verified profiles with Plus, Gold or Platinum.');
-                        },
+                        onPressed: () => verifiedUpgrade(context),
                         icon: const Icon(Icons.lock_outline_rounded, size: 16),
                         label: const Text('Plus')),
                 ]),
-                SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('A little extra peace of mind',
-                        style: TextStyle(fontSize: 13)),
-                    value: store.canFilterVerified && verified,
-                    onChanged: store.canFilterVerified
-                        ? (value) => setState(() => verified = value)
-                        : null),
+                // Locked controls stay greyed out but open the upgrade.
+                GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: store.canFilterVerified
+                        ? null
+                        : () => verifiedUpgrade(context),
+                    child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('A little extra peace of mind',
+                            style: TextStyle(fontSize: 13)),
+                        value: store.canFilterVerified && verified,
+                        onChanged: store.canFilterVerified
+                            ? (value) => setState(() => verified = value)
+                            : null)),
                 const SizedBox(height: 14),
                 Row(children: [
                   const Expanded(child: Text('Relationship intentions')),
                   if (!store.canFilterIntentions)
                     TextButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          showUpgrade(context, store,
-                              title: 'Meet people who want what you want.',
-                              detail:
-                                  'Filter by relationship intentions with Plus, Gold or Platinum.');
-                        },
+                        onPressed: () => intentionsUpgrade(context),
                         icon: const Icon(Icons.lock_outline_rounded, size: 16),
                         label: const Text('Plus')),
                 ]),
                 const SizedBox(height: 8),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final c in LookingFor.values)
-                    FilterChip(
-                        label: Text(c.short),
-                        selected: intents.contains(c),
-                        onSelected: store.canFilterIntentions
-                            ? (on) => setState(
-                                () => on ? intents.add(c) : intents.remove(c))
-                            : null),
-                ]),
+                GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: store.canFilterIntentions
+                        ? null
+                        : () => intentionsUpgrade(context),
+                    child: Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final c in LookingFor.values)
+                        FilterChip(
+                            label: Text(c.short),
+                            selected: intents.contains(c),
+                            onSelected: store.canFilterIntentions
+                                ? (on) => setState(() =>
+                                    on ? intents.add(c) : intents.remove(c))
+                                : null),
+                    ])),
                 const SizedBox(height: 22),
                 FilledButton(
                     onPressed: () {
@@ -1829,10 +1900,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ])),
       const SizedBox(height: 18),
       Center(
-          child: Text.rich(
-              EverlaneFonts.nameAge(store.myName, store.myAge,
-                  size: 32, color: EverlaneColors.plum),
-              textAlign: TextAlign.center)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Flexible(
+            child: Text.rich(
+                EverlaneFonts.nameAge(store.myName, store.myAge,
+                    size: 32, color: EverlaneColors.plum),
+                textAlign: TextAlign.center)),
+        if (store.myVerified) ...[
+          const SizedBox(width: 8),
+          const Tooltip(
+              message: 'Selfie verified',
+              child: Icon(Icons.verified_rounded,
+                  size: 24, color: Color(0xFF60A5FA))),
+        ],
+      ])),
       const SizedBox(height: 6),
       Center(
           child: Wrap(
@@ -1858,25 +1939,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: TextStyle(color: EverlaneColors.muted, fontSize: 14)),
               ]),
           ])),
-      const SizedBox(height: 10),
-      Center(
-          child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                  color: store.myProfilePosted
-                      ? EverlaneColors.boost.withValues(alpha: .15)
-                      : EverlaneColors.blush,
-                  borderRadius: BorderRadius.circular(30)),
-              child: Text(
-                  store.myProfilePosted
-                      ? 'Live in the preview'
-                      : 'Draft, not posted',
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: store.myProfilePosted
-                          ? EverlaneColors.boost
-                          : EverlaneColors.like)))),
       const SizedBox(height: 18),
       Center(
           child: SizedBox(
