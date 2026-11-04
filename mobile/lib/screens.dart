@@ -821,6 +821,26 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
   var distance = store.distance;
   var verified = store.verifiedOnly;
   final intents = {...store.intentFilter};
+  final screen = context;
+
+  // The sheet's own context is gone once it closes, so the upgrade opens
+  // from the screen underneath.
+  void upgrade(BuildContext sheet, String title, String detail) {
+    Navigator.pop(sheet);
+    if (screen.mounted) {
+      showUpgrade(screen, store, title: title, detail: detail);
+    }
+  }
+
+  void verifiedUpgrade(BuildContext sheet) => upgrade(
+      sheet,
+      'See only the real deal.',
+      'Filter to selfie-verified profiles with Plus, Gold or Platinum.');
+  void intentionsUpgrade(BuildContext sheet) => upgrade(
+      sheet,
+      'Meet people who want what you want.',
+      'Filter by relationship intentions with Plus, Gold or Platinum.');
+
   await showEverlaneSheet(
       context,
       StatefulBuilder(
@@ -868,50 +888,49 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                   const Expanded(child: Text('Selfie-verified profiles')),
                   if (!store.canFilterVerified)
                     TextButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          showUpgrade(context, store,
-                              title: 'See only the real deal.',
-                              detail:
-                                  'Filter to selfie-verified profiles with Plus, Gold or Platinum.');
-                        },
+                        onPressed: () => verifiedUpgrade(context),
                         icon: const Icon(Icons.lock_outline_rounded, size: 16),
                         label: const Text('Plus')),
                 ]),
-                SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text('A little extra peace of mind',
-                        style: TextStyle(fontSize: 13)),
-                    value: store.canFilterVerified && verified,
-                    onChanged: store.canFilterVerified
-                        ? (value) => setState(() => verified = value)
-                        : null),
+                // Locked controls stay greyed out but open the upgrade.
+                GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: store.canFilterVerified
+                        ? null
+                        : () => verifiedUpgrade(context),
+                    child: SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('A little extra peace of mind',
+                            style: TextStyle(fontSize: 13)),
+                        value: store.canFilterVerified && verified,
+                        onChanged: store.canFilterVerified
+                            ? (value) => setState(() => verified = value)
+                            : null)),
                 const SizedBox(height: 14),
                 Row(children: [
                   const Expanded(child: Text('Relationship intentions')),
                   if (!store.canFilterIntentions)
                     TextButton.icon(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          showUpgrade(context, store,
-                              title: 'Meet people who want what you want.',
-                              detail:
-                                  'Filter by relationship intentions with Plus, Gold or Platinum.');
-                        },
+                        onPressed: () => intentionsUpgrade(context),
                         icon: const Icon(Icons.lock_outline_rounded, size: 16),
                         label: const Text('Plus')),
                 ]),
                 const SizedBox(height: 8),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final c in LookingFor.values)
-                    FilterChip(
-                        label: Text(c.short),
-                        selected: intents.contains(c),
-                        onSelected: store.canFilterIntentions
-                            ? (on) => setState(
-                                () => on ? intents.add(c) : intents.remove(c))
-                            : null),
-                ]),
+                GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: store.canFilterIntentions
+                        ? null
+                        : () => intentionsUpgrade(context),
+                    child: Wrap(spacing: 8, runSpacing: 8, children: [
+                      for (final c in LookingFor.values)
+                        FilterChip(
+                            label: Text(c.short),
+                            selected: intents.contains(c),
+                            onSelected: store.canFilterIntentions
+                                ? (on) => setState(() =>
+                                    on ? intents.add(c) : intents.remove(c))
+                                : null),
+                    ])),
                 const SizedBox(height: 22),
                 FilledButton(
                     onPressed: () {
