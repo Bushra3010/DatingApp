@@ -582,7 +582,11 @@ class PersonDetailsScreen extends StatelessWidget {
   final bool fromChat;
   @override
   Widget build(BuildContext context) => Scaffold(
+        // Opaque, so nothing scrolls up under it.
         appBar: AppBar(
+            backgroundColor: EverlaneColors.paper,
+            surfaceTintColor: Colors.transparent,
+            scrolledUnderElevation: 0,
             title: Text(fromChat ? person.name : 'Discover',
                 style: const TextStyle(fontSize: 17)),
             actions: [
@@ -592,6 +596,9 @@ class PersonDetailsScreen extends StatelessWidget {
                   icon: const Icon(Icons.more_horiz)),
               const SizedBox(width: 12)
             ]),
+        // Pass or like from anywhere on the page, without scrolling back up.
+        bottomNavigationBar:
+            fromChat ? null : _DetailActions(store: store, person: person),
         body: Center(
             child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 480),
@@ -1751,7 +1758,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final store = widget.store;
     final strength = store.profileCompleteness;
-    return ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 32), children: [
+    return ListView(padding: const EdgeInsets.fromLTRB(20, 0, 20, 40), children: [
       if (store.adminWarning.isNotEmpty)
         Container(
             margin: const EdgeInsets.only(top: 12),
@@ -3204,6 +3211,51 @@ class _PlanCard extends StatelessWidget {
               style: TextStyle(fontSize: 11, color: EverlaneColors.muted)),
         ],
       ]));
+}
+
+/// Pass and Like, pinned to the bottom of a profile's details.
+class _DetailActions extends StatelessWidget {
+  const _DetailActions({required this.store, required this.person});
+  final PreviewStore store;
+  final Person person;
+  @override
+  Widget build(BuildContext context) => Container(
+      decoration: BoxDecoration(
+          color: EverlaneColors.paper,
+          border: Border(top: BorderSide(color: EverlaneColors.line))),
+      child: SafeArea(
+          top: false,
+          child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+              // heightFactor: a bare Center would fill the whole screen here.
+              child: Center(
+                  heightFactor: 1,
+                  child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: Row(children: [
+                        Expanded(
+                            child: OutlinedButton.icon(
+                                onPressed: () {
+                                  HapticFeedback.selectionClick();
+                                  store.skip(person);
+                                  Navigator.pop(context);
+                                },
+                                style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size(0, 52),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(16))),
+                                icon: const Icon(Icons.close_rounded),
+                                label: const Text('Pass'))),
+                        const SizedBox(width: 12),
+                        Expanded(
+                            flex: 2,
+                            child: GradientButton(
+                                label: 'Like ${person.name.split(' ').first}',
+                                icon: Icons.favorite_rounded,
+                                onTap: () => showLikeComposer(
+                                    context, store, person, 'photo'))),
+                      ]))))));
 }
 
 /// Moves its child at a slower rate than the page scrolls.
