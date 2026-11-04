@@ -452,7 +452,10 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     <button type="button" class="tab" data-view="train-chat">Training chat</button>
     <button type="button" class="tab" data-view="train-test">Tests</button>
   </div>
-  <div class="nav sb" data-subnav="hang" aria-label="Hangouts pages"><button type="button" class="tab" data-view="hangouts">Plans</button></div>
+  <div class="nav sb" data-subnav="hang" aria-label="Hangouts pages">
+    <button type="button" class="tab" data-view="hangouts">Plans</button>
+    <button type="button" class="tab" data-view="hangouts-official">Everlane plans <span class="pill bad hidden" id="hgReqBadge"></span></button>
+  </div>
   <div class="nav sb" data-subnav="subs" aria-label="Revenue pages">
     <button type="button" class="tab" data-view="subs-plans">Plans</button>
     <button type="button" class="tab" data-view="subs-promos">Promos</button>
@@ -622,6 +625,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
       <div class="bulkbar">
         <button class="btn small" id="hgSelAll"></button><button class="btn small" id="hgSelClear">Clear</button>
         <span class="muted" id="hgSelCount" style="margin-right:8px"></span>
+        <button class="btn small" id="hgCancel">Cancel selected</button>
         <button class="btn small danger" id="hgDelete">Delete selected</button>
       </div>
       <div class="card scroll"><table>
@@ -629,6 +633,39 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
         <tbody id="hangouts"></tbody>
       </table></div>
       <p class="muted" id="hgCount" style="margin-top:10px"></p>
+    </div>
+
+    <div id="view-hangouts-official" class="hidden">
+      <div class="head"><div><h2>Everlane plans</h2>
+        <p class="sub">Plans the team hosts, and the members asking to join them.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <p class="note info">These plans are hosted by the official “Everlane” profile and show an “Everlane event” badge in the app. Someone from the team should actually be at the venue; members who ask to join get a reply from you here.</p>
+      <form class="card pad" id="hgOfficialForm" style="margin-bottom:12px">
+        <h3>Host a plan as Everlane</h3>
+        <div class="formgrid">
+          <div><label for="hoKind">What</label><select id="hoKind"></select></div>
+          <div><label for="hoTitle">Title</label><input type="text" id="hoTitle" maxlength="60" placeholder="e.g. Sunday brunch with the Everlane team"></div>
+          <div><label for="hoDate">Date</label><input type="date" id="hoDate" class="fld"></div>
+          <div><label for="hoTime">Time</label><input type="time" id="hoTime" class="fld"></div>
+          <div><label for="hoCity">City</label><input type="text" id="hoCity" maxlength="60" placeholder="e.g. Bengaluru"></div>
+          <div><label for="hoArea">Area <span class="sub" style="font-weight:500">(everyone sees this)</span></label><input type="text" id="hoArea" maxlength="60" placeholder="e.g. Indiranagar"></div>
+          <div><label for="hoVenue">Exact venue <span class="sub" style="font-weight:500">(only accepted guests)</span></label><input type="text" id="hoVenue" maxlength="120" placeholder="e.g. Toit, 100 Feet Rd"></div>
+          <div><label for="hoSpots">Spots</label><input type="number" id="hoSpots" min="1" max="8" step="1" value="4"></div>
+          <div><label for="hoNote">Note</label><input type="text" id="hoNote" maxlength="140" placeholder="Anything guests should know (140 max)"></div>
+          <div><label for="hoLooking">Who are you hoping to meet?</label><input type="text" id="hoLooking" maxlength="80" placeholder="e.g. New members in their 20s and 30s"></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn primary" id="hoCreate">Host this plan</button></div>
+      </form>
+      <div class="head" style="margin-top:18px"><div><h3 style="margin:0">Requests</h3>
+        <p class="sub">Members asking to join an Everlane plan. Accepting shows them the exact venue.</p></div>
+        <div class="chips" id="hgReqFilter" role="group" aria-label="Which requests">
+          <button type="button" class="chip on" data-req="pending" aria-pressed="true">Pending</button>
+          <button type="button" class="chip" data-req="all" aria-pressed="false">All</button>
+        </div></div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Plan</th><th>Member</th><th>Requested</th><th>Status</th><th></th></tr></thead>
+        <tbody id="hgRequests"></tbody>
+      </table></div>
     </div>
 
     <div id="view-reports" class="hidden">
@@ -873,6 +910,11 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
       <div class="grid g3" id="priceCards"></div>
       <p class="sub" style="margin-top:12px">The app shows India prices on the Membership screen. Free has no price.</p>
       <div class="row" style="margin-top:10px"><button class="btn primary" id="priceSave">Save prices</button></div>
+
+      <div class="head" style="margin-top:22px"><div><h3 style="margin:0">Features and limits</h3>
+        <p class="sub">What each membership tier is called and what it includes.</p></div></div>
+      <p class="note info">These names, limits and perks show in the app’s Membership screen. Prices are set above.</p>
+      <div class="grid g3" id="planCards"></div>
     </div>
 
     <div id="view-subs-promos" class="hidden">
@@ -1252,7 +1294,7 @@ const ROLE_INFO = {
   finance: 'Plans, free premium and boosts, plus the overview and members list.',
   analyst: 'The overview and members list, read-only.' };
 // Which permission opens each section.
-const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', hangouts: 'bots', reports: 'moderate', photos: 'moderate',
+const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', hangouts: 'bots', 'hangouts-official': 'bots', reports: 'moderate', photos: 'moderate',
   'train-kb': 'bots', 'train-style': 'bots', 'train-time': 'bots', 'train-chat': 'bots', 'train-test': 'bots',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team',
   'subs-plans': 'billing', 'subs-promos': 'billing', 'subs-transactions': 'billing', 'subs-iap': 'billing', 'subs-reports': 'billing',
@@ -1345,7 +1387,7 @@ function show(view) {
   try { history.replaceState(null, '', '#' + view); } catch (e) {}
   if (MOCK_VIEWS.has(view)) return window.EverlaneMock.render(view);
   window.EverlaneMock?.close();
-  return ({ overview: loadOverview, leads: loadMembers, gen: loadGenerator, bots: loadBots, hangouts: loadHangouts, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
+  return ({ overview: loadOverview, leads: loadMembers, gen: loadGenerator, bots: loadBots, hangouts: loadHangouts, 'hangouts-official': loadHangoutsOfficial, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
      audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: () => {},
      'subs-plans': loadPrices, 'subs-promos': loadPromos, 'subs-transactions': loadTransactions, 'subs-iap': loadProducts,
      'subs-reports': loadRevenue, 'train-kb': loadTrainKb, 'train-style': loadTrainStyle, 'train-time': loadTrainTime,
@@ -2547,7 +2589,7 @@ function renderHangouts() {
     <td style="white-space:nowrap">${esc(fmtWhen(h.starts_at))}</td>
     <td>${esc(h.city || '—')} · ${esc(h.area || '—')}</td><td>${esc(HG_KINDS[h.kind] || h.kind)}</td>
     <td><b style="color:var(--text)">${esc(h.title)}</b>${h.venue ? `<br><span class="code">${esc(h.venue)}</span>` : ''}</td>
-    <td>${esc(h.host_name || '—')} ${h.host_bot ? '<span class="pill warn">Bot</span>' : ''}</td>
+    <td>${esc(h.host_name || '—')} ${h.host_bot ? '<span class="pill warn">Bot</span>' : h.host_name === 'Everlane' ? '<span class="pill ok">Everlane</span>' : ''}</td>
     <td>${h.requests || 0} · ${h.accepted || 0} in</td><td>${h.spots}</td><td>${hgStatus(h)}</td>
   </tr>`).join('') || `<tr><td colspan="9" class="muted">${hangouts.length ? 'No upcoming plans. Choose “All” to see past ones.' : 'No plans yet.'}</td></tr>`;
   const up = hangouts.filter(h => !h.cancelled && new Date(h.starts_at) >= Date.now()).length;
@@ -2573,6 +2615,79 @@ $('#hgDelete').onclick = async () => {
     if (error) throw error;
     hgSel.clear(); toast(`Deleted ${data} plan${data === 1 ? '' : 's'}`); loadHangouts();
   } catch (x) { fail(x); }
+};
+// Cancelling hides a plan from members but keeps the record (and its requests).
+$('#hgCancel').onclick = async () => {
+  const ids = [...hgSel];
+  if (!ids.length) return toast('Select some plans first');
+  if (!confirm(`Cancel ${ids.length} plan${ids.length > 1 ? 's' : ''}? Members won’t see ${ids.length > 1 ? 'them' : 'it'} any more; the record stays here.`)) return;
+  try {
+    const { data, error } = await sb.rpc('admin_cancel_hangouts', { ids });
+    if (error) throw error;
+    hgSel.clear(); toast(`Cancelled ${data ?? ids.length} plan${(data ?? ids.length) === 1 ? '' : 's'}`); loadHangouts();
+  } catch (x) { fail(x); }
+};
+
+// ----- Everlane plans: hosted by the official profile, plus their join requests -----
+let hgRequests = [], hgReqFilter = 'pending';
+$('#hoKind').innerHTML = Object.entries(HG_KINDS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+async function loadHangoutsOfficial() {
+  const { data, error } = await sb.rpc('admin_hangout_requests');
+  if (error) return fail(error);
+  hgRequests = data || [];
+  badge('#hgReqBadge', hgRequests.filter(r => r.status === 'pending').length);
+  renderHangoutRequests();
+}
+const reqPill = s => s === 'accepted' ? '<span class="pill ok">Accepted</span>' : s === 'declined' ? '<span class="pill bad">Declined</span>' : '<span class="pill warn">Pending</span>';
+function renderHangoutRequests() {
+  const list = (hgReqFilter === 'all' ? hgRequests : hgRequests.filter(r => r.status === 'pending'))
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  $('#hgRequests').innerHTML = list.map(r => `<tr>
+    <td><b style="color:var(--text)">${esc(r.title)}</b><br><span class="code">${esc(fmtWhen(r.starts_at))}${r.city ? ' · ' + esc(r.city) : ''}</span></td>
+    <td>${esc(r.member_name || '—')} ${r.member_verified ? '<span class="pill ok">Verified</span>' : ''}<br><span class="code">${esc(r.member_email || '')}${r.member_city ? ' · ' + esc(r.member_city) : ''}</span></td>
+    <td style="white-space:nowrap">${esc(fmtWhen(r.created_at))}</td>
+    <td>${reqPill(r.status)}</td>
+    <td style="white-space:nowrap">${r.status === 'pending' ? `<button class="btn small primary" data-req-answer="1" data-plan="${esc(r.hangout)}" data-who="${esc(r.member)}">Accept</button>
+      <button class="btn small" data-req-answer="0" data-plan="${esc(r.hangout)}" data-who="${esc(r.member)}">Decline</button>` : ''}</td>
+  </tr>`).join('') || `<tr><td colspan="5" class="muted">${hgRequests.length ? 'No pending requests. Choose “All” to see answered ones.' : 'No requests yet.'}</td></tr>`;
+}
+document.querySelectorAll('#hgReqFilter [data-req]').forEach(b => b.onclick = () => {
+  hgReqFilter = b.dataset.req;
+  document.querySelectorAll('#hgReqFilter [data-req]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
+  renderHangoutRequests();
+});
+$('#hgRequests').onclick = async e => {
+  const b = e.target.closest('[data-req-answer]');
+  if (!b) return;
+  const accept = b.dataset.reqAnswer === '1';
+  b.disabled = true;
+  const { error } = await sb.rpc('admin_answer_hangout_request', { plan: b.dataset.plan, who: b.dataset.who, accept });
+  if (error) { b.disabled = false; return fail(error); }
+  toast(accept ? 'Request accepted' : 'Request declined'); loadHangoutsOfficial();
+};
+$('#hgOfficialForm').onsubmit = async e => {
+  e.preventDefault();
+  const title = $('#hoTitle').value.trim(), city = $('#hoCity').value.trim(), area = $('#hoArea').value.trim(), venue = $('#hoVenue').value.trim();
+  const note = $('#hoNote').value.trim(), looking_for = $('#hoLooking').value.trim(), spots = +$('#hoSpots').value;
+  if (!title) return toast('Enter a title');
+  if (title.length > 60) return toast('Keep the title to 60 characters');
+  if (!$('#hoDate').value || !$('#hoTime').value) return toast('Pick the date and time');
+  const starts = new Date(`${$('#hoDate').value}T${$('#hoTime').value}`);
+  if (isNaN(starts)) return toast('Check the date and time');
+  if (starts <= Date.now()) return toast('The plan must be in the future');
+  if (!city) return toast('Enter the city');
+  if (!area) return toast('Enter the area everyone sees');
+  if (!venue) return toast('Enter the exact venue');
+  if (note.length > 140) return toast('Keep the note to 140 characters');
+  if (looking_for.length > 80) return toast('Keep “who are you hoping to meet” to 80 characters');
+  if (!(Number.isInteger(spots) && spots >= 1 && spots <= 8)) return toast('Spots is 1 to 8');
+  $('#hoCreate').disabled = true;
+  const { error } = await sb.rpc('admin_create_hangout', { kind: $('#hoKind').value, title, starts_at: starts.toISOString(), area, venue, city,
+    note: note || null, looking_for: looking_for || null, spots });
+  $('#hoCreate').disabled = false;
+  if (error) return fail(error);
+  $('#hgOfficialForm').reset(); $('#hoSpots').value = 4;
+  toast('Plan hosted as Everlane'); loadHangoutsOfficial();
 };
 
 // ---------- Reports ----------
@@ -2925,7 +3040,51 @@ const itemName = (kind, item) => kind === 'subscription' ? (PLAN_NAMES[item] || 
 const indiaPrice = plan => billing.prices.find(p => p.country === 'India' && p.plan === plan);
 
 // ----- Plans -----
-async function loadPrices() { if (await loadBilling()) renderPrices(); }
+async function loadPrices() { if (await loadBilling()) { renderPrices(); loadPlanFeatures(); } }
+// Tier names, limits and perks (table plans); what the app's Membership screen lists.
+const TIERS = ['free', 'plus', 'gold', 'platinum'];
+async function loadPlanFeatures() {
+  const { data, error } = await sb.from('plans').select('*').order('position');
+  if (error) return fail(error);
+  const rows = (data || []).sort((a, b) => TIERS.indexOf(a.plan) - TIERS.indexOf(b.plan));
+  const numFld = (id, label, v) => `<div><label for="${id}">${label}</label><input type="number" id="${id}" min="0" step="1" value="${esc(v ?? 0)}"></div>`;
+  $('#planCards').innerHTML = rows.map(p => { const id = 'pf-' + p.plan; return `<div class="card pad" data-tier="${esc(p.plan)}">
+    <h3>${esc(PLAN_NAMES[p.plan] || p.plan)}</h3>
+    <div class="formgrid">
+      <div><label for="${id}-title">Title</label><input type="text" id="${id}-title" maxlength="40" value="${esc(p.title)}"></div>
+      <div><label for="${id}-tag">Tagline</label><input type="text" id="${id}-tag" maxlength="80" value="${esc(p.tagline)}"></div>
+      ${numFld(id + '-likes', 'Daily likes', p.daily_likes)}
+      ${numFld(id + '-sparks', 'Sparks per week', p.weekly_sparks)}
+      ${numFld(id + '-boosts', 'Boosts per month', p.monthly_boosts)}
+      <div><label for="${id}-hl">Highlight badge</label><input type="text" id="${id}-hl" maxlength="30" value="${esc(p.highlight)}" placeholder="e.g. Most popular"></div>
+    </div>
+    <label for="${id}-perks">Perks <span class="sub" style="font-weight:500">(one per line)</span></label>
+    <textarea id="${id}-perks" rows="5">${esc((p.perks || []).join('\n'))}</textarea>
+    <div class="row" style="margin-top:12px;justify-content:space-between">
+      <label class="tog"><input type="checkbox" id="${id}-active" ${p.active || p.plan === 'free' ? 'checked' : ''} ${p.plan === 'free' ? 'disabled' : ''}> Active${p.plan === 'free' ? ' (always)' : ''}</label>
+      <button type="button" class="btn small primary" data-plan-save="${esc(p.plan)}">Save ${esc(PLAN_NAMES[p.plan] || p.plan)}</button>
+    </div>
+    <p class="sub" style="font-size:12px;margin-top:10px">Updated ${fmtDate(p.updated_at)}</p></div>`; }).join('')
+    || '<p class="sub">No tiers found. Apply the plans migration first.</p>';
+  document.querySelectorAll('#planCards [data-plan-save]').forEach(b => b.onclick = async () => {
+    const plan = b.dataset.planSave, id = '#pf-' + plan, name = PLAN_NAMES[plan] || plan;
+    const title = $(id + '-title').value.trim(), tagline = $(id + '-tag').value.trim();
+    if (!title) return toast(`Enter the ${name} title`);
+    const nums = {};
+    for (const [k, sel, lbl] of [['daily_likes', '-likes', 'daily likes'], ['weekly_sparks', '-sparks', 'sparks per week'], ['monthly_boosts', '-boosts', 'boosts per month']]) {
+      const v = +$(id + sel).value.trim();
+      if (!(Number.isInteger(v) && v >= 0)) return toast(`${name}: ${lbl} is a whole number, 0 or more`);
+      nums[k] = v;
+    }
+    const perks = $(id + '-perks').value.split('\n').map(x => x.trim()).filter(Boolean);
+    const item = { plan, title, tagline, ...nums, perks, highlight: $(id + '-hl').value.trim(), active: plan === 'free' ? true : $(id + '-active').checked };
+    b.disabled = true;
+    const { error } = await sb.rpc('admin_save_plan', { item });
+    b.disabled = false;
+    if (error) return fail(error);
+    toast(`${name} saved`); loadPlanFeatures();
+  });
+}
 function renderPrices() {
   const byCountry = {};
   billing.prices.forEach(p => {
