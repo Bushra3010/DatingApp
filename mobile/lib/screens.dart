@@ -1829,10 +1829,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ])),
       const SizedBox(height: 18),
       Center(
-          child: Text.rich(
-              EverlaneFonts.nameAge(store.myName, store.myAge,
-                  size: 32, color: EverlaneColors.plum),
-              textAlign: TextAlign.center)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Flexible(
+            child: Text.rich(
+                EverlaneFonts.nameAge(store.myName, store.myAge,
+                    size: 32, color: EverlaneColors.plum),
+                textAlign: TextAlign.center)),
+        if (store.myVerified) ...[
+          const SizedBox(width: 8),
+          const Tooltip(
+              message: 'Selfie verified',
+              child: Icon(Icons.verified_rounded,
+                  size: 24, color: Color(0xFF60A5FA))),
+        ],
+      ])),
       const SizedBox(height: 6),
       Center(
           child: Wrap(
