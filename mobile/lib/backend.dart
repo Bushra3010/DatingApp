@@ -215,6 +215,15 @@ class ProfileBackend {
   Future<void> recordArea(double lat, double lng) =>
       client.rpc('record_area', params: {'lat': lat, 'lng': lng});
 
+  /// Where the member is now, rounded to about 1 km by the database, so
+  /// Discover and Hangouts can use real distances.
+  Future<void> recordLocation(double lat, double lng) =>
+      client.rpc('record_location', params: {'p_lat': lat, 'p_lng': lng});
+
+  /// Membership tiers as set in the admin panel.
+  Future<List<Map<String, dynamic>>> plans() async =>
+      _rows(await client.from('plans').select().eq('active', true).order('position'));
+
   Future<List<Map<String, dynamic>>> crossedPaths() async =>
       _rows(await client.rpc('crossed_paths'));
 

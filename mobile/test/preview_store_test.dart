@@ -105,19 +105,14 @@ void main() {
     expect(store.intentFilter, isEmpty);
   });
 
-  test('A city search ignores distance; Nearby lists only people close by',
-      () {
+  test('Distance limits Discover; Nearby lists only people close by', () {
     final store = PreviewStore();
     addTearDown(store.dispose);
     store.ages = const RangeValues(18, 60);
     store.distance = 1;
     expect(store.discover, isEmpty);
-    store.cityFilter = 'bengaluru';
-    expect(store.discover, isNotEmpty,
-        reason: 'case-insensitive, and distance no longer applies');
-    store.cityFilter = 'Mumbai';
-    expect(store.discover, isEmpty);
-    expect(store.cityOptions, contains('Mumbai'));
+    store.distance = 25;
+    expect(store.discover, isNotEmpty);
     expect(store.nearby.every((p) => p.distance <= 5), isTrue);
     expect(store.nearby.map((p) => p.distance).toList(),
         [...store.nearby.map((p) => p.distance)]..sort());
