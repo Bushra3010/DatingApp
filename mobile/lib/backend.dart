@@ -250,15 +250,23 @@ class ProfileBackend {
         'note': h.note,
         'looking_for': h.lookingFor,
         'spots': h.spots,
+        'prompt': h.prompt,
+        'event_tag': h.event?.name ?? '',
       });
 
   Future<void> cancelHangout(String id) =>
       client.rpc('cancel_hangout', params: {'plan': id});
 
   /// Returns your request's status: 'pending', or 'accepted' straight away
-  /// for a sample profile's plan.
-  Future<String?> requestHangout(String id) async =>
-      await client.rpc('request_hangout', params: {'plan': id}) as String?;
+  /// for a sample profile's plan. Plans with an icebreaker need the voice
+  /// answer's storage path (see migration 035).
+  Future<String?> requestHangout(String id,
+          {String voicePath = '', int voiceSeconds = 0}) async =>
+      await client.rpc('request_hangout', params: {
+        'plan': id,
+        'voice_path': voicePath,
+        'voice_seconds': voiceSeconds,
+      }) as String?;
 
   Future<List<Map<String, dynamic>>> hangoutRequestsMine() async =>
       _rows(await client.rpc('hangout_requests_mine'));

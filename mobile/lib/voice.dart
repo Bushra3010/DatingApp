@@ -378,3 +378,154 @@ class _VoicePromptState extends State<VoicePrompt>
                       fontSize: 14, fontStyle: FontStyle.italic, height: 1.5))),
       ]));
 }
+
+/// A recorded answer to a Hangout's icebreaker.
+typedef VoiceAnswer = ({Uint8List wav, int seconds});
+
+/// Records an answer to [prompt] of up to [maxHangoutVoiceSeconds]; returns
+/// null if the sheet is closed without sending.
+Future<VoiceAnswer?> recordHangoutAnswer(
+        BuildContext context, String prompt, String hostName) =>
+    showEverlaneSheet<VoiceAnswer>(
+        context, _HangoutAnswer(prompt: prompt, hostName: hostName));
+
+class _HangoutAnswer extends StatefulWidget {
+  const _HangoutAnswer({required this.prompt, required this.hostName});
+  final String prompt, hostName;
+  @override
+  State<_HangoutAnswer> createState() => _HangoutAnswerState();
+}
+
+class _HangoutAnswerState extends State<_HangoutAnswer> {
+  final recorder = AudioRecorder();
+  final pcm = BytesBuilder(copy: false);
+  StreamSubscription<Uint8List>? sub;
+  Timer? ticker;
+  int seconds = 0;
+  bool recording = false;
+  Uint8List? wav;
+
+  @override
+  void dispose() {
+    ticker?.cancel();
+    sub?.cancel();
+    recorder.dispose();
+    super.dispose();
+  }
+
+  Future<void> start() async {
+    try {
+      if (!await recorder.hasPermission()) {
+        if (mounted) {
+          showNotice(context, 'Allow microphone access to record your answer.');
+        }
+        return;
+      }
+      pcm.clear();
+      final stream = await recorder.startStream(const RecordConfig(
+          encoder: AudioEncoder.pcm16bits,
+          sampleRate: _sampleRate,
+          numChannels: 1,
+          echoCancel: true,
+          noiseSuppress: true));
+      sub = stream.listen(pcm.add);
+      setState(() {
+        recording = true;
+        seconds = 0;
+        wav = null;
+      });
+      ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+        setState(() => seconds++);
+        // Hard stop at the cap.
+        if (seconds >= maxHangoutVoiceSeconds) stop();
+      });
+    } catch (_) {
+      if (mounted) showNotice(context, 'Couldn’t start recording. Try again.');
+    }
+  }
+
+  Future<void> stop() async {
+    ticker?.cancel();
+    await recorder.stop();
+    await sub?.cancel();
+    sub = null;
+    final bytes = pcm.takeBytes();
+    setState(() {
+      recording = false;
+      wav = seconds < 1 || bytes.isEmpty ? null : wavFromPcm16(bytes);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final clip = wav;
+    final left = maxHangoutVoiceSeconds - seconds;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Eyebrow('Answer to join'),
+      const SizedBox(height: 10),
+      Text('“${widget.prompt}”',
+          style: Theme.of(context).textTheme.headlineMedium),
+      const SizedBox(height: 8),
+      Text(
+          'No typing here: ${widget.hostName} listens to your answer before accepting. Up to $maxHangoutVoiceSeconds seconds.',
+          style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
+      const SizedBox(height: 24),
+      Center(
+          child: Column(children: [
+        Text(
+            recording
+                ? '0:${left.toString().padLeft(2, '0')} left'
+                : '0:${seconds.toString().padLeft(2, '0')} / 0:$maxHangoutVoiceSeconds',
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: recording ? EverlaneColors.like : EverlaneColors.muted)),
+        const SizedBox(height: 12),
+        Semantics(
+            button: true,
+            label: recording ? 'Stop recording' : 'Start recording',
+            child: GestureDetector(
+                onTap: recording ? stop : start,
+                child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: recording ? EverlaneColors.like : null,
+                        gradient:
+                            recording ? null : EverlaneColors.premiumGradient,
+                        boxShadow: [
+                          BoxShadow(
+                              color: EverlaneColors.like.withValues(alpha: .4),
+                              blurRadius: recording ? 26 : 14)
+                        ]),
+                    child: Icon(
+                        recording ? Icons.stop_rounded : Icons.mic_rounded,
+                        color: Colors.white,
+                        size: 38)))),
+        const SizedBox(height: 10),
+        Text(
+            recording
+                ? 'Recording… tap to stop'
+                : clip == null
+                    ? 'Tap to record'
+                    : 'Tap to record again',
+            style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+      ])),
+      if (clip != null && !recording) ...[
+        const SizedBox(height: 20),
+        VoicePrompt(id: 'answer', seconds: seconds, bytes: clip),
+      ],
+      const SizedBox(height: 22),
+      GradientButton(
+          label: 'Send request',
+          icon: Icons.send_rounded,
+          onTap: clip == null || recording
+              ? null
+              : () => Navigator.pop(context,
+                  (wav: clip, seconds: seconds.clamp(1, maxHangoutVoiceSeconds)))),
+      const SizedBox(height: 10),
+    ]);
+  }
+}
