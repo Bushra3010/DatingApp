@@ -232,7 +232,7 @@ class _HangoutsScreenState extends State<HangoutsScreen> {
                   ],
                   Text(
                       store.signedIn && store.myCity.isNotEmpty
-                          ? 'Plans within ${store.distance.round()} km of ${store.myCity.split(',').first}. Host one, or ask to join.'
+                          ? 'Plans within ${store.distance.round()} km of you. Host one, or ask to join.'
                           : 'Host a plan, or ask to join one that suits you.',
                       style: TextStyle(color: EverlaneColors.muted, height: 1.4)),
                   const SizedBox(height: 14),
@@ -383,9 +383,15 @@ class _HangoutCard extends StatelessWidget {
                       ? 'You'
                       : host.age > 0 ? '${host.name}, ${host.age}' : host.name,
                       style: const TextStyle(fontWeight: FontWeight.w700)),
-                  Text('${h.kind.label}, hosted by $hostName',
-                      style:
-                          TextStyle(fontSize: 11, color: EverlaneColors.muted)),
+                  Text(
+                      h.official
+                          ? '${h.kind.label} · Everlane event, hosted by the team'
+                          : '${h.kind.label}, hosted by $hostName',
+                      style: TextStyle(
+                          fontSize: 11,
+                          color: h.official
+                              ? EverlaneColors.lavender
+                              : EverlaneColors.muted)),
                 ])),
             _pill(
                 h.spotsLeft == 0
@@ -511,7 +517,8 @@ class _HangoutCard extends StatelessWidget {
                   })),
               // Real members can chat once the host accepts (that matches
               // you); the demo lets you message straight away.
-              if (h.status == 'accepted' || !(host?.remote ?? false))
+              if (!h.official &&
+                  (h.status == 'accepted' || !(host?.remote ?? false)))
                 OutlinedButton(
                     onPressed: () => Navigator.push(
                         context,

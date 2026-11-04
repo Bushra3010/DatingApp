@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'
     show AuthException, RealtimeChannel;
 import 'backend.dart';
 import 'chemistry.dart';
+import 'cities.dart';
 import 'question_bank.dart';
 import 'theme.dart';
 
@@ -254,11 +255,22 @@ enum Plan {
     'Hangouts: host or join plans nearby',
   ]);
 
-  const Plan(this.title, this.price, this.tagline, this.dailyLikes,
-      this.monthlyBoosts, this.weeklySparks, this.perks);
-  final String title, price, tagline;
-  final int dailyLikes, monthlyBoosts, weeklySparks;
-  final List<String> perks;
+  const Plan(this._title, this.price, this._tagline, this._dailyLikes,
+      this._monthlyBoosts, this._weeklySparks, this._perks);
+  final String _title, price, _tagline;
+  final int _dailyLikes, _monthlyBoosts, _weeklySparks;
+  final List<String> _perks;
+
+  /// The admin panel can rename a tier and change what it includes; the
+  /// built-in values are the fallback.
+  PlanConfig? get _c => planConfigs[this];
+  String get title => _c?.title ?? _title;
+  String get tagline => _c?.tagline ?? _tagline;
+  int get dailyLikes => _c?.dailyLikes ?? _dailyLikes;
+  int get monthlyBoosts => _c?.monthlyBoosts ?? _monthlyBoosts;
+  int get weeklySparks => _c?.weeklySparks ?? _weeklySparks;
+  List<String> get perks => _c?.perks ?? _perks;
+  String get highlight => _c?.highlight ?? (this == Plan.gold ? 'Most popular' : '');
 
   bool atLeast(Plan other) => index >= other.index;
 
@@ -295,7 +307,8 @@ class Hangout {
       int? spotsLeft,
       this.distanceKm,
       this.status,
-      this.pendingRequests = 0})
+      this.pendingRequests = 0,
+      this.official = false})
       : spotsLeft = spotsLeft ?? spots;
 
   /// From a `hangouts_near` row (see migration 020).
@@ -334,10 +347,14 @@ class Hangout {
         spotsLeft: (r['spots_left'] as num?)?.toInt(),
         distanceKm: (r['distance_km'] as num?)?.toInt(),
         status: r['my_status'] as String?,
-        pendingRequests: (r['pending_requests'] as num?)?.toInt() ?? 0);
+        pendingRequests: (r['pending_requests'] as num?)?.toInt() ?? 0,
+        official: r['host_official'] as bool? ?? false);
   }
 
   final String id, title, area, city, venue, note, lookingFor;
+
+  /// Hosted by the Everlane team's own profile (made in the admin panel).
+  final bool official;
   final Person? host;
   final HangoutKind kind;
   final DateTime startsAt;
@@ -661,37 +678,11 @@ class PreviewStore extends ChangeNotifier {
   RangeValues ages = const RangeValues(21, 40);
   double distance = 25;
 
-  /// Discover asks the server for people within [distance], unless a city
-  /// filter is set (that city may be further away).
-  int? get _maxKm => cityFilter.isEmpty ? distance.round() : null;
-
-  /// Show people in one city only (empty: anywhere within [distance]).
-  /// Looking in another city ignores the distance limit.
-  String cityFilter = '';
+  /// Discover asks the server for people within [distance] of where you
+  /// are (your shared position, or your city).
+  int? get _maxKm => distance.round();
   bool verifiedOnly = false;
 
-  static const popularCities = [
-    'Bengaluru',
-    'Mumbai',
-    'Delhi',
-    'Hyderabad',
-    'Chennai',
-    'Pune',
-    'Kolkata',
-    'Ahmedabad',
-    'Jaipur',
-    'Goa',
-  ];
-
-  /// Cities people in the pool live in, then popular ones, for suggestions.
-  List<String> get cityOptions => {
-        for (final p in _pool)
-          if (p.city.trim().isNotEmpty) p.city.trim(),
-        ...popularCities,
-      }.toList();
-
-  bool _inCity(Person p) =>
-      p.city.trim().toLowerCase() == cityFilter.trim().toLowerCase();
   bool paused = false;
   bool notifications = true;
 
@@ -1043,7 +1034,7 @@ class PreviewStore extends ChangeNotifier {
               !conversations.any((chat) => chat.person.id == p.id) &&
               // A real member without a birthday has age 0; don't hide them.
               (p.age == 0 || (p.age >= ages.start && p.age <= ages.end)) &&
-              (cityFilter.isEmpty ? p.distance <= distance : _inCity(p)) &&
+              p.distance <= distance &&
               (!verifiedOnly || p.verified) &&
               (intentFilter.isEmpty || p.lookingFor.any(intentFilter.contains)))
           .toList();
@@ -1242,6 +1233,20 @@ class PreviewStore extends ChangeNotifier {
       }
       if (added) notifyListeners();
     }, onError: (Object _) {});
+  }
+
+  /// Tells the server roughly where the member is (about 1 km), so Discover
+  /// and Hangouts use real distances rather than the home city. Quiet when
+  /// location is off; Discover then falls back to the city.
+  Future<void> _shareLiveLocation(ProfileBackend b) async {
+    final at = await currentPosition();
+    if (at == null || !b.signedIn) return;
+    try {
+      await b.recordLocation(at.$1, at.$2);
+      await refreshMembers();
+    } catch (_) {
+      // The city centre is used instead.
+    }
   }
 
   Future<void> _loadCommunitySafely() async {
@@ -1610,6 +1615,20 @@ class PreviewStore extends ChangeNotifier {
       if (of('interest').isNotEmpty) interestOptions = of('interest');
       if (of('language').isNotEmpty) languageOptions = of('language');
       if (of('prompt').isNotEmpty) promptOptions = of('prompt');
+      for (final r in await b.plans()) {
+        for (final p in Plan.values) {
+          if (p.name == r['plan']) {
+            planConfigs[p] = PlanConfig(
+                title: r['title'] as String? ?? p._title,
+                tagline: r['tagline'] as String? ?? p._tagline,
+                dailyLikes: (r['daily_likes'] as num?)?.toInt() ?? p._dailyLikes,
+                weeklySparks: (r['weekly_sparks'] as num?)?.toInt() ?? p._weeklySparks,
+                monthlyBoosts: (r['monthly_boosts'] as num?)?.toInt() ?? p._monthlyBoosts,
+                perks: List<String>.from(r['perks'] as List? ?? p._perks),
+                highlight: r['highlight'] as String? ?? '');
+          }
+        }
+      }
       for (final r in await b.planPrices()) {
         for (final p in Plan.values) {
           if (p.name == r['plan']) {
@@ -1653,6 +1672,7 @@ class PreviewStore extends ChangeNotifier {
     }
     // People, likes and chats load alongside the member's own photos.
     final community = _loadCommunitySafely();
+    _shareLiveLocation(b).ignore();
     myName = row['name'] as String? ?? '';
     myBirthday = DateTime.tryParse(row['birthday'] as String? ?? '');
     myGender = row['gender'] as String? ?? '';
@@ -1718,6 +1738,23 @@ String heightLabel(int cm) {
 
 /// Admin-made bot profiles (see `sample_profile_ids()` in Supabase).
 final Set<String> sampleProfileIds = {};
+
+/// A tier's name, limits and perks as set in the admin panel (plans table).
+class PlanConfig {
+  const PlanConfig(
+      {required this.title,
+      required this.tagline,
+      required this.dailyLikes,
+      required this.weeklySparks,
+      required this.monthlyBoosts,
+      required this.perks,
+      required this.highlight});
+  final String title, tagline, highlight;
+  final int dailyLikes, weeklySparks, monthlyBoosts;
+  final List<String> perks;
+}
+
+final Map<Plan, PlanConfig> planConfigs = {};
 
 /// Monthly prices from Supabase's plan_prices (set in the admin panel),
 /// e.g. {Plan.gold: '₹499'}. Empty until loaded; plans fall back to their

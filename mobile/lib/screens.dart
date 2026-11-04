@@ -780,8 +780,6 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
   var ages = store.ages;
   var distance = store.distance;
   var verified = store.verifiedOnly;
-  var city = store.cityFilter;
-  final cityField = TextEditingController(text: city);
   final intents = {...store.intentFilter};
   await showEverlaneSheet(
       context,
@@ -822,55 +820,9 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                     max: 100,
                     divisions: 99,
                     label: '${distance.round()} km',
-                    onChanged: city.isEmpty
-                        ? (value) => setState(() => distance = value)
-                        : null),
-                const SizedBox(height: 10),
-                Row(children: [
-                  const Expanded(child: Text('City')),
-                  Text(city.isEmpty ? 'Near me' : city,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                ]),
-                const SizedBox(height: 10),
-                TextField(
-                    controller: cityField,
-                    textInputAction: TextInputAction.search,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                        hintText: 'Search a city, e.g. Mumbai',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        suffixIcon: city.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: 'Clear city',
-                                onPressed: () => setState(() {
-                                      city = '';
-                                      cityField.clear();
-                                    }),
-                                icon: const Icon(Icons.close_rounded))),
-                    onChanged: (v) => setState(() => city = v.trim())),
-                const SizedBox(height: 10),
-                Wrap(spacing: 8, runSpacing: 8, children: [
-                  for (final option in store.cityOptions
-                      .where((c) => c
-                          .toLowerCase()
-                          .contains(cityField.text.trim().toLowerCase()))
-                      .take(8))
-                    ChoiceChip(
-                        label: Text(option),
-                        selected: option.toLowerCase() == city.toLowerCase(),
-                        onSelected: (on) => setState(() {
-                              city = on ? option : '';
-                              cityField.text = city;
-                            })),
-                ]),
-                if (city.isNotEmpty)
-                  Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                          'Showing people in $city. Distance doesn’t apply.',
-                          style: TextStyle(
-                              fontSize: 12, color: EverlaneColors.muted))),
+                    onChanged: (value) => setState(() => distance = value)),
+                Text('From where you are now (or your city when location is off). We never show exact locations.',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
                 const SizedBox(height: 18),
                 Row(children: [
                   const Expanded(child: Text('Selfie-verified profiles')),
@@ -925,7 +877,6 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                     onPressed: () {
                       store.ages = ages;
                       store.distance = distance;
-                      store.cityFilter = city;
                       store.verifiedOnly = store.canFilterVerified && verified;
                       store.intentFilter
                         ..clear()
@@ -940,8 +891,6 @@ Future<void> showFilters(BuildContext context, PreviewStore store) async {
                         onPressed: () => setState(() {
                               ages = const RangeValues(21, 40);
                               distance = 25;
-                              city = '';
-                              cityField.clear();
                               verified = false;
                               intents.clear();
                             }),
@@ -3200,14 +3149,14 @@ class _PlanCard extends StatelessWidget {
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -.6))),
-          if (plan == Plan.gold)
+          if (plan.highlight.isNotEmpty)
             Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                     color: EverlaneColors.blush,
                     borderRadius: BorderRadius.circular(20)),
-                child: const Text('Most popular',
+                child: Text(plan.highlight,
                     style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
