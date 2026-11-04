@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
 <title>Everlane Admin</title>
-<meta name="version" content="0.3.8">
+<meta name="version" content="0.3.9">
 <link rel="icon" type="image/png" href="../favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Caveat+Brush&display=swap" rel="stylesheet">
@@ -855,19 +855,20 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
         <input type="text" id="botSearch" placeholder="Search name, city or BOT number…" aria-label="Search bots">
         <select id="botGender" aria-label="Bot gender"><option value="">All genders</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
         <select id="botCity" aria-label="Bot city"><option value="">All cities</option></select>
-        <select id="botStatus" aria-label="Bot status"><option value="">Any status</option><option value="live">Live</option><option value="paused">Paused</option><option value="off">Switched off</option><option value="nophoto">Needs a real photo</option></select>
+        <select id="botStatus" aria-label="Bot status"><option value="">Any status</option><option value="live">Live</option><option value="paused">Paused</option><option value="off">Switched off</option><option value="verified">Verified only</option><option value="unverified">Unverified only</option><option value="nophoto">Needs a real photo</option></select>
         <select id="botBatch" aria-label="Bot batch"><option value="">All batches</option></select>
       </div>
       <div class="bulkbar">
         <button class="btn small" id="botSelAll"></button><button class="btn small" id="botSelClear">Clear</button>
         <span class="muted" id="botSelCount" style="margin-right:8px"></span>
+        <button class="btn small ok" data-bulk="verify">✓ Verify</button><button class="btn small" data-bulk="unverify">Unverify</button>
         <button class="btn small" data-bulk="activate">Activate</button><button class="btn small" data-bulk="pause">Pause</button>
         <button class="btn small" data-bulk="bios">New bios</button><button class="btn small" data-bulk="city">Move city</button>
         <button class="btn small danger" data-bulk="delete">Delete</button>
         <button class="btn small" id="botJson">Copy JSON</button><button class="btn small" id="botCsv">Copy CSV</button>
       </div>
       <div class="card scroll"><table>
-        <thead><tr><th></th><th>Name</th><th>Age</th><th>Gender → wants</th><th>City</th><th>Batch</th><th>Status</th><th>Photo</th></tr></thead>
+        <thead><tr><th></th><th>Name</th><th>Age</th><th>Gender → wants</th><th>City</th><th>Batch</th><th>Status</th><th>Verified</th><th>Photo</th></tr></thead>
         <tbody id="bots"></tbody>
       </table></div>
       <input type="file" id="botQuickFile" accept="image/jpeg,image/png,image/webp" class="hidden" aria-label="Bot photo">
@@ -2286,7 +2287,7 @@ function filteredBots() {
     st = $('#botStatus').value, bt = $('#botBatch').value;
   return bots.filter(b => (!q || [b.name, b.city, botCode(b)].some(v => (v || '').toLowerCase().includes(q)))
     && (!g || b.gender === g) && (!c || b.city === c) && (!bt || b.bot_batch === bt)
-    && (!st || (st === 'nophoto' ? !hasRealPhoto(b) : botStatus(b) === st)));
+    && (!st || (st === 'nophoto' ? !hasRealPhoto(b) : st === 'verified' ? !!b.verified : st === 'unverified' ? !b.verified : botStatus(b) === st)));
 }
 function renderBots() {
   const list = filteredBots();
@@ -2295,11 +2296,12 @@ function renderBots() {
   $('#bots').innerHTML = list.slice(botPage * BOT_PAGE, (botPage + 1) * BOT_PAGE).map(b => `<tr data-bot="${esc(b.id)}">
     <td><input type="checkbox" data-sel="${esc(b.id)}" ${botSel.has(b.id) ? 'checked' : ''} aria-label="Select ${esc(b.name)}"></td>
     <td style="white-space:nowrap">${b.photos?.length ? `<img class="avatar" src="${esc(photoUrl(b.photos[0]))}" alt="" loading="lazy">` : `<span class="avatar">${esc((b.name || '?')[0])}</span>`}
-      <span style="display:inline-block;vertical-align:middle;margin-left:8px"><b style="color:var(--text)">${esc(b.name || 'Unnamed')}</b><br><span class="code">${botCode(b)}</span></span></td>
+      <span style="display:inline-block;vertical-align:middle;margin-left:8px"><b style="color:var(--text)">${esc(b.name || 'Unnamed')}</b>${b.verified ? '<span title="Verified" style="color:var(--primary);margin-left:4px;font-size:13px;font-weight:bold"> ✓</span>' : ''}<br><span class="code">${botCode(b)}</span></span></td>
     <td>${ageOf(b) || '—'}</td><td>${esc(b.gender || '—')} → ${esc(b.interested_in || '—')}</td><td>${esc(b.city || '—')}</td>
     <td>${esc(b.bot_batch || 'By hand')}</td><td>${STATUS_PILL[botStatus(b)]}</td>
+    <td><button type="button" class="btn small ${b.verified ? 'ok' : ''}" data-verify="${esc(b.id)}" title="${b.verified ? 'Click to unverify' : 'Click to verify'}">${b.verified ? '✓ Verified' : '+ Verify'}</button></td>
     <td><button class="btn small" data-photo="${esc(b.id)}">${hasRealPhoto(b) ? 'Add photo' : 'Upload photo'}</button></td>
-  </tr>`).join('') || `<tr><td colspan="8" class="muted">${bots.length ? 'No bots match.' : 'No bots yet. Use Generate bots, “New bot” or “Bulk create”.'}</td></tr>`;
+  </tr>`).join('') || `<tr><td colspan="9" class="muted">${bots.length ? 'No bots match.' : 'No bots yet. Use Generate bots, “New bot” or “Bulk create”.'}</td></tr>`;
   $('#botPager').innerHTML = pages > 1 ? `<button class="btn small" id="botPrev" ${botPage ? '' : 'disabled'}>Previous</button>
     <span class="muted">Page ${botPage + 1} of ${pages}</span><button class="btn small" id="botNext" ${botPage < pages - 1 ? '' : 'disabled'}>Next</button>` : '';
   $('#botPrev')?.addEventListener('click', () => { botPage--; renderBots(); });
@@ -2312,11 +2314,28 @@ function renderBots() {
 $('#botSelAll').onclick = () => { filteredBots().forEach(b => botSel.add(b.id)); renderBots(); };
 $('#botSelClear').onclick = () => { botSel.clear(); renderBots(); };
 $('#bots').onclick = e => {
-  const sel = e.target.closest('[data-sel]'), photo = e.target.closest('[data-photo]'), row = e.target.closest('[data-bot]');
+  const sel = e.target.closest('[data-sel]'), photo = e.target.closest('[data-photo]'), vbtn = e.target.closest('[data-verify]'), row = e.target.closest('[data-bot]');
   if (sel) { sel.checked ? botSel.add(sel.dataset.sel) : botSel.delete(sel.dataset.sel); $('#botSelCount').textContent = `${botSel.size} selected`; }
+  else if (vbtn) {
+    const b = bots.find(x => x.id === vbtn.dataset.verify);
+    if (b) toggleBotVerified(b);
+  }
   else if (photo) { photoFor = photo.dataset.photo; $('#botQuickFile').click(); }
   else if (row) editProfile(bots.find(b => b.id === row.dataset.bot));
 };
+async function toggleBotVerified(b) {
+  const next = !b.verified;
+  try {
+    const { error } = await sb.rpc('admin_toggle_bot_verified', { bot_id: b.id, p_verified: next });
+    if (error) {
+      const { error: err2 } = await sb.from('profiles').update({ verified: next }).eq('id', b.id);
+      if (err2) throw err2;
+    }
+    b.verified = next;
+    toast(`${b.name || 'Bot'} is now ${next ? 'Verified ✓' : 'Unverified'}`);
+    renderBots();
+  } catch (err) { fail(err); }
+}
 // Upload photo: the new photo becomes the main one and replaces a drawn placeholder.
 $('#botQuickFile').onchange = async e => {
   const file = e.target.files[0], b = bots.find(x => x.id === photoFor);
@@ -2351,6 +2370,18 @@ document.querySelectorAll('[data-bulk]').forEach(btn => btn.onclick = async () =
   if (act === 'delete' && !confirm(`Delete ${list.length} bot${list.length > 1 ? 's' : ''} and their photos?`)) return;
   try {
     if (act === 'delete') await deleteBots(ids);
+    else if (act === 'verify' || act === 'unverify') {
+      const isV = act === 'verify';
+      try {
+        await botsAction(ids, isV ? 'verify' : 'unverify');
+      } catch (err) {
+        await sb.from('profiles').update({ verified: isV }).in('id', ids);
+      }
+      list.forEach(b => b.verified = isV);
+      toast(`${isV ? 'Verified ✓' : 'Unverified'} ${list.length} bot${list.length > 1 ? 's' : ''}`);
+      renderBots();
+      return;
+    }
     else if (act === 'bios') await botsAction(ids, 'fields', Object.fromEntries(list.map(b => [b.id, { bio: makeBio(b, 'Mixed') }])));
     else await botsAction(ids, act);
     toast({ activate: 'Activated', pause: 'Paused', bios: 'New bios written for', delete: 'Deleted' }[act] + ` ${list.length} bot${list.length > 1 ? 's' : ''}`);
@@ -2457,6 +2488,16 @@ async function editProfile(bot, member = false) {
     <label>Interests</label>${pick('interest', optionValues('interest'), b.interests || [])}
     <label>Languages</label>${pick('language', optionValues('language'), b.languages || [])}
     ${member ? '' : `<label>Compatibility quiz <button type="button" class="btn small" id="bShuffle">Shuffle answers</button></label><div id="bQuiz"></div>`}
+    <div style="margin:12px 0;padding:10px 14px;background:var(--card-sub);border-radius:10px;display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <b style="color:var(--text);font-size:13.5px">Verified badge</b>
+        <p class="muted" style="margin:2px 0 0;font-size:12px">Show the blue verified checkmark icon next to this profile in the app.</p>
+      </div>
+      <label style="cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+        <input type="checkbox" id="bVerified" ${b.verified ? 'checked' : ''} style="width:18px;height:18px">
+        <span style="font-weight:600;font-size:13px">Verified</span>
+      </label>
+    </div>
     <div class="err" id="bErr"></div>
     <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px;flex-wrap:wrap">
       <div>${bot && !member ? '<button type="button" class="btn danger" id="bDelete">Delete bot</button>' : ''}</div>
@@ -2505,6 +2546,7 @@ async function editProfile(bot, member = false) {
       job: $('#bJob', ov).value.trim(), looking_for: $('#bLooking', ov).value, bio: $('#bBio', ov).value.trim(),
       prompt_label: $('#bPrompt', ov).value, prompt_answer: $('#bAnswer', ov).value.trim(),
       height_cm: height ? +height : null, interests: checked('interest'), languages: checked('language'),
+      verified: $('#bVerified', ov)?.checked ?? b.verified ?? false,
       ...(member ? {} : { quiz_answers: quiz }) };
     $('#bSave', ov).disabled = true; $('#bSave', ov).textContent = 'Saving…';
     try {
@@ -2719,7 +2761,7 @@ function drawAvatar(gender) {
 const canvasBlob = c => new Promise(r => c.toBlob(r, 'image/webp', .85));
 
 const gen = { count: 50, women: 55, men: 40, nb: 5, wants: 'Realistic', goal: 'Mixed', ageMin: 22, ageMax: 36,
-  bio: 'Mixed', likes: 20, where: 'random', cities: [], photos: true };
+  bio: 'Mixed', likes: 20, where: 'random', cities: [], photos: true, verified: true };
 
 function makeGenBot(gender, city) {
   const info = cityInfo(city), R = REGIONS[info.region];
@@ -2733,7 +2775,7 @@ function makeGenBot(gender, city) {
     looking_for: gen.goal === 'Mixed' ? weighted(GOAL_WEIGHTS) : gen.goal, interests, languages,
     prompt_label: rnd(optionValues('prompt').length ? optionValues('prompt') : ['My ideal Sunday is']), prompt_answer: rnd(ANSWERS),
     height_cm: gender === 'Woman' ? between(152, 172) : gender === 'Man' ? between(165, 188) : between(155, 182),
-    quiz_answers: randomQuizAnswers(), likes_test: chance(gen.likes) };
+    quiz_answers: randomQuizAnswers(), likes_test: chance(gen.likes), verified: gen.verified ?? true };
   b.bio = makeBio(b, gen.bio);
   return b;
 }
@@ -2770,7 +2812,8 @@ function renderGenerator() {
         <div><label for="gMax">Max age</label><input type="number" id="gMax" min="18" max="80"></div></div>
       <label for="gBio">Bio style</label><select id="gBio">${['Mixed', 'Short', 'Playful', 'Thoughtful'].map(v => `<option>${v}</option>`).join('')}</select>
       <label for="gLikes">Chance a bot has already liked a test account: <b id="gLikesV"></b></label><input type="range" id="gLikes" min="0" max="100">
-      <p class="muted" style="font-size:12px;margin:4px 0 0">Bots are only seen by test accounts, so their likes go to a random test account, never a real member.</p></div>
+      <p class="muted" style="font-size:12px;margin:4px 0 0">Bots are only seen by test accounts, so their likes go to a random test account, never a real member.</p>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--body);margin:12px 0 0;cursor:pointer"><input type="checkbox" id="gVerified" style="width:auto"> <b>Verified badge</b> · Give generated bots the blue verified checkmark badge</label></div>
     <div class="card"><h3>4. Location</h3>
       <div class="seg"><button type="button" class="btn small" data-where="random">Random across India</button><button type="button" class="btn small" data-where="cities">Specific cities</button></div>
       <p class="muted" id="gRandomHint" style="font-size:12px;margin:10px 0 0">Cities are chosen at random across ${CITIES.length} Indian cities, weighted by size (metros get more bots). Names match the region of each city.</p>
@@ -2795,13 +2838,14 @@ function renderGenerator() {
   $('#gW').value = gen.women; $('#gM').value = gen.men; $('#gN').value = gen.nb;
   $('#gWants').value = gen.wants; $('#gGoal').value = gen.goal; $('#gMin').value = gen.ageMin; $('#gMax').value = gen.ageMax;
   $('#gBio').value = gen.bio; $('#gLikes').value = gen.likes; $('#gPhotos').checked = gen.photos;
+  if ($('#gVerified')) $('#gVerified').checked = gen.verified !== false;
   f.addEventListener('input', e => {
     if (e.target.id === 'gCityIn') return;
     if (e.target.id === 'gCountR') $('#gCount').value = e.target.value;
     if (e.target.id === 'gCount') $('#gCountR').value = e.target.value;
     Object.assign(gen, { count: Math.max(1, Math.min(500, +$('#gCount').value || 1)), women: +$('#gW').value, men: +$('#gM').value,
       nb: +$('#gN').value, wants: $('#gWants').value, goal: $('#gGoal').value, ageMin: +$('#gMin').value, ageMax: +$('#gMax').value,
-      bio: $('#gBio').value, likes: +$('#gLikes').value, photos: $('#gPhotos').checked });
+      bio: $('#gBio').value, likes: +$('#gLikes').value, photos: $('#gPhotos').checked, verified: $('#gVerified')?.checked ?? true });
     updateGenerator();
   });
   f.querySelectorAll('[data-count]').forEach(b => b.onclick = () => { $('#gCount').value = b.dataset.count; f.dispatchEvent(new Event('input')); });
