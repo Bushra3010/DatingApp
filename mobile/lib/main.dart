@@ -204,6 +204,7 @@ class _EverlaneShellState extends State<EverlaneShell> {
                           name: store.myName,
                           age: store.myAge,
                           location: store.myCity,
+                          verified: store.myVerified,
                           photo: store.hasPhoto
                               ? MemoryImage(store.myPhotos.first)
                               : null,

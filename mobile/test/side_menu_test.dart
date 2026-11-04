@@ -39,4 +39,21 @@ void main() {
     await tester.tap(find.byTooltip('Edit profile'));
     expect(edited, isTrue);
   });
+
+  testWidgets('The verified badge shows only for verified members',
+      (tester) async {
+    Widget menu(bool verified) => MaterialApp(
+        home: Scaffold(
+            body: SideMenu(
+                name: 'Pratik',
+                age: 33,
+                location: 'Aurangabad',
+                verified: verified,
+                items: const [])));
+    await tester.pumpWidget(menu(false));
+    expect(find.byTooltip('Verified Profile'), findsNothing);
+    await tester.pumpWidget(menu(true));
+    expect(find.byTooltip('Verified Profile'), findsOneWidget);
+    expect(find.text('Pratik, 33'), findsOneWidget);
+  });
 }

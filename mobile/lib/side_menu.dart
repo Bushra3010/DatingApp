@@ -26,11 +26,15 @@ class SideMenu extends StatelessWidget {
       required this.location,
       required this.items,
       this.photo,
-      this.onEdit});
+      this.onEdit,
+      this.verified = false});
   final String name;
   final int age;
   final String location;
   final List<SideMenuItem> items;
+
+  /// Selfie-verified by the team: shows the badge after the name.
+  final bool verified;
 
   /// The member's first photo; their initial shows without one.
   final ImageProvider? photo;
@@ -94,6 +98,7 @@ class SideMenu extends StatelessWidget {
               location: location,
               photo: photo,
               onEdit: onEdit,
+              verified: verified,
               top: padding.top),
           const Divider(height: 1, thickness: 1, color: line),
           Expanded(
@@ -131,12 +136,14 @@ class _Header extends StatelessWidget {
       required this.location,
       required this.photo,
       required this.onEdit,
+      required this.verified,
       required this.top});
   final String name;
   final int age;
   final String location;
   final ImageProvider? photo;
   final VoidCallback? onEdit;
+  final bool verified;
   final double top;
 
   @override
@@ -175,11 +182,25 @@ class _Header extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-              Text(age > 0 ? '$name, $age' : name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontFamily: 'Lora', fontSize: 25, color: SideMenu.cream)),
+              Row(children: [
+                Flexible(
+                    child: Text(age > 0 ? '$name, $age' : name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontFamily: 'Lora',
+                            fontSize: 25,
+                            color: SideMenu.cream))),
+                if (verified) ...[
+                  const SizedBox(width: 6),
+                  const Tooltip(
+                      message: 'Verified Profile',
+                      child: Icon(Icons.verified_rounded,
+                          size: 20,
+                          color: Color(0xFF38B6FF),
+                          semanticLabel: 'Verified Profile')),
+                ],
+              ]),
               const SizedBox(height: 6),
               Row(children: [
                 const Icon(Icons.location_on, size: 14, color: SideMenu.gold),
