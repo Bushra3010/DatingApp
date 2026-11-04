@@ -1508,6 +1508,11 @@ class PreviewStore extends ChangeNotifier {
     plan = next;
     if (!next.atLeast(Plan.plus)) intentFilter.clear();
     notifyListeners();
+    final b = backend;
+    if (b != null && b.signedIn) {
+      b.choosePreviewPlan(next.name).catchError((Object _) => _failed(
+          'Your plan couldn’t be saved, so it will reset when you reload.'));
+    }
   }
 
   void update() => notifyListeners();
@@ -1694,9 +1699,20 @@ class PreviewStore extends ChangeNotifier {
     // A plan set by an admin (support / troubleshooting) wins, until it ends.
     final adminPlan = row['plan'] as String? ?? '';
     final planUntil = DateTime.tryParse(row['plan_until'] as String? ?? '');
+    var adminSet = false;
     if (planUntil == null || planUntil.isAfter(DateTime.now())) {
       for (final p in Plan.values) {
-        if (p.name == adminPlan) plan = p;
+        if (p.name == adminPlan) {
+          plan = p;
+          adminSet = true;
+        }
+      }
+    }
+    // Otherwise the plan picked in the app, while payments aren't live.
+    if (!adminSet) {
+      final picked = row['preview_plan'] as String? ?? '';
+      for (final p in Plan.values) {
+        if (p.name == picked) plan = p;
       }
     }
     myVerified = row['verified'] as bool? ?? false;

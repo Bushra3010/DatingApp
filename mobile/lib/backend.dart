@@ -114,6 +114,11 @@ class ProfileBackend {
     return path;
   }
 
+  /// Keeps the plan picked in the app while payments aren't live
+  /// (see migration 034).
+  Future<void> choosePreviewPlan(String plan) =>
+      client.rpc('choose_preview_plan', params: {'p_plan': plan});
+
   /// Uploads a live-selfie burst into the private "verifications" bucket
   /// and queues it for an admin to review.
   Future<void> submitVerification(List<Uint8List> frames) async {
