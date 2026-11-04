@@ -142,14 +142,12 @@ void main() {
     await tester.drag(find.text('Ananya, 27'), const Offset(300, 0));
     await tester.pumpAndSettle();
     expect(find.text('You liked Ananya'), findsOneWidget);
-    expect(find.text('7 likes left today · Free'), findsOneWidget);
     await tester.drag(find.text('Meera, 28'), const Offset(-300, 0));
     await tester.pumpAndSettle();
     expect(find.text('Isha, 25'), findsOneWidget);
     await tester.drag(find.text('Isha, 25'), const Offset(40, 0));
     await tester.pumpAndSettle();
     expect(find.text('Isha, 25'), findsOneWidget);
-    expect(find.text('7 likes left today · Free'), findsOneWidget);
   });
 
   /// Explore moved to the side menu when Hangouts became a main tab.
@@ -218,7 +216,6 @@ void main() {
     expect(find.text('Current plan'), findsOneWidget);
     await tester.pageBack();
     await tester.pumpAndSettle();
-    expect(find.text('25 likes left today · Plus'), findsOneWidget);
     await tester.tap(find.byTooltip('Undo last pass'));
     await tester.pumpAndSettle();
     expect(find.text('Ananya, 27'), findsOneWidget);

@@ -136,16 +136,7 @@ class DiscoverScreen extends StatelessWidget {
                         HapticFeedback.selectionClick();
                         showCommentComposer(context, store, person, target);
                       })))),
-      Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-          child: Text(
-              [
-                '${store.remaining} likes left today',
-                if (store.boosting)
-                  'Boosting until ${TimeOfDay.fromDateTime(store.boostEndsAt!).format(context)}',
-                store.plan.title,
-              ].join(' · '),
-              style: TextStyle(fontSize: 11, color: EverlaneColors.muted))),
+      const SizedBox(height: 10),
     ]);
   }
 }
