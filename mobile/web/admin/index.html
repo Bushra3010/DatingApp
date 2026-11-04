@@ -612,6 +612,8 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   .md { position: fixed; inset: 0; background: var(--scrim); display: none; align-items: flex-start; justify-content: center; padding: 18px 12px; z-index: 60; overflow: auto; }
   .md.on { display: flex; }
   .mb { background: var(--surf); border: 1px solid var(--line); border-radius: 18px; max-width: 720px; width: 100%; padding: 18px; margin: auto 0; box-shadow: var(--sh); }
+  .heat { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  .heat .hc { border-radius: 10px; padding: 9px 10px; font-size: 12px; color: #fff; font-weight: 600; }
   .mk .heat { display: grid; gap: 4px; }
   .mk .hc { border-radius: 8px; padding: 8px; text-align: center; font-size: 12px; color: #fff; font-weight: 600; }
   .mk .ph { width: 100%; aspect-ratio: 3/4; border-radius: 12px; display: grid; place-items: center; font: 700 34px Inter, system-ui, sans-serif; color: rgba(255,255,255,.9); }
@@ -673,8 +675,8 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   <div class="nav sb" data-subnav="dash" aria-label="Dashboard pages">
     <button type="button" class="tab" data-view="overview">Overview</button>
     <button type="button" class="tab" data-view="dash-retention" data-mock>Retention</button>
-    <button type="button" class="tab" data-view="dash-geo" data-mock>Geo</button>
-    <button type="button" class="tab" data-view="dash-reports" data-mock>Reports</button>
+    <button type="button" class="tab" data-view="dash-geo">Geo</button>
+    <button type="button" class="tab" data-view="dash-reports">Reports</button>
   </div>
   <div class="nav sb" data-subnav="users" aria-label="Users pages">
     <button type="button" class="tab" data-view="leads">Directory</button>
@@ -809,6 +811,42 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
             <tbody id="dashCities"></tbody></table></div></div>
         <div class="card pad"><h3>All-time counts</h3>
           <div class="stats" id="stats" style="margin-top:10px"></div></div>
+      </div>
+    </div>
+
+    <div id="view-dash-geo" class="hidden">
+      <div class="head"><div><h2>Geo and demographics</h2>
+        <p class="sub">Real members per city, with the gender split and average age. Bots, test accounts and deleted accounts are left out.</p></div>
+        <div class="row"><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="stack">
+        <div class="grid g4" id="geoKpis"></div>
+        <div class="card pad"><h3>Heatmap</h3><div class="heat" id="geoHeat" style="margin-top:10px"></div></div>
+        <div class="card pad"><h3>By city</h3>
+          <div class="scroll"><table>
+            <thead><tr><th>City</th><th>Members</th><th>Women</th><th>Men</th><th>Avg age</th></tr></thead>
+            <tbody id="geoRows"></tbody></table></div></div>
+      </div>
+    </div>
+
+    <div id="view-dash-reports" class="hidden">
+      <div class="head"><div><h2>Sign-up reports</h2>
+        <p class="sub">Real sign-ups only. Bots, test accounts and deleted accounts are left out.</p></div>
+        <div class="row"><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="stack">
+        <div class="card pad"><div class="grid g3">
+          <label>Group by<select id="repBy">
+            <option>City</option><option>Gender</option><option>Age band</option><option>Day</option></select></label>
+          <label>Range<select id="repRange">
+            <option value="7">Last 7 days</option><option value="30" selected>Last 30 days</option>
+            <option value="90">Last 90 days</option><option value="0">All time</option></select></label>
+        </div></div>
+        <div class="card pad">
+          <div class="row" style="justify-content:space-between;margin-bottom:8px">
+            <span class="sub" id="repTotal"></span><button class="btn" id="repCsv">Export CSV</button></div>
+          <div class="scroll"><table>
+            <thead><tr><th id="repHead">City</th><th>Sign-ups</th><th style="width:34%">Share</th></tr></thead>
+            <tbody id="repRows"></tbody></table></div></div>
+        <p class="sub">“Export CSV” copies the table so you can paste it straight into Excel or Google Sheets.</p>
       </div>
     </div>
 
@@ -1489,9 +1527,6 @@ function openM(fn){MODAL=fn;fn()}function closeM(){MODAL=null;$('#mkMd').classNa
 // ---------- pages: dashboard ----------
 function pRetention(){const rows=Array.from({length:8},(_,i)=>{const b=100;return[`Week ${8-i}`,b,Math.round(R(48,62)),Math.round(R(30,42)),Math.round(R(22,32)),Math.round(R(15,24)),Math.round(R(9,17))]});const col=v=>`rgba(124,58,237,${(v/100*.9+.08).toFixed(2)})`;
 return pg('Retention and cohorts','Share of each signup cohort still active.',card('Cohort retention',`<div class="scroll"><table><tr><th>Cohort</th><th>Day 0</th><th>Day 1</th><th>Day 7</th><th>Day 14</th><th>Day 30</th><th>Day 60</th></tr>${rows.map(r=>`<tr><td>${r[0]}</td>${r.slice(1).map(v=>`<td><div class="hc" style="background:${col(v)}">${v}%</div></td>`).join('')}</tr>`).join('')}</table></div>`)+g3(card('Churn reasons (exit survey)',bars([['Not enough matches',38],['Found someone',24],['Too many fake profiles',14],['Privacy concerns',9],['Pricing',8]])),card('Activation',bars([['Matched in 24h',42],['Matched in 7 days',61],['Sent first message',44]]))))}
-function pGeo(){const rows=C.cities.map(c=>({n:c.n,u:R(4000,60000),f:R(38,58),a:R(24,31)}));const mx=Math.max(...rows.map(r=>r.u));return pg('Geo and demographics','Users, gender ratio and average age per city.',card('Heatmap',`<div class="heat" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr))">${rows.map(r=>`<div class="hc" style="background:rgba(236,72,153,${(r.u/mx*.85+.1).toFixed(2)});text-align:left"><b>${r.n}</b><br>${fmt(r.u)} users</div>`).join('')}</div>`)+tbl('geo',['City','Users','Women %','Men %','Avg age'],rows.map(r=>({c:[r.n,fmt(r.u),r.f+'%',100-r.f+'%',r.a]}))))}
-function pReports(){const o=S.rep=S.rep||{metric:'Signups',by:'City',range:'Last 30 days'},base=P([3,5,8]);const rows=(o.by==='City'?CITY:o.by==='Gender'?['Woman','Man','Non-binary']:o.by==='Age band'?['18–24','25–30','31–36','37–45']:Array.from({length:7},(_,i)=>ago(i))).map(k=>({c:[k,fmt(R(200,9000)*base)]}));
-return pg('Custom reports','Build a report and export it as CSV or Excel.',card('Report builder',`<div class="grid g3"><div>${fld(o,'metric','Metric','select',{o:['Signups','Matches','Messages','Revenue','Reports','Bans']})}</div><div>${fld(o,'by','Group by','select',{o:['City','Gender','Age band','Day']})}</div><div>${fld(o,'range','Range','select',{o:['Last 7 days','Last 30 days','Last 90 days']})}</div></div><div style="margin-top:10px">${btn('Run report',()=>render())}</div>`)+tbl('rep',[o.by,o.metric],rows,{search:false})+`<p class="sub">“Export CSV” copies data you can paste straight into Excel or Google Sheets.</p>`)}
 // ---------- users ----------
 function userM(u){const hist=Array.from({length:4},(_,i)=>`<tr><td>${ago(i*2)}</td><td>${u.device}</td><td>${u.ip}</td><td>${i?'Mobile app':'Web'}</td></tr>`).join('');const dup=USERS.filter(x=>x!==u&&(x.device===u.device||x.ip===u.ip));
 const set=(s,l)=>btn(l||s,A(l||s,u.id+' → '+s,()=>{u.status=s}),s==='Banned'||s==='Deleted'?'d':'s');
@@ -1568,7 +1603,7 @@ function pAge(){return pg('Age verification and regional compliance','',g3(card(
 // ---------- navigation ----------
 // ---------- pages and rendering ----------
 const PAGES = {
-  'dash-retention': ['dash', pRetention], 'dash-geo': ['dash', pGeo], 'dash-reports': ['dash', pReports],
+  'dash-retention': ['dash', pRetention],
   'users-multi': ['users', pMulti], 'users-gdpr': ['users', pDsar],
   'mod-chat': ['mod', pChat], 'mod-fake': ['mod', pFake], 'mod-bans': ['mod', pBans], 'mod-auto': ['mod', pAuto], 'mod-underage': ['mod', pUnder],
   'match-algorithm': ['match', pAlgo], 'match-visibility': ['match', pVis], 'match-limits': ['match', pLim], 'match-locations': ['match', pLoc], 'match-ab': ['match', pAB],
@@ -1640,7 +1675,7 @@ const ROLE_INFO = {
   finance: 'Plans, free premium and boosts, plus the overview and members list.',
   analyst: 'The overview and members list, read-only.' };
 // Which permission opens each section.
-const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', 'bots-chats': 'bots', hangouts: 'bots', 'hangouts-official': 'bots', reports: 'moderate', photos: 'moderate',
+const VIEW_PERM = { overview: 'stats', 'dash-geo': 'members', 'dash-reports': 'members', leads: 'members', gen: 'bots', bots: 'bots', 'bots-chats': 'bots', hangouts: 'bots', 'hangouts-official': 'bots', reports: 'moderate', photos: 'moderate',
   'train-kb': 'bots', 'train-style': 'bots', 'train-time': 'bots', 'train-chat': 'bots', 'train-test': 'bots',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team',
   'subs-plans': 'billing', 'subs-promos': 'billing', 'subs-transactions': 'billing', 'subs-iap': 'billing', 'subs-reports': 'billing',
@@ -1733,7 +1768,7 @@ function show(view) {
   try { history.replaceState(null, '', '#' + view); } catch (e) {}
   if (MOCK_VIEWS.has(view)) return window.EverlaneMock.render(view);
   window.EverlaneMock?.close();
-  return ({ overview: loadOverview, leads: loadMembers, gen: loadGenerator, bots: loadBots, 'bots-chats': loadBotChats, hangouts: loadHangouts, 'hangouts-official': loadHangoutsOfficial, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
+  return ({ overview: loadOverview, 'dash-geo': loadGeo, 'dash-reports': loadSignupReport, leads: loadMembers, gen: loadGenerator, bots: loadBots, 'bots-chats': loadBotChats, hangouts: loadHangouts, 'hangouts-official': loadHangoutsOfficial, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
      audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: () => {},
      'subs-plans': loadPrices, 'subs-promos': loadPromos, 'subs-transactions': loadTransactions, 'subs-iap': loadProducts,
      'subs-reports': loadRevenue, 'train-kb': loadTrainKb, 'train-style': loadTrainStyle, 'train-time': loadTrainTime,
@@ -1879,6 +1914,85 @@ function renderDashboard(d) {
         <span class="sub" style="font-size:11.5px">${tot ? pct(m, tot) + ' real' : '—'}</span></td></tr>`;
   }).join('') || '<tr><td colspan="4" class="muted">No cities yet.</td></tr>';
 }
+
+// ---------- Geo and sign-up reports (real members) ----------
+// admin_members already leaves bots out; test and deleted accounts are dropped here.
+async function realMembers() {
+  const { data, error } = await sb.rpc('admin_members');
+  if (error) { fail(error); return null; }
+  return (data || []).filter(m => !m.is_test && !m.deleted_at);
+}
+const genderOf = g => {
+  const v = String(g || '').toLowerCase();
+  if (!v) return 'Not set';
+  if (v.startsWith('wom') || v === 'female' || v === 'f') return 'Women';
+  if (v.startsWith('man') || v.startsWith('men') || v === 'male' || v === 'm') return 'Men';
+  return 'Other';
+};
+const ageBand = a => !a ? 'Not set' : a < 25 ? '18–24' : a < 31 ? '25–30' : a < 37 ? '31–36' : a < 46 ? '37–45' : '46+';
+
+async function loadGeo() {
+  const list = await realMembers();
+  if (!list) return;
+  const by = new Map();
+  for (const m of list) {
+    const city = m.city || 'Not set';
+    const c = by.get(city) || { city, n: 0, women: 0, men: 0, ageSum: 0, ageN: 0 };
+    c.n++;
+    const g = genderOf(m.gender);
+    if (g === 'Women') c.women++; else if (g === 'Men') c.men++;
+    if (m.age > 0) { c.ageSum += m.age; c.ageN++; }
+    by.set(city, c);
+  }
+  const rows = [...by.values()].sort((a, b) => b.n - a.n);
+  const max = Math.max(1, ...rows.map(r => r.n));
+  const named = rows.filter(r => r.city !== 'Not set');
+  const women = list.filter(m => genderOf(m.gender) === 'Women').length;
+  const aged = list.filter(m => m.age > 0);
+  $('#geoKpis').innerHTML = [
+    ['Real members', fmtN(list.length)],
+    ['Cities', fmtN(named.length)],
+    ['Women', pct(women, list.length)],
+    ['Average age', aged.length ? Math.round(aged.reduce((s, m) => s + m.age, 0) / aged.length) : '—'],
+  ].map(([k, v]) => `<div class="kpi"><span>${k}</span><b>${v}</b></div>`).join('');
+  $('#geoHeat').innerHTML = rows.map(r =>
+    `<div class="hc" style="background:rgba(236,72,153,${(r.n / max * .8 + .15).toFixed(2)})"><b>${esc(r.city)}</b><br>${fmtN(r.n)} member${r.n === 1 ? '' : 's'}</div>`
+  ).join('') || '<p class="muted">No members yet.</p>';
+  $('#geoRows').innerHTML = rows.map(r => `<tr style="cursor:default"><td>${esc(r.city)}</td><td>${fmtN(r.n)}</td>
+    <td>${pct(r.women, r.n)}</td><td>${pct(r.men, r.n)}</td><td>${r.ageN ? Math.round(r.ageSum / r.ageN) : '—'}</td></tr>`
+  ).join('') || '<tr><td colspan="5" class="muted">No members yet.</td></tr>';
+}
+
+let signupRows = [];
+async function loadSignupReport() {
+  const list = await realMembers();
+  if (!list) return;
+  const by = $('#repBy').value, days = +$('#repRange').value;
+  const since = days ? Date.now() - days * 864e5 : 0;
+  const joined = list.filter(m => m.joined_at && new Date(m.joined_at).getTime() >= since);
+  const key = m => by === 'City' ? (m.city || 'Not set')
+    : by === 'Gender' ? genderOf(m.gender)
+    : by === 'Age band' ? ageBand(m.age)
+    : new Date(m.joined_at).toLocaleDateString('en-CA');
+  const counts = new Map();
+  for (const m of joined) counts.set(key(m), (counts.get(key(m)) || 0) + 1);
+  signupRows = [...counts.entries()].sort(by === 'Day' ? (a, b) => b[0].localeCompare(a[0]) : (a, b) => b[1] - a[1]);
+  $('#repHead').textContent = by;
+  $('#repTotal').textContent = `${fmtN(joined.length)} real sign-up${joined.length === 1 ? '' : 's'}`;
+  $('#repRows').innerHTML = signupRows.map(([k, n]) => `<tr style="cursor:default"><td>${esc(k)}</td><td>${fmtN(n)}</td>
+    <td><div class="bar"><i style="width:${(100 * n / joined.length).toFixed(1)}%"></i></div>
+      <span class="sub" style="font-size:11.5px">${pct(n, joined.length)}</span></td></tr>`
+  ).join('') || '<tr><td colspan="3" class="muted">No sign-ups in this range.</td></tr>';
+}
+$('#repBy').onchange = loadSignupReport;
+$('#repRange').onchange = loadSignupReport;
+$('#repCsv').onclick = async () => {
+  const cell = v => /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  const text = [[$('#repBy').value, 'Sign-ups'], ...signupRows.map(([k, n]) => [k, String(n)])]
+    .map(r => r.map(cell).join(',')).join('\n');
+  try { await navigator.clipboard.writeText(text); toast(`Copied ${signupRows.length} row${signupRows.length === 1 ? '' : 's'} as CSV`); }
+  catch (e) { toast('Couldn’t copy. Your browser blocked the clipboard.'); }
+};
 
 async function loadStats() {
   const { data, error } = await sb.rpc('admin_stats');
