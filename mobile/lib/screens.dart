@@ -111,10 +111,6 @@ class DiscoverScreen extends StatelessWidget {
                     size: 30,
                     weight: FontWeight.w700,
                     color: EverlaneColors.plum)),
-            const SizedBox(height: 2),
-            Text(
-                '${people.length} ${people.length == 1 ? 'person matches' : 'people match'} your preferences',
-                style: TextStyle(fontSize: 13, color: EverlaneColors.muted)),
           ]))),
       Expanded(
           child: Padding(
