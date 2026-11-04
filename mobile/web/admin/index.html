@@ -305,6 +305,267 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   .tchat .msg .meta a { font-weight: 600; text-decoration: none; }
   .tchat .msg .meta a:hover { text-decoration: underline; }
 
+  /* Bot Chats Live Feed & Takeover */
+  .bc-layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 14px;
+    height: calc(100vh - 190px);
+    min-height: 580px;
+    margin-top: 12px;
+  }
+  @media (max-width: 900px) {
+    .bc-layout {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+  }
+  .bc-list-pane {
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    overflow: hidden;
+    height: 100%;
+  }
+  .bc-search-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .bc-search-bar input {
+    font-size: 13px;
+    padding: 7px 10px;
+  }
+  .bc-search-bar select {
+    font-size: 12.5px;
+    padding: 6px 9px;
+  }
+  .bc-feed-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 2px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .bc-convos {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+    padding-right: 2px;
+  }
+  .bc-convo-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: transparent;
+    transition: background .12s, border-color .12s;
+    text-align: left;
+    width: 100%;
+  }
+  .bc-convo-item:hover {
+    background: var(--bg);
+  }
+  .bc-convo-item.selected {
+    background: var(--bg);
+    border-color: var(--acc);
+    box-shadow: inset 3px 0 0 var(--acc);
+  }
+  .bc-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--line);
+    flex-shrink: 0;
+  }
+  .bc-convo-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .bc-convo-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 2px;
+  }
+  .bc-name {
+    font-weight: 600;
+    font-size: 13.5px;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bc-time {
+    font-size: 11px;
+    color: var(--mute);
+    white-space: nowrap;
+  }
+  .bc-convo-sub {
+    font-size: 12px;
+    color: var(--mute);
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bc-snippet {
+    font-size: 12.5px;
+    color: var(--ink);
+    opacity: .88;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.35;
+  }
+  .bc-convo-badges {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+  }
+  .bc-empty {
+    text-align: center;
+    padding: 30px 14px;
+    color: var(--mute);
+    font-size: 13px;
+  }
+  .bc-thread-pane {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    height: 100%;
+  }
+  .bc-no-select {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+  }
+  .bc-thread-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .bc-thread-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surf);
+    flex-wrap: wrap;
+  }
+  .bc-user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .bc-user-title {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+  .bc-bot-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .bc-pause-banner {
+    padding: 8px 16px;
+    background: rgba(180,83,9,.12);
+    border-bottom: 1px solid rgba(180,83,9,.3);
+    font-size: 12px;
+    color: var(--warn);
+  }
+  .bc-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg);
+  }
+  .bc-bubble-wrap {
+    display: flex;
+    flex-direction: column;
+    max-width: 78%;
+  }
+  .bc-bubble-wrap.from-user {
+    align-self: flex-start;
+  }
+  .bc-bubble-wrap.from-bot {
+    align-self: flex-end;
+  }
+  .bc-bubble {
+    padding: 9px 13px;
+    border-radius: 16px;
+    font-size: 13.5px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .bc-bubble-wrap.from-user .bc-bubble {
+    background: var(--surf);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-bottom-left-radius: 4px;
+  }
+  .bc-bubble-wrap.from-bot .bc-bubble {
+    background: linear-gradient(135deg, var(--acc), #9333EA);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .bc-msg-meta {
+    font-size: 11px;
+    color: var(--mute);
+    margin-top: 3px;
+    padding: 0 4px;
+  }
+  .bc-bubble-wrap.from-bot .bc-msg-meta {
+    text-align: right;
+  }
+  .bc-composer {
+    border-top: 1px solid var(--line);
+    background: var(--surf);
+    padding: 12px 16px;
+  }
+  .bc-composer-hint {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+  }
+  .bc-reply-form {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .bc-reply-form textarea {
+    font-size: 13.5px;
+    line-height: 1.4;
+    padding: 10px 12px;
+  }
+  .bc-composer-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
   @media (max-width: 800px) { .card.scroll { max-height: none; } }
   @media (max-width: 560px) {
     .row2 { grid-template-columns: 1fr; gap: 0; }
@@ -441,6 +702,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   <div class="nav sb" data-subnav="bots" aria-label="Bots pages">
     <button type="button" class="tab" data-view="bots">Profiles</button>
     <button type="button" class="tab" data-view="gen">Create</button>
+    <button type="button" class="tab" data-view="bots-chats">Chats <span class="pill bad hidden" id="botChatsBadge"></span></button>
     <button type="button" class="tab" data-view="bots-behaviour" data-mock>Behaviour</button>
     <button type="button" class="tab" data-view="bots-phase-out" data-mock>Phase-out</button>
     <button type="button" class="tab" data-view="bots-activity" data-mock>Activity</button>
@@ -616,6 +878,88 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
       <div class="head"><div><h2>Create bots</h2>
         <p class="sub">Make test bots in bulk. Every member sees bots, always labelled “Sample profile” in the app. To type bots in by hand, use “New bot” or “Bulk create” under Profiles.</p></div></div>
       <form class="gen" id="genForm"></form>
+    </div>
+
+    <div id="view-bots-chats" class="hidden">
+      <div class="head">
+        <div>
+          <h2>Bot chats &amp; live takeover</h2>
+          <p class="sub">Live conversation feed between real members and bot profiles. Reply manually on behalf of any bot to take over the conversation.</p>
+        </div>
+        <div class="row">
+          <button class="btn" id="bcRefreshBtn">Refresh</button>
+        </div>
+      </div>
+
+      <div class="bc-layout">
+        <!-- Left Pane: Conversations Feed -->
+        <div class="card bc-list-pane">
+          <div class="bc-search-bar">
+            <input type="text" id="bcSearch" placeholder="Search member, bot, or message…" aria-label="Search conversations">
+            <select id="bcBotFilter" aria-label="Filter by bot profile">
+              <option value="">All bot profiles</option>
+            </select>
+          </div>
+          <div class="bc-feed-meta">
+            <span id="bcCount" class="sub" style="font-size:12px">0 conversations</span>
+            <span id="bcLiveIndicator" class="pill ok" style="font-size:10.5px">● Live feed</span>
+          </div>
+          <div id="bcConvoList" class="bc-convos" role="list">
+            <div class="bc-empty">Loading conversations…</div>
+          </div>
+        </div>
+
+        <!-- Right Pane: Thread History & Manual Reply Box -->
+        <div class="card bc-thread-pane">
+          <div id="bcThreadEmpty" class="bc-no-select">
+            <div style="font-size:36px;margin-bottom:10px">💬</div>
+            <h3>Select a conversation</h3>
+            <p class="sub" style="max-width:320px;text-align:center">Choose a chat from the left to view the messages and manually reply on behalf of the bot profile.</p>
+          </div>
+
+          <div id="bcThreadActive" class="hidden bc-thread-wrap">
+            <div class="bc-thread-header">
+              <div class="bc-user-info">
+                <img id="bcUserAvatar" class="bc-avatar" src="" alt="">
+                <div>
+                  <div class="bc-user-title">
+                    <span id="bcUserName" class="bc-name"></span>
+                    <span id="bcUserAgeCity" class="sub"></span>
+                  </div>
+                  <div class="bc-bot-badge">
+                    <span class="sub" style="font-size:12px">Chatting with</span>
+                    <span id="bcBotPill" class="pill" style="font-weight:600"></span>
+                  </div>
+                </div>
+              </div>
+              <div class="row" style="gap:8px">
+                <span id="bcPauseStatus" class="pill"></span>
+                <button type="button" class="btn small" id="bcTogglePauseBtn"></button>
+              </div>
+            </div>
+
+            <div class="bc-pause-banner hidden" id="bcPauseBanner">
+              ⚠️ <b>Auto-reply is paused for this conversation.</b> Bot scripts will not send automated messages. Real member is waiting for manual replies.
+            </div>
+
+            <div id="bcMessages" class="bc-messages" aria-live="polite"></div>
+
+            <div class="bc-composer">
+              <div class="bc-composer-hint">
+                <span>Replying as <b id="bcComposerBotName">Bot</b></span>
+                <span class="muted" style="font-size:11.5px">Manual reply will pause auto-scripts for this conversation</span>
+              </div>
+              <form id="bcReplyForm" class="bc-reply-form">
+                <textarea id="bcReplyInput" rows="2" placeholder="Type a message to send as the bot…" required></textarea>
+                <div class="bc-composer-actions">
+                  <span id="bcSendingStatus" class="muted" style="font-size:12px"></span>
+                  <button type="submit" class="btn primary" id="bcSendBtn">Send reply</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="view-hangouts" class="hidden">
@@ -1294,7 +1638,7 @@ const ROLE_INFO = {
   finance: 'Plans, free premium and boosts, plus the overview and members list.',
   analyst: 'The overview and members list, read-only.' };
 // Which permission opens each section.
-const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', hangouts: 'bots', 'hangouts-official': 'bots', reports: 'moderate', photos: 'moderate',
+const VIEW_PERM = { overview: 'stats', leads: 'members', gen: 'bots', bots: 'bots', 'bots-chats': 'bots', hangouts: 'bots', 'hangouts-official': 'bots', reports: 'moderate', photos: 'moderate',
   'train-kb': 'bots', 'train-style': 'bots', 'train-time': 'bots', 'train-chat': 'bots', 'train-test': 'bots',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team',
   'subs-plans': 'billing', 'subs-promos': 'billing', 'subs-transactions': 'billing', 'subs-iap': 'billing', 'subs-reports': 'billing',
@@ -1387,7 +1731,7 @@ function show(view) {
   try { history.replaceState(null, '', '#' + view); } catch (e) {}
   if (MOCK_VIEWS.has(view)) return window.EverlaneMock.render(view);
   window.EverlaneMock?.close();
-  return ({ overview: loadOverview, leads: loadMembers, gen: loadGenerator, bots: loadBots, hangouts: loadHangouts, 'hangouts-official': loadHangoutsOfficial, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
+  return ({ overview: loadOverview, leads: loadMembers, gen: loadGenerator, bots: loadBots, 'bots-chats': loadBotChats, hangouts: loadHangouts, 'hangouts-official': loadHangoutsOfficial, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
      audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: () => {},
      'subs-plans': loadPrices, 'subs-promos': loadPromos, 'subs-transactions': loadTransactions, 'subs-iap': loadProducts,
      'subs-reports': loadRevenue, 'train-kb': loadTrainKb, 'train-style': loadTrainStyle, 'train-time': loadTrainTime,
@@ -3840,6 +4184,493 @@ $('#addAdmin').onsubmit = async e => {
   $('#adminEmail').value = ''; toast(`${email} added as ${ROLES[role]}`); loadTeam();
 };
 
+// ---------- Bot Chats Live Feed & Takeover ----------
+let botConvos = [];
+let selectedMatchId = null;
+let botChatRealtimeSub = null;
+let botChatPollTimer = null;
+
+function timeAgo(date) {
+  if (!date) return '—';
+  const s = Math.floor((Date.now() - new Date(date).getTime()) / 1000);
+  if (s < 45) return 'just now';
+  if (s < 3600) return Math.floor(s / 60) + 'm ago';
+  if (s < 86400) return Math.floor(s / 3600) + 'h ago';
+  return Math.floor(s / 86400) + 'd ago';
+}
+
+async function loadBotChats() {
+  selectedMatchId = null;
+  const activeWrap = $('#bcThreadActive');
+  const emptyWrap = $('#bcThreadEmpty');
+  if (activeWrap) activeWrap.classList.add('hidden');
+  if (emptyWrap) emptyWrap.classList.remove('hidden');
+  const listEl = $('#bcConvoList');
+  if (listEl) listEl.innerHTML = '<div class="bc-empty">Loading conversations…</div>';
+  await refreshBotConvos();
+  setupBotChatRealtime();
+}
+
+async function refreshBotConvos() {
+  const filterBot = $('#bcBotFilter')?.value || null;
+  let convos = null;
+
+  try {
+    const { data, error } = await sb.rpc('admin_bot_conversations', { p_bot_id: filterBot || null });
+    if (!error && Array.isArray(data)) convos = data;
+  } catch (e) {
+    console.warn('RPC admin_bot_conversations error:', e);
+  }
+
+  // Graceful fallback if RPC is not yet in database
+  if (!convos) {
+    try {
+      const { data: bList } = await sb.rpc('admin_bots');
+      const botMap = new Map((bList || []).map(b => [b.id, b]));
+      
+      const { data: mList, error: mErr } = await sb.from('matches').select('*').order('created_at', { ascending: false });
+      if (!mErr && mList) {
+        const botMatches = mList.filter(m => botMap.has(m.user_a) || botMap.has(m.user_b));
+        const otherIds = [...new Set(botMatches.map(m => botMap.has(m.user_a) ? m.user_b : m.user_a))];
+        let userMap = new Map();
+        if (otherIds.length) {
+          const { data: uProfiles } = await sb.from('profiles').select('*').in('id', otherIds);
+          userMap = new Map((uProfiles || []).map(u => [u.id, u]));
+        }
+
+        const { data: stopped } = await sb.from('bot_stopped').select('match_id');
+        const stoppedSet = new Set((stopped || []).map(s => s.match_id));
+
+        const matchIds = botMatches.map(m => m.id);
+        const { data: msgs } = await sb.from('messages').select('*').in('match_id', matchIds).order('created_at', { ascending: false });
+        const lastMsgMap = new Map();
+        const msgCountMap = new Map();
+        (msgs || []).forEach(msg => {
+          msgCountMap.set(msg.match_id, (msgCountMap.get(msg.match_id) || 0) + 1);
+          if (!lastMsgMap.has(msg.match_id)) lastMsgMap.set(msg.match_id, msg);
+        });
+
+        convos = botMatches.map(m => {
+          const bId = botMap.has(m.user_a) ? m.user_a : m.user_b;
+          const uId = botMap.has(m.user_a) ? m.user_b : m.user_a;
+          const b = botMap.get(bId) || {};
+          const u = userMap.get(uId) || {};
+          const lastM = lastMsgMap.get(m.id);
+          return {
+            match_id: m.id,
+            bot_id: bId,
+            bot_name: b.name || 'Bot',
+            bot_city: b.city || '',
+            bot_photo: (b.photos && b.photos[0]) || '',
+            bot_job: b.job || '',
+            user_id: uId,
+            user_name: u.name || 'Member',
+            user_city: u.city || '',
+            user_photo: (u.photos && u.photos[0]) || '',
+            user_age: u.age,
+            last_message: lastM ? lastM.body : null,
+            last_message_at: lastM ? lastM.created_at : m.created_at,
+            last_sender: lastM ? lastM.sender : null,
+            is_last_from_user: lastM ? (lastM.sender === uId) : false,
+            is_paused: stoppedSet.has(m.id),
+            pending_reply: null,
+            message_count: msgCountMap.get(m.id) || 0,
+            created_at: m.created_at
+          };
+        });
+      }
+    } catch (fallbackErr) {
+      console.warn('Fallback query error:', fallbackErr);
+    }
+  }
+
+  botConvos = convos || [];
+  populateBotFilter(botConvos);
+  renderBotConvos();
+
+  if (selectedMatchId) {
+    const active = botConvos.find(c => c.match_id === selectedMatchId);
+    if (active) updateThreadHeader(active);
+  }
+}
+
+function populateBotFilter(convos) {
+  const sel = $('#bcBotFilter');
+  if (!sel) return;
+  const curr = sel.value;
+  const botMap = new Map();
+  convos.forEach(c => {
+    if (c.bot_id && c.bot_name) botMap.set(c.bot_id, c.bot_name);
+  });
+  const opts = ['<option value="">All bot profiles</option>'];
+  [...botMap.entries()].sort((a,b) => a[1].localeCompare(b[1])).forEach(([id, name]) => {
+    opts.push(`<option value="${esc(id)}"${curr === id ? ' selected' : ''}>${esc(name)}</option>`);
+  });
+  sel.innerHTML = opts.join('');
+}
+
+function renderBotConvos() {
+  const box = $('#bcConvoList');
+  if (!box) return;
+
+  const q = ($('#bcSearch')?.value || '').trim().toLowerCase();
+  const filterBot = $('#bcBotFilter')?.value || '';
+
+  const filtered = botConvos.filter(c => {
+    if (filterBot && c.bot_id !== filterBot) return false;
+    if (q) {
+      const target = [c.user_name, c.bot_name, c.user_city, c.last_message || ''].join(' ').toLowerCase();
+      if (!target.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const waitingCount = botConvos.filter(c => c.is_last_from_user).length;
+  const badgeEl = $('#botChatsBadge');
+  if (badgeEl) {
+    badgeEl.textContent = waitingCount;
+    badgeEl.classList.toggle('hidden', !waitingCount);
+  }
+
+  const countEl = $('#bcCount');
+  if (countEl) {
+    countEl.textContent = `${filtered.length} conversation${filtered.length === 1 ? '' : 's'}${waitingCount ? ` · ${waitingCount} awaiting reply` : ''}`;
+  }
+
+  if (!filtered.length) {
+    box.innerHTML = `<div class="bc-empty">${q || filterBot ? 'No conversations match your search/filter.' : 'No active bot conversations yet. Real member matches and messages will appear here in real time.'}</div>`;
+    return;
+  }
+
+  box.innerHTML = filtered.map(c => {
+    const isSel = c.match_id === selectedMatchId;
+    const photo = c.user_photo ? photoUrl(c.user_photo) : '../icons/Icon-192.png';
+    const ageCity = [c.user_age ? `${c.user_age}` : '', c.user_city].filter(Boolean).join(', ');
+    const snippet = c.last_message ? esc(c.last_message) : '<i>New match · No messages yet</i>';
+    const senderPrefix = c.last_message ? (c.is_last_from_user ? '<b>User:</b> ' : `<b>${esc(c.bot_name)}:</b> `) : '';
+
+    return `
+      <div class="bc-convo-item ${isSel ? 'selected' : ''}" data-match-id="${esc(c.match_id)}" role="button" tabindex="0">
+        <img class="bc-avatar" src="${esc(photo)}" alt="" onerror="this.src='../icons/Icon-192.png'">
+        <div class="bc-convo-info">
+          <div class="bc-convo-top">
+            <span class="bc-name">${esc(c.user_name)}</span>
+            <span class="bc-time">${timeAgo(c.last_message_at)}</span>
+          </div>
+          <div class="bc-convo-sub">
+            ${ageCity ? `<span>${esc(ageCity)}</span> · ` : ''}
+            <span>with <b>${esc(c.bot_name)}</b></span>
+          </div>
+          <div class="bc-snippet">${senderPrefix}${snippet}</div>
+          <div class="bc-convo-badges">
+            ${c.is_last_from_user ? '<span class="pill ok" style="font-size:10.5px">User waiting</span>' : ''}
+            ${c.is_paused ? '<span class="pill warn" style="font-size:10.5px">Auto-reply Paused</span>' : ''}
+            ${c.message_count === 0 ? '<span class="pill muted" style="font-size:10.5px">New match</span>' : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  box.querySelectorAll('.bc-convo-item').forEach(el => {
+    el.onclick = () => selectBotConvo(el.dataset.matchId);
+    el.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectBotConvo(el.dataset.matchId); } };
+  });
+}
+
+async function selectBotConvo(matchId) {
+  selectedMatchId = matchId;
+  const c = botConvos.find(item => item.match_id === matchId);
+  if (!c) return;
+
+  document.querySelectorAll('.bc-convo-item').forEach(el => {
+    el.classList.toggle('selected', el.dataset.matchId === matchId);
+  });
+
+  const emptyWrap = $('#bcThreadEmpty');
+  const activeWrap = $('#bcThreadActive');
+  if (emptyWrap) emptyWrap.classList.add('hidden');
+  if (activeWrap) activeWrap.classList.remove('hidden');
+
+  updateThreadHeader(c);
+
+  const msgsBox = $('#bcMessages');
+  if (msgsBox) msgsBox.innerHTML = '<div class="bc-empty">Loading messages…</div>';
+
+  let messages = null;
+  try {
+    const { data, error } = await sb.rpc('admin_bot_messages', { p_match_id: matchId });
+    if (!error && Array.isArray(data)) messages = data;
+  } catch (e) {
+    console.warn('RPC admin_bot_messages error:', e);
+  }
+
+  if (!messages) {
+    const { data, error } = await sb.from('messages')
+      .select('id, match_id, sender, body, created_at')
+      .eq('match_id', matchId)
+      .order('created_at', { ascending: true });
+    if (!error && data) {
+      messages = data.map(m => ({
+        ...m,
+        is_bot: m.sender === c.bot_id,
+        sender_name: m.sender === c.bot_id ? c.bot_name : c.user_name
+      }));
+    }
+  }
+
+  renderThreadMessages(messages || [], c);
+  $('#bcReplyInput')?.focus();
+}
+
+function updateThreadHeader(c) {
+  const photo = c.user_photo ? photoUrl(c.user_photo) : '../icons/Icon-192.png';
+  const avatar = $('#bcUserAvatar');
+  if (avatar) avatar.src = photo;
+  const nameEl = $('#bcUserName');
+  if (nameEl) nameEl.textContent = c.user_name;
+  const ageCity = [c.user_age ? `${c.user_age}` : '', c.user_city].filter(Boolean).join(', ');
+  const ageCityEl = $('#bcUserAgeCity');
+  if (ageCityEl) ageCityEl.textContent = ageCity ? `(${ageCity})` : '';
+  const botPill = $('#bcBotPill');
+  if (botPill) botPill.textContent = c.bot_name + (c.bot_city ? ` · ${c.bot_city}` : '');
+
+  const pauseStatus = $('#bcPauseStatus');
+  const toggleBtn = $('#bcTogglePauseBtn');
+  const banner = $('#bcPauseBanner');
+
+  if (c.is_paused) {
+    if (pauseStatus) {
+      pauseStatus.className = 'pill warn';
+      pauseStatus.textContent = 'Auto-reply: Paused (Manual takeover)';
+    }
+    if (toggleBtn) {
+      toggleBtn.textContent = 'Resume auto-reply';
+      toggleBtn.className = 'btn small';
+    }
+    if (banner) banner.classList.remove('hidden');
+  } else {
+    if (pauseStatus) {
+      pauseStatus.className = 'pill ok';
+      pauseStatus.textContent = 'Auto-reply: Active';
+    }
+    if (toggleBtn) {
+      toggleBtn.textContent = 'Pause auto-reply';
+      toggleBtn.className = 'btn small danger';
+    }
+    if (banner) banner.classList.add('hidden');
+  }
+
+  const composerBot = $('#bcComposerBotName');
+  if (composerBot) composerBot.textContent = c.bot_name;
+  const replyIn = $('#bcReplyInput');
+  if (replyIn) replyIn.placeholder = `Type a reply as ${c.bot_name}…`;
+}
+
+function renderThreadMessages(msgs, c) {
+  const box = $('#bcMessages');
+  if (!box) return;
+
+  if (!msgs.length) {
+    box.innerHTML = `
+      <div class="bc-empty" style="margin:auto">
+        <p>No messages yet in this match.</p>
+        <p class="sub">Break the ice by sending the first message as <b>${esc(c.bot_name)}</b> below.</p>
+      </div>`;
+    return;
+  }
+
+  box.innerHTML = msgs.map(m => {
+    const isBot = m.is_bot || m.sender === c.bot_id;
+    const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '';
+    const dateStr = m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '';
+
+    return `
+      <div class="bc-bubble-wrap ${isBot ? 'from-bot' : 'from-user'}">
+        <div class="bc-bubble">${esc(m.body)}</div>
+        <div class="bc-msg-meta">
+          ${isBot ? `<span>Sent as <b>${esc(c.bot_name)}</b></span> · ` : ''}
+          <span>${esc(timeStr)} (${esc(dateStr)})</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  box.scrollTop = box.scrollHeight;
+}
+
+function appendThreadMessage(m, c) {
+  const box = $('#bcMessages');
+  if (!box) return;
+  const empty = box.querySelector('.bc-empty');
+  if (empty) empty.remove();
+
+  const isBot = m.is_bot || m.sender === c.bot_id;
+  const timeStr = m.created_at ? new Date(m.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'now';
+  const dateStr = m.created_at ? new Date(m.created_at).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) : '';
+
+  const div = document.createElement('div');
+  div.className = `bc-bubble-wrap ${isBot ? 'from-bot' : 'from-user'}`;
+  div.innerHTML = `
+    <div class="bc-bubble">${esc(m.body)}</div>
+    <div class="bc-msg-meta">
+      ${isBot ? `<span>Sent as <b>${esc(c.bot_name)}</b></span> · ` : ''}
+      <span>${esc(timeStr)} ${dateStr ? `(${esc(dateStr)})` : ''}</span>
+    </div>
+  `;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+}
+
+function setupBotChatRealtime() {
+  if (botChatRealtimeSub) return;
+  try {
+    botChatRealtimeSub = sb.channel('admin-bot-chats-channel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+        const newMsg = payload.new;
+        if (!newMsg) return;
+
+        if (selectedMatchId && newMsg.match_id === selectedMatchId) {
+          const c = botConvos.find(item => item.match_id === selectedMatchId);
+          if (c && newMsg.sender !== c.bot_id) {
+            appendThreadMessage({
+              id: newMsg.id,
+              body: newMsg.body,
+              created_at: newMsg.created_at,
+              is_bot: false,
+              sender_name: c.user_name
+            }, c);
+          }
+        }
+        refreshBotConvos();
+      })
+      .subscribe();
+  } catch (e) {
+    console.warn('Realtime subscription error:', e);
+  }
+
+  if (!botChatPollTimer) {
+    botChatPollTimer = setInterval(() => {
+      if (current === 'bots-chats' && !$('#app').classList.contains('hidden')) {
+        refreshBotConvos();
+        if (selectedMatchId) {
+          sb.rpc('admin_bot_messages', { p_match_id: selectedMatchId }).then(({ data, error }) => {
+            if (!error && data && data.length) {
+              const c = botConvos.find(item => item.match_id === selectedMatchId);
+              if (c) renderThreadMessages(data, c);
+            }
+          });
+        }
+      }
+    }, 6000);
+  }
+}
+
+function initBotChatEvents() {
+  $('#bcSearch')?.addEventListener('input', () => renderBotConvos());
+  $('#bcBotFilter')?.addEventListener('change', () => {
+    refreshBotConvos();
+  });
+  $('#bcRefreshBtn')?.addEventListener('click', () => {
+    toast('Refreshing conversations…');
+    refreshBotConvos();
+  });
+
+  $('#bcReplyForm')?.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!selectedMatchId) return;
+    const c = botConvos.find(item => item.match_id === selectedMatchId);
+    if (!c) return;
+
+    const input = $('#bcReplyInput');
+    const text = input.value.trim();
+    if (!text) return;
+
+    const btn = $('#bcSendBtn');
+    btn.disabled = true;
+    $('#bcSendingStatus').textContent = `Sending as ${c.bot_name}…`;
+
+    try {
+      let result = null;
+      const { data, error } = await sb.rpc('admin_send_bot_reply', {
+        p_match_id: selectedMatchId,
+        p_body: text
+      });
+
+      if (error) {
+        console.warn('RPC send error, fallback to direct insert:', error);
+        const { data: ins, error: insErr } = await sb.from('messages').insert({
+          match_id: selectedMatchId,
+          sender: c.bot_id,
+          body: text
+        }).select().single();
+        if (insErr) throw insErr;
+        await sb.from('bot_stopped').insert({ match_id: selectedMatchId });
+        result = { id: ins.id, match_id: selectedMatchId, sender: c.bot_id, body: text, created_at: ins.created_at, is_bot: true, is_paused: true };
+      } else {
+        result = data;
+      }
+
+      input.value = '';
+      appendThreadMessage({
+        id: result?.id || Math.random(),
+        body: text,
+        created_at: new Date().toISOString(),
+        is_bot: true,
+        sender_name: c.bot_name
+      }, c);
+
+      c.is_paused = true;
+      c.last_message = text;
+      c.last_message_at = new Date().toISOString();
+      c.is_last_from_user = false;
+      c.message_count = (c.message_count || 0) + 1;
+
+      updateThreadHeader(c);
+      renderBotConvos();
+      toast(`Reply sent as ${c.bot_name}. Auto-reply paused.`);
+    } catch (err) {
+      fail(err);
+    } finally {
+      btn.disabled = false;
+      $('#bcSendingStatus').textContent = '';
+    }
+  });
+
+  $('#bcTogglePauseBtn')?.addEventListener('click', async () => {
+    if (!selectedMatchId) return;
+    const c = botConvos.find(item => item.match_id === selectedMatchId);
+    if (!c) return;
+
+    const nextPaused = !c.is_paused;
+    const btn = $('#bcTogglePauseBtn');
+    btn.disabled = true;
+
+    try {
+      const { error } = await sb.rpc('admin_toggle_bot_pause', {
+        p_match_id: selectedMatchId,
+        p_paused: nextPaused
+      });
+      if (error) {
+        if (nextPaused) {
+          await sb.from('bot_stopped').insert({ match_id: selectedMatchId });
+        } else {
+          await sb.from('bot_stopped').delete().eq('match_id', selectedMatchId);
+        }
+      }
+      c.is_paused = nextPaused;
+      updateThreadHeader(c);
+      renderBotConvos();
+      toast(nextPaused ? 'Auto-reply paused for this conversation' : 'Auto-reply resumed');
+    } catch (err) {
+      fail(err);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+initBotChatEvents();
 start();
 
 // Every pop-up form (edit bot, question, bulk edit…) gets a ✕ in its top
