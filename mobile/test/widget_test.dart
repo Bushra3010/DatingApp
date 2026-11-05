@@ -223,7 +223,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('Hangouts is a main tab: join, message and host plans',
+  testWidgets('Hangouts is a main tab: answer to join, and host plans',
       (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -258,26 +258,17 @@ void main() {
         .descendant(
             of: find.byType(HangoutsScreen), matching: find.byType(Scrollable))
         .first;
-    await tester.scrollUntilVisible(find.text('Request to join'), 200,
+    // This plan has an icebreaker: joining means answering it by voice.
+    await tester.scrollUntilVisible(find.text('Answer to join'), 200,
         scrollable: plans);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Request to join'));
-    await tester.pumpAndSettle();
-    expect(find.text('Requested'), findsOneWidget);
-    expect(find.textContaining('Request sent to'), findsOneWidget);
-    await tester.tap(find.text('Message host'));
-    await tester.pumpAndSettle();
-    expect(
-        find.text(
-            'Hi, I’m interested in “Dinner and good conversation”. Is there still room?'),
-        findsOneWidget);
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('All'));
-    await tester.tap(find.text('All'));
-    await tester.pumpAndSettle();
+    expect(find.text('Answer to join'), findsOneWidget);
+    // No typed openers: you can only message the host once accepted.
+    expect(find.text('Message host'), findsNothing);
     await tester.scrollUntilVisible(find.text('Host a plan'), -200,
         scrollable: plans);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('All'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Host a plan'));
     await tester.pumpAndSettle();

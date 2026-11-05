@@ -463,10 +463,13 @@ class _HangoutCard extends StatelessWidget {
                           Icon(Icons.hourglass_bottom_rounded,
                               size: 13, color: EverlaneColors.muted),
                           const SizedBox(width: 4),
-                          Text('Post ends in $endsIn',
-                              style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: EverlaneColors.muted)),
+                          Flexible(
+                              child: Text('Post ends in $endsIn',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: EverlaneColors.muted))),
                         ]),
                       ],
                     ])),
@@ -836,14 +839,6 @@ class _HostPlanForm extends StatefulWidget {
   State<_HostPlanForm> createState() => _HostPlanFormState();
 }
 
-/// Starting points for a plan's icebreaker.
-const _icebreakers = [
-  'Coldplay or Diljit?',
-  'Best late-night chai spot in town?',
-  'Mountains or beaches, and why?',
-  'What’s a dish you could eat every day?',
-];
-
 class _HostPlanFormState extends State<_HostPlanForm> {
   var kind = HangoutKind.coffee;
   HangoutEvent? event;
@@ -856,7 +851,6 @@ class _HostPlanFormState extends State<_HostPlanForm> {
   final venue = TextEditingController();
   final note = TextEditingController();
   final lookingFor = TextEditingController();
-  final prompt = TextEditingController();
   late final city = TextEditingController(text: widget.store.myCity);
 
   static DateTime _today() {
@@ -869,7 +863,7 @@ class _HostPlanFormState extends State<_HostPlanForm> {
 
   @override
   void dispose() {
-    for (final c in [title, area, venue, note, lookingFor, prompt, city]) {
+    for (final c in [title, area, venue, note, lookingFor, city]) {
       c.dispose();
     }
     super.dispose();
@@ -917,7 +911,6 @@ class _HostPlanFormState extends State<_HostPlanForm> {
           note: note.text.trim(),
           lookingFor: lookingFor.text.trim(),
           spots: spots,
-          prompt: prompt.text.trim(),
           event: event,
           expiresAt: DateTime.now().add(hangoutLifetime)));
       if (mounted) Navigator.pop(context);
@@ -1017,25 +1010,6 @@ class _HostPlanFormState extends State<_HostPlanForm> {
           decoration: const InputDecoration(
               labelText: 'Who are you hoping to meet? (optional)',
               hintText: 'e.g. Film lovers, easy-going people')),
-      const Text('Icebreaker', style: TextStyle(fontWeight: FontWeight.w700)),
-      const SizedBox(height: 4),
-      Text('People answer it with a voice note of up to $maxHangoutVoiceSeconds seconds to ask to join. No typed “hi”.',
-          style: TextStyle(fontSize: 12, color: EverlaneColors.muted, height: 1.4)),
-      const SizedBox(height: 8),
-      TextField(
-          controller: prompt,
-          onChanged: (_) => setState(() {}),
-          maxLength: 120,
-          textCapitalization: TextCapitalization.sentences,
-          decoration: const InputDecoration(
-              hintText: 'Ask something fun to answer out loud',
-              prefixIcon: Icon(Icons.record_voice_over_outlined))),
-      Wrap(spacing: 8, runSpacing: 8, children: [
-        for (final q in _icebreakers)
-          ActionChip(
-              label: Text(q, style: const TextStyle(fontSize: 12)),
-              onPressed: () => setState(() => prompt.text = q)),
-      ]),
       const SizedBox(height: 16),
       const Text('Got a spare ticket? (optional)',
           style: TextStyle(fontWeight: FontWeight.w700)),
@@ -1074,8 +1048,7 @@ class _HostPlanFormState extends State<_HostPlanForm> {
           label: posting ? 'Posting…' : 'Post plan',
           onTap: posting ||
                   title.text.trim().isEmpty ||
-                  area.text.trim().isEmpty ||
-                  prompt.text.trim().isEmpty
+                  area.text.trim().isEmpty
               ? null
               : post),
     ]);
