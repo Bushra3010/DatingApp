@@ -305,6 +305,12 @@ class ProfileBackend {
         .order('created_at'));
   }
 
+  /// "I'm here": keeps your Online / Recently online status fresh.
+  Future<void> touchPresence() => client.rpc('touch_presence');
+
+  Future<void> setShowOnline(bool show) =>
+      client.rpc('set_show_online', params: {'p_show': show});
+
   /// Unread messages per match id (only matches that have any).
   Future<Map<String, int>> unread() async => {
         for (final r in _rows(await client.rpc('my_unread')))
