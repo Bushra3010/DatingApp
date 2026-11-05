@@ -1,3 +1,4 @@
+import 'package:everlane/screens.dart' show UnreadBadge;
 import 'package:everlane/side_menu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -55,5 +56,17 @@ void main() {
     await tester.pumpWidget(menu(true));
     expect(find.byTooltip('Verified Profile'), findsOneWidget);
     expect(find.text('Pratik, 33'), findsOneWidget);
+  });
+
+  testWidgets('The unread badge stays small inside a list tile',
+      (tester) async {
+    await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+            body: ListTile(
+                title: Text('Pratap'), trailing: UnreadBadge(3)))));
+    final size = tester.getSize(find.byType(UnreadBadge));
+    expect(size.width, lessThan(40));
+    expect(size.height, lessThan(30));
+    expect(find.text('3'), findsOneWidget);
   });
 }
