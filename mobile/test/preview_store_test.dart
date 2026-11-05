@@ -99,7 +99,7 @@ void main() {
     final store = PreviewStore();
     addTearDown(store.dispose);
     store.choosePlan(Plan.plus);
-    store.intentFilter.add(LookingFor.shortTerm);
+    store.setFilters(store.filters.copyWith(intents: {LookingFor.shortTerm}));
     expect(store.discover.map((p) => p.id), ['isha']);
     store.choosePlan(Plan.free);
     expect(store.intentFilter, isEmpty);

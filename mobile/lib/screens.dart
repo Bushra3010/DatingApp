@@ -699,6 +699,12 @@ class PersonDetailsScreen extends StatelessWidget {
                               : '${person.job}. Looking for a lasting connection and someone to share the everyday adventures with.',
                           style: TextStyle(
                               color: EverlaneColors.muted, height: 1.7)),
+                      if (lifestyleTags(person).isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        Wrap(spacing: 8, runSpacing: 8, children: [
+                          for (final t in lifestyleTags(person)) _EmojiTag(t)
+                        ]),
+                      ],
                       const SizedBox(height: 28),
                       const DetailHeading(
                           icon: Icons.favorite_rounded,
@@ -738,6 +744,37 @@ class PersonDetailsScreen extends StatelessWidget {
                                               'My ideal Sunday'))),
                               ])),
                     ]))),
+      );
+}
+
+/// A person's lifestyle answers as short tags, e.g. "🍷 Socially".
+List<String> lifestyleTags(Person p) => [
+      if (Lifestyle.label(Lifestyle.drinking, p.drinking) case final l
+          when l.isNotEmpty)
+        '🍷 $l',
+      if (Lifestyle.label(Lifestyle.smoking, p.smoking) case final l
+          when l.isNotEmpty)
+        '${p.smoking == 'non_smoker' ? '🚭' : '🚬'} $l',
+      if (Lifestyle.label(Lifestyle.education, p.education) case final l
+          when l.isNotEmpty)
+        '🎓 $l',
+      if (Lifestyle.label(Lifestyle.familyPlans, p.familyPlans) case final l
+          when l.isNotEmpty)
+        '👶 $l',
+    ];
+
+/// Like [Tag], with an emoji in the text instead of an icon.
+class _EmojiTag extends StatelessWidget {
+  const _EmojiTag(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+            color: EverlaneColors.card.withValues(alpha: .7),
+            border: Border.all(color: EverlaneColors.line),
+            borderRadius: BorderRadius.circular(30)),
+        child: Text(text, style: const TextStyle(fontSize: 12)),
       );
 }
 
@@ -823,145 +860,309 @@ void showCommentComposer(BuildContext context, PreviewStore store,
       ]));
 }
 
-Future<void> showFilters(BuildContext context, PreviewStore store) async {
-  var ages = store.ages;
-  var distance = store.distance;
-  var verified = store.verifiedOnly;
-  final intents = {...store.intentFilter};
-  final screen = context;
+Future<void> showFilters(BuildContext context, PreviewStore store) =>
+    showModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        useSafeArea: true,
+        showDragHandle: true,
+        backgroundColor: EverlaneColors.paper,
+        builder: (sheet) => FractionallySizedBox(
+            heightFactor: .94,
+            child: _FiltersSheet(store: store, screen: context)));
 
-  // The sheet's own context is gone once it closes, so the upgrade opens
-  // from the screen underneath.
-  void upgrade(BuildContext sheet, String title, String detail) {
-    Navigator.pop(sheet);
-    if (screen.mounted) {
-      showUpgrade(screen, store, title: title, detail: detail);
+/// The Discover filters: edits a copy of [PreviewStore.filters] and only
+/// saves it on "Show my people".
+class _FiltersSheet extends StatefulWidget {
+  const _FiltersSheet({required this.store, required this.screen});
+  final PreviewStore store;
+
+  /// The screen underneath, which outlives the sheet (upgrades open there).
+  final BuildContext screen;
+  @override
+  State<_FiltersSheet> createState() => _FiltersSheetState();
+}
+
+class _FiltersSheetState extends State<_FiltersSheet> {
+  PreviewStore get store => widget.store;
+  late DiscoverFilters f = store.filters;
+  late String showMe = store.interestedIn;
+
+  void edit(DiscoverFilters next) => setState(() => f = next);
+
+  void upgrade(String title, String detail) {
+    Navigator.pop(context);
+    if (widget.screen.mounted) {
+      showUpgrade(widget.screen, store, title: title, detail: detail);
     }
   }
 
-  void verifiedUpgrade(BuildContext sheet) => upgrade(
-      sheet,
-      'See only the real deal.',
+  void verifiedUpgrade() => upgrade('See only the real deal.',
       'Filter to selfie-verified profiles with Plus, Gold or Platinum.');
-  void intentionsUpgrade(BuildContext sheet) => upgrade(
-      sheet,
-      'Meet people who want what you want.',
+  void intentionsUpgrade() => upgrade('Meet people who want what you want.',
       'Filter by relationship intentions with Plus, Gold or Platinum.');
 
-  await showEverlaneSheet(
-      context,
-      StatefulBuilder(
-          builder: (context, setState) =>
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Eyebrow('Your kind of connection'),
-                const SizedBox(height: 10),
-                Text('Widen your circle.\nOr make it a little closer.',
-                    style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 28),
-                Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(child: Text('Age range')),
-                      Text('${ages.start.round()}–${ages.end.round()}',
-                          style: const TextStyle(fontWeight: FontWeight.w600))
-                    ]),
-                RangeSlider(
-                    values: ages,
-                    min: 18,
-                    max: 60,
-                    divisions: 42,
-                    labels: RangeLabels(
-                        '${ages.start.round()}', '${ages.end.round()}'),
-                    onChanged: (value) => setState(() => ages = value)),
-                const SizedBox(height: 18),
-                Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(child: Text('Maximum distance')),
-                      Text('${distance.round()} km',
-                          style: const TextStyle(fontWeight: FontWeight.w600))
-                    ]),
-                Slider(
-                    value: distance,
-                    min: 1,
-                    max: 100,
-                    divisions: 99,
-                    label: '${distance.round()} km',
-                    onChanged: (value) => setState(() => distance = value)),
-                Text('From where you are now (or your city when location is off). We never show exact locations.',
-                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
-                const SizedBox(height: 18),
-                Row(children: [
-                  const Expanded(child: Text('Selfie-verified profiles')),
-                  if (!store.canFilterVerified)
-                    TextButton.icon(
-                        onPressed: () => verifiedUpgrade(context),
-                        icon: const Icon(Icons.lock_outline_rounded, size: 16),
-                        label: const Text('Plus')),
-                ]),
-                // Locked controls stay greyed out but open the upgrade.
-                GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: store.canFilterVerified
-                        ? null
-                        : () => verifiedUpgrade(context),
-                    child: SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('A little extra peace of mind',
-                            style: TextStyle(fontSize: 13)),
-                        value: store.canFilterVerified && verified,
-                        onChanged: store.canFilterVerified
-                            ? (value) => setState(() => verified = value)
-                            : null)),
-                const SizedBox(height: 14),
-                Row(children: [
-                  const Expanded(child: Text('Relationship intentions')),
+  /// What would be saved: locked choices never apply.
+  DiscoverFilters get pending => f.copyWith(
+      verifiedOnly: store.canFilterVerified && f.verifiedOnly,
+      intents: store.canFilterIntentions ? f.intents : const {});
+
+  void apply() {
+    final old = store.filters;
+    final next = pending;
+    final showMeChanged = showMe != store.interestedIn;
+    final refetch = showMeChanged ||
+        next.strictDistance != old.strictDistance ||
+        (next.strictDistance && next.distance.round() != old.distance.round());
+    store.setFilters(next);
+    if (showMeChanged) {
+      store.interestedIn = showMe;
+      // The server filters by who you want to meet, so save it first.
+      store.saveProfile().then((_) => store.refreshMembers());
+    } else if (refetch) {
+      store.refreshMembers();
+    }
+    Navigator.pop(context);
+  }
+
+  Widget heading(String text) => Padding(
+      padding: const EdgeInsets.only(top: 26, bottom: 8),
+      child: Eyebrow(text));
+
+  Widget valueRow(String label, String value) => Row(children: [
+        Expanded(child: Text(label)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ]);
+
+  Widget toggle(String title, bool value, ValueChanged<bool>? onChanged) =>
+      SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          dense: true,
+          title: Text(title, style: const TextStyle(fontSize: 14)),
+          value: value,
+          onChanged: onChanged);
+
+  Widget chips<T>(Iterable<(T, String)> options, Set<T> selected,
+          ValueChanged<Set<T>>? onChanged) =>
+      Wrap(spacing: 8, runSpacing: 8, children: [
+        for (final (value, label) in options)
+          FilterChip(
+              label: Text(label),
+              selected: selected.contains(value),
+              onSelected: onChanged == null
+                  ? null
+                  : (on) => onChanged(on
+                      ? {...selected, value}
+                      : ({...selected}..remove(value)))),
+      ]);
+
+  Widget group(String title, List<(String, String)> options, Set<String> chosen,
+          ValueChanged<Set<String>> onChanged) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const SizedBox(height: 16),
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        chips(options, chosen, onChanged),
+      ]);
+
+  @override
+  Widget build(BuildContext context) {
+    final count = store.discoverWith(pending).length;
+    final more = f.moreCount;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 12, 4),
+          child: Row(children: [
+            Expanded(
+                child: Text('Filters',
+                    style: Theme.of(context).textTheme.headlineMedium)),
+            TextButton(
+                onPressed: () => edit(const DiscoverFilters()),
+                style: TextButton.styleFrom(
+                    foregroundColor: EverlaneColors.muted),
+                child: const Text('Reset')),
+          ])),
+      Expanded(
+          child: ListView(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+              children: [
+            Text('Widen your circle. Or make it a little closer.',
+                style: TextStyle(color: EverlaneColors.muted)),
+            heading('Show me'),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final option in const ['Women', 'Men', 'Everyone'])
+                ChoiceChip(
+                    label: Text(option),
+                    selected: showMe == option,
+                    showCheckmark: false,
+                    selectedColor: EverlaneColors.deep,
+                    backgroundColor: EverlaneColors.card,
+                    side: BorderSide(
+                        color: showMe == option
+                            ? EverlaneColors.deep
+                            : EverlaneColors.line),
+                    labelStyle: TextStyle(
+                        color: showMe == option
+                            ? Colors.white
+                            : EverlaneColors.plum),
+                    onSelected: (_) => setState(() => showMe = option)),
+            ]),
+            heading('Age and distance'),
+            valueRow('Age range',
+                '${f.ages.start.round()}–${f.ages.end.round()}'),
+            RangeSlider(
+                values: f.ages,
+                min: 18,
+                max: 60,
+                divisions: 42,
+                labels: RangeLabels(
+                    '${f.ages.start.round()}', '${f.ages.end.round()}'),
+                onChanged: (v) => edit(f.copyWith(ages: v))),
+            toggle('Only show people in this range', f.strictAges,
+                (v) => edit(f.copyWith(strictAges: v))),
+            const SizedBox(height: 10),
+            valueRow('Maximum distance', '${f.distance.round()} km'),
+            Slider(
+                value: f.distance,
+                min: 1,
+                max: 100,
+                divisions: 99,
+                label: '${f.distance.round()} km',
+                onChanged: (v) => edit(f.copyWith(distance: v))),
+            toggle('Only show people within this distance', f.strictDistance,
+                (v) => edit(f.copyWith(strictDistance: v))),
+            Text(
+                'From where you are now (or your city when location is off). We never show exact locations.',
+                style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+            heading('Activity'),
+            toggle('Online now', f.onlineNow,
+                (v) => edit(f.copyWith(onlineNow: v))),
+            toggle('Active in the last 24 hours', f.activeToday,
+                (v) => edit(f.copyWith(activeToday: v))),
+            toggle('New members (joined this week)', f.newMembers,
+                (v) => edit(f.copyWith(newMembers: v))),
+            // Locked controls stay greyed out but open the upgrade.
+            Row(children: [
+              Expanded(
+                  child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: store.canFilterVerified ? null : verifiedUpgrade,
+                      child: toggle(
+                          'Selfie-verified only',
+                          store.canFilterVerified && f.verifiedOnly,
+                          store.canFilterVerified
+                              ? (v) => edit(f.copyWith(verifiedOnly: v))
+                              : null))),
+              if (!store.canFilterVerified)
+                TextButton.icon(
+                    onPressed: verifiedUpgrade,
+                    icon: const Icon(Icons.lock_outline_rounded, size: 16),
+                    label: const Text('Plus')),
+            ]),
+            Padding(
+                padding: const EdgeInsets.only(top: 26, bottom: 8),
+                child: Row(children: [
+                  const Expanded(child: Eyebrow('Relationship intentions')),
                   if (!store.canFilterIntentions)
                     TextButton.icon(
-                        onPressed: () => intentionsUpgrade(context),
+                        onPressed: intentionsUpgrade,
                         icon: const Icon(Icons.lock_outline_rounded, size: 16),
                         label: const Text('Plus')),
-                ]),
-                const SizedBox(height: 8),
-                GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: store.canFilterIntentions
-                        ? null
-                        : () => intentionsUpgrade(context),
-                    child: Wrap(spacing: 8, runSpacing: 8, children: [
-                      for (final c in LookingFor.values)
-                        FilterChip(
-                            label: Text(c.short),
-                            selected: intents.contains(c),
-                            onSelected: store.canFilterIntentions
-                                ? (on) => setState(() =>
-                                    on ? intents.add(c) : intents.remove(c))
-                                : null),
+                ])),
+            GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: store.canFilterIntentions ? null : intentionsUpgrade,
+                child: chips<LookingFor>(
+                    [for (final c in LookingFor.values) (c, c.short)],
+                    store.canFilterIntentions ? f.intents : const {},
+                    store.canFilterIntentions
+                        ? (v) => edit(f.copyWith(intents: v))
+                        : null)),
+            const SizedBox(height: 18),
+            Theme(
+                // No divider lines around the expander.
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    childrenPadding: EdgeInsets.zero,
+                    expandedCrossAxisAlignment: CrossAxisAlignment.start,
+                    expandedAlignment: Alignment.centerLeft,
+                    title: Row(children: [
+                      const Flexible(
+                          child: Text('More preferences',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontWeight: FontWeight.w700))),
+                      if (more > 0) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                                color: EverlaneColors.deep,
+                                borderRadius: BorderRadius.circular(20)),
+                            child: Text('$more',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700))),
+                      ],
+                    ]),
+                    subtitle: Text(
+                        'Languages, height, lifestyle and profile quality',
+                        style: TextStyle(
+                            fontSize: 12, color: EverlaneColors.muted)),
+                    children: [
+                      const SizedBox(height: 4),
+                      const Text('Languages',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 8),
+                      chips(
+                          [for (final l in PreviewStore.languageOptions) (l, l)],
+                          f.languages,
+                          (v) => edit(f.copyWith(languages: v))),
+                      const SizedBox(height: 16),
+                      valueRow(
+                          'Height',
+                          f.anyHeightChosen
+                              ? 'Any height'
+                              : '${f.heights.start.round()}–${f.heights.end.round()} cm'),
+                      RangeSlider(
+                          values: f.heights,
+                          min: DiscoverFilters.minHeight,
+                          max: DiscoverFilters.maxHeight,
+                          divisions: 70,
+                          labels: RangeLabels('${f.heights.start.round()} cm',
+                              '${f.heights.end.round()} cm'),
+                          onChanged: (v) => edit(f.copyWith(heights: v))),
+                      group('Drinking', Lifestyle.drinking, f.drinking,
+                          (v) => edit(f.copyWith(drinking: v))),
+                      group('Smoking', Lifestyle.smoking, f.smoking,
+                          (v) => edit(f.copyWith(smoking: v))),
+                      group('Education', Lifestyle.education, f.education,
+                          (v) => edit(f.copyWith(education: v))),
+                      group('Family plans', Lifestyle.familyPlans,
+                          f.familyPlans, (v) => edit(f.copyWith(familyPlans: v))),
+                      const SizedBox(height: 16),
+                      const Text('Profile quality',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      toggle('Has a bio or prompt', f.hasBioOrPrompt,
+                          (v) => edit(f.copyWith(hasBioOrPrompt: v))),
+                      toggle('Has a voice note', f.hasVoice,
+                          (v) => edit(f.copyWith(hasVoice: v))),
+                      toggle('3+ photos', f.threePhotos,
+                          (v) => edit(f.copyWith(threePhotos: v))),
                     ])),
-                const SizedBox(height: 22),
-                FilledButton(
-                    onPressed: () {
-                      store.ages = ages;
-                      store.distance = distance;
-                      store.verifiedOnly = store.canFilterVerified && verified;
-                      store.intentFilter
-                        ..clear()
-                        ..addAll(intents);
-                      store.update();
-                      store.refreshMembers();
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Show my people')),
-                Center(
-                    child: TextButton(
-                        onPressed: () => setState(() {
-                              ages = const RangeValues(21, 40);
-                              distance = 25;
-                              verified = false;
-                              intents.clear();
-                            }),
-                        child: const Text('Reset preferences'))),
-              ])));
+          ])),
+      Container(
+          padding: const EdgeInsets.fromLTRB(24, 12, 24, 16),
+          decoration: BoxDecoration(
+              color: EverlaneColors.paper,
+              border: Border(top: BorderSide(color: EverlaneColors.line))),
+          child: GradientButton(
+              label: 'Show my people ($count)', onTap: apply)),
+    ]);
+  }
 }
 
 class ExploreScreen extends StatelessWidget {
@@ -2756,6 +2957,10 @@ class _EditProfileFormState extends State<_EditProfileForm> {
   late String lookingFor = widget.store.myLookingFor;
   late String promptLabel = widget.store.myPromptLabel;
   late final interests = <String>{...widget.store.myInterests};
+  late String drinking = widget.store.myDrinking;
+  late String smoking = widget.store.mySmoking;
+  late String education = widget.store.myEducation;
+  late String familyPlans = widget.store.myFamilyPlans;
   bool picking = false;
   final key = GlobalKey<FormState>();
 
@@ -2812,6 +3017,11 @@ class _EditProfileFormState extends State<_EditProfileForm> {
     store.myInterests
       ..clear()
       ..addAll(interests);
+    store
+      ..myDrinking = drinking
+      ..mySmoking = smoking
+      ..myEducation = education
+      ..myFamilyPlans = familyPlans;
     if (parsedAge != null && parsedAge >= 18) {
       final now = DateTime.now();
       store.myBirthday = DateTime(now.year - parsedAge, now.month, now.day);
@@ -2905,6 +3115,40 @@ class _EditProfileFormState extends State<_EditProfileForm> {
                           : EverlaneColors.plum),
                   onSelected: (_) => setState(() => lookingFor = option)),
           ]),
+          for (final (title, options, value, set) in [
+            ('Drinking', Lifestyle.drinking, drinking,
+                (String v) => drinking = v),
+            ('Smoking', Lifestyle.smoking, smoking, (String v) => smoking = v),
+            ('Education', Lifestyle.education, education,
+                (String v) => education = v),
+            ('Family plans', Lifestyle.familyPlans, familyPlans,
+                (String v) => familyPlans = v),
+          ]) ...[
+            const SizedBox(height: 18),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final (option, label) in [
+                ...options,
+                ('', 'Prefer not to say')
+              ])
+                ChoiceChip(
+                    label: Text(label),
+                    selected: value == option,
+                    showCheckmark: false,
+                    selectedColor: EverlaneColors.deep,
+                    backgroundColor: EverlaneColors.card,
+                    side: BorderSide(
+                        color: value == option
+                            ? EverlaneColors.deep
+                            : EverlaneColors.line),
+                    labelStyle: TextStyle(
+                        color: value == option
+                            ? Colors.white
+                            : EverlaneColors.plum),
+                    onSelected: (_) => setState(() => set(option))),
+            ]),
+          ],
           const SizedBox(height: 18),
           const Text('Interests (choose up to 6)',
               style: TextStyle(fontWeight: FontWeight.w700)),

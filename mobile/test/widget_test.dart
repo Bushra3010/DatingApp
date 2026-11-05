@@ -84,10 +84,29 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Filter profiles'));
     await tester.pumpAndSettle();
-    expect(find.text('Show my people'), findsOneWidget);
-    await tester.ensureVisible(find.text('Show my people'));
+    expect(find.text('Filters'), findsOneWidget);
+    expect(find.text('Reset'), findsOneWidget);
+    expect(find.text('Show my people (3)'), findsOneWidget);
+    // Live count: Online now leaves the two demo people who are online.
+    await tester.scrollUntilVisible(find.text('Online now'), 200,
+        scrollable: find.byType(Scrollable).last);
+    await tester.tap(find.text('Online now'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Show my people'));
+    expect(find.text('Show my people (2)'), findsOneWidget);
+    await tester.tap(find.text('Reset'));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('More preferences'), 200,
+        scrollable: find.byType(Scrollable).last);
+    await tester.tap(find.text('More preferences'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Has a voice note'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Has a voice note'));
+    await tester.pumpAndSettle();
+    expect(find.text('Show my people (2)'), findsOneWidget);
+    await tester.tap(find.text('Has a voice note'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Show my people'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byTooltip('Like Ananya’s photo'));
     await tester.pumpAndSettle();

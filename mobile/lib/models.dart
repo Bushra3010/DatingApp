@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +50,276 @@ enum Presence {
   final Color color;
 }
 
+/// Optional lifestyle answers on a profile, as saved (value, label). An
+/// empty value means the member preferred not to say.
+abstract final class Lifestyle {
+  static const drinking = [
+    ('never', 'Never'),
+    ('socially', 'Socially'),
+    ('regularly', 'Regularly'),
+  ];
+  static const smoking = [
+    ('non_smoker', 'Non-smoker'),
+    ('socially', 'Socially'),
+    ('smoker', 'Smoker'),
+  ];
+  static const education = [
+    ('high_school', 'High school'),
+    ('graduate', 'Graduate'),
+    ('postgraduate', 'Postgraduate'),
+    ('phd', 'PhD'),
+  ];
+  static const familyPlans = [
+    ('wants_kids', 'Wants kids'),
+    ('open', 'Open to kids'),
+    ('doesnt_want', 'Doesn’t want kids'),
+    ('has_kids', 'Has kids'),
+  ];
+
+  /// The label for [value], or '' when it isn't set (or isn't known).
+  static String label(List<(String, String)> options, String value) {
+    for (final (v, l) in options) {
+      if (v == value) return l;
+    }
+    return '';
+  }
+}
+
+/// Everything the Discover filters sheet can choose. Immutable: the sheet
+/// edits a copy, and [PreviewStore.discoverWith] counts what it would show.
+@immutable
+class DiscoverFilters {
+  const DiscoverFilters(
+      {this.ages = defaultAges,
+      this.strictAges = true,
+      this.distance = defaultDistance,
+      this.strictDistance = true,
+      this.onlineNow = false,
+      this.activeToday = false,
+      this.newMembers = false,
+      this.verifiedOnly = false,
+      this.intents = const {},
+      this.languages = const {},
+      this.heights = anyHeight,
+      this.drinking = const {},
+      this.smoking = const {},
+      this.education = const {},
+      this.familyPlans = const {},
+      this.hasBioOrPrompt = false,
+      this.hasVoice = false,
+      this.threePhotos = false});
+
+  static const defaultAges = RangeValues(21, 40);
+  static const double defaultDistance = 25;
+  static const double minHeight = 140, maxHeight = 210;
+  static const anyHeight = RangeValues(minHeight, maxHeight);
+
+  final RangeValues ages;
+  final double distance;
+
+  /// Strict: only people inside the range. Otherwise everyone, with people
+  /// inside it first.
+  final bool strictAges, strictDistance;
+  final bool onlineNow, activeToday, newMembers, verifiedOnly;
+  final Set<LookingFor> intents;
+  final Set<String> languages;
+  final RangeValues heights;
+  final Set<String> drinking, smoking, education, familyPlans;
+  final bool hasBioOrPrompt, hasVoice, threePhotos;
+
+  bool get anyHeightChosen =>
+      heights.start <= minHeight && heights.end >= maxHeight;
+
+  DiscoverFilters copyWith(
+          {RangeValues? ages,
+          bool? strictAges,
+          double? distance,
+          bool? strictDistance,
+          bool? onlineNow,
+          bool? activeToday,
+          bool? newMembers,
+          bool? verifiedOnly,
+          Set<LookingFor>? intents,
+          Set<String>? languages,
+          RangeValues? heights,
+          Set<String>? drinking,
+          Set<String>? smoking,
+          Set<String>? education,
+          Set<String>? familyPlans,
+          bool? hasBioOrPrompt,
+          bool? hasVoice,
+          bool? threePhotos}) =>
+      DiscoverFilters(
+          ages: ages ?? this.ages,
+          strictAges: strictAges ?? this.strictAges,
+          distance: distance ?? this.distance,
+          strictDistance: strictDistance ?? this.strictDistance,
+          onlineNow: onlineNow ?? this.onlineNow,
+          activeToday: activeToday ?? this.activeToday,
+          newMembers: newMembers ?? this.newMembers,
+          verifiedOnly: verifiedOnly ?? this.verifiedOnly,
+          intents: intents ?? this.intents,
+          languages: languages ?? this.languages,
+          heights: heights ?? this.heights,
+          drinking: drinking ?? this.drinking,
+          smoking: smoking ?? this.smoking,
+          education: education ?? this.education,
+          familyPlans: familyPlans ?? this.familyPlans,
+          hasBioOrPrompt: hasBioOrPrompt ?? this.hasBioOrPrompt,
+          hasVoice: hasVoice ?? this.hasVoice,
+          threePhotos: threePhotos ?? this.threePhotos);
+
+  /// Choices inside "More preferences".
+  int get moreCount => [
+        languages.isNotEmpty,
+        !anyHeightChosen,
+        drinking.isNotEmpty,
+        smoking.isNotEmpty,
+        education.isNotEmpty,
+        familyPlans.isNotEmpty,
+        hasBioOrPrompt,
+        hasVoice,
+        threePhotos,
+      ].where((on) => on).length;
+
+  /// Every choice that differs from the defaults.
+  int get activeCount =>
+      moreCount +
+      [
+        ages != defaultAges,
+        !strictAges,
+        distance != defaultDistance,
+        !strictDistance,
+        onlineNow,
+        activeToday,
+        newMembers,
+        verifiedOnly,
+        intents.isNotEmpty,
+      ].where((on) => on).length;
+
+  /// A real member without a birthday has age 0; don't hide them.
+  bool inAgeRange(Person p) =>
+      p.age == 0 || (p.age >= ages.start && p.age <= ages.end);
+  bool inDistance(Person p) => p.distance <= distance;
+
+  /// Everything except age and distance, which can be soft.
+  bool matches(Person p) {
+    bool pick(Set<String> chosen, String value) =>
+        chosen.isEmpty || chosen.contains(value);
+    final h = p.heightCm;
+    return (!onlineNow || p.presence == Presence.online) &&
+        (!activeToday || p.activeToday) &&
+        (!newMembers || p.isNew) &&
+        (!verifiedOnly || p.verified) &&
+        (intents.isEmpty || p.lookingFor.any(intents.contains)) &&
+        (languages.isEmpty || p.languages.any(languages.contains)) &&
+        (anyHeightChosen ||
+            (h != null && h >= heights.start && h <= heights.end)) &&
+        pick(drinking, p.drinking) &&
+        pick(smoking, p.smoking) &&
+        pick(education, p.education) &&
+        pick(familyPlans, p.familyPlans) &&
+        (!hasBioOrPrompt ||
+            p.bio.trim().isNotEmpty ||
+            p.answer.trim().isNotEmpty) &&
+        (!hasVoice || p.hasVoice) &&
+        (!threePhotos || p.photoCount >= 3);
+  }
+
+  /// Filters and orders [pool]: with a strict range only people inside it,
+  /// otherwise people inside it first (in their original order), then the
+  /// rest — nearest first when distance is soft.
+  List<Person> apply(Iterable<Person> pool) {
+    final kept = [
+      for (final p in pool)
+        if (matches(p) &&
+            (!strictAges || inAgeRange(p)) &&
+            (!strictDistance || inDistance(p)))
+          p
+    ];
+    if (strictAges && strictDistance) return kept;
+    int rank(Person p) =>
+        (inAgeRange(p) ? 0 : 2) + (inDistance(p) ? 0 : 1);
+    // Sorted with the original position as a tie-break, so it's stable.
+    final indexed = kept.indexed.toList()
+      ..sort((x, y) {
+        final (i, a) = x;
+        final (j, b) = y;
+        final byRank = rank(a).compareTo(rank(b));
+        if (byRank != 0) return byRank;
+        if (!inDistance(a)) {
+          final byKm = a.distance.compareTo(b.distance);
+          if (byKm != 0) return byKm;
+        }
+        return i.compareTo(j);
+      });
+    return [for (final (_, p) in indexed) p];
+  }
+
+  Map<String, dynamic> toJson() => {
+        'ages': [ages.start, ages.end],
+        'strictAges': strictAges,
+        'distance': distance,
+        'strictDistance': strictDistance,
+        'onlineNow': onlineNow,
+        'activeToday': activeToday,
+        'newMembers': newMembers,
+        'verifiedOnly': verifiedOnly,
+        'intents': [for (final i in intents) i.name],
+        'languages': languages.toList(),
+        'heights': [heights.start, heights.end],
+        'drinking': drinking.toList(),
+        'smoking': smoking.toList(),
+        'education': education.toList(),
+        'familyPlans': familyPlans.toList(),
+        'hasBioOrPrompt': hasBioOrPrompt,
+        'hasVoice': hasVoice,
+        'threePhotos': threePhotos,
+      };
+
+  /// Anything missing or malformed falls back to its default.
+  factory DiscoverFilters.fromJson(Map<String, dynamic> j) {
+    RangeValues range(Object? v, RangeValues fallback, double lo, double hi) {
+      if (v is! List || v.length != 2 || v[0] is! num || v[1] is! num) {
+        return fallback;
+      }
+      final a = (v[0] as num).toDouble().clamp(lo, hi);
+      final b = (v[1] as num).toDouble().clamp(lo, hi);
+      return a <= b ? RangeValues(a, b) : fallback;
+    }
+
+    Set<String> strings(Object? v) =>
+        v is List ? {for (final s in v) if (s is String) s} : const {};
+    bool flag(String k, bool fallback) => j[k] is bool ? j[k] as bool : fallback;
+    const d = DiscoverFilters();
+    return DiscoverFilters(
+        ages: range(j['ages'], defaultAges, 18, 60),
+        strictAges: flag('strictAges', d.strictAges),
+        distance: j['distance'] is num
+            ? (j['distance'] as num).toDouble().clamp(1, 100)
+            : defaultDistance,
+        strictDistance: flag('strictDistance', d.strictDistance),
+        onlineNow: flag('onlineNow', false),
+        activeToday: flag('activeToday', false),
+        newMembers: flag('newMembers', false),
+        verifiedOnly: flag('verifiedOnly', false),
+        intents: {
+          for (final name in strings(j['intents']))
+            for (final l in LookingFor.values)
+              if (l.name == name) l
+        },
+        languages: strings(j['languages']),
+        heights: range(j['heights'], anyHeight, minHeight, maxHeight),
+        drinking: strings(j['drinking']),
+        smoking: strings(j['smoking']),
+        education: strings(j['education']),
+        familyPlans: strings(j['familyPlans']),
+        hasBioOrPrompt: flag('hasBioOrPrompt', false),
+        hasVoice: flag('hasVoice', false),
+        threePhotos: flag('threePhotos', false));
+  }
+}
+
 class Person {
   const Person(
       {required this.id,
@@ -74,9 +345,38 @@ class Person {
       this.heightCm,
       this.languages = const [],
       this.lastSeenAt,
-      this.joinedAt});
+      this.joinedAt,
+      this.drinking = '',
+      this.smoking = '',
+      this.education = '',
+      this.familyPlans = ''});
 
   final int? heightCm;
+
+  /// Optional lifestyle answers (see [Lifestyle]); '' when not given.
+  final String drinking, smoking, education, familyPlans;
+
+  /// Real members' uploaded photos; a demo person has their one portrait.
+  int get photoCount =>
+      photoUrls.isNotEmpty ? photoUrls.length : (photo.isNotEmpty ? 1 : 0);
+
+  /// Seen in the last day (Online, Recently online, or a new member who was
+  /// around recently).
+  bool get activeToday {
+    final p = presence;
+    if (p == Presence.online || p == Presence.recent) return true;
+    final seen = lastSeenAt;
+    return remote &&
+        seen != null &&
+        DateTime.now().difference(seen) < const Duration(hours: 24);
+  }
+
+  /// Joined in the last week.
+  bool get isNew =>
+      presence == Presence.newHere ||
+      (remote &&
+          joinedAt != null &&
+          DateTime.now().difference(joinedAt!) <= const Duration(days: 7));
 
   /// When a real member was last active (null when they hide it, and for
   /// automated profiles), and when they joined.
@@ -137,6 +437,10 @@ class Person {
         ],
         lastSeenAt: DateTime.tryParse(r['last_seen_at'] as String? ?? '')?.toLocal(),
         joinedAt: DateTime.tryParse(r['joined_at'] as String? ?? '')?.toLocal(),
+        drinking: r['drinking'] as String? ?? '',
+        smoking: r['smoking'] as String? ?? '',
+        education: r['education'] as String? ?? '',
+        familyPlans: r['family_plans'] as String? ?? '',
         remote: true);
   }
 
@@ -186,6 +490,12 @@ class Person {
 const demoPeople = [
   Person(
       id: 'ananya',
+      heightCm: 165,
+      languages: ['English', 'Kannada'],
+      drinking: 'socially',
+      smoking: 'non_smoker',
+      education: 'postgraduate',
+      familyPlans: 'wants_kids',
       activeNow: true,
       bio: 'Designer by day, bookstore wanderer by weekend. Looking for someone to share filter coffee and long walks with.',
       interests: ['Coffee', 'Books', 'Design'],
@@ -204,6 +514,12 @@ const demoPeople = [
           'A slow morning, a strong filter coffee, and getting wonderfully lost in a bookstore.'),
   Person(
       id: 'meera',
+      heightCm: 170,
+      languages: ['English', 'Hindi'],
+      drinking: 'never',
+      smoking: 'non_smoker',
+      education: 'graduate',
+      familyPlans: 'open',
       bio: 'Architect who sketches cafés instead of buildings on Sundays. Long walks, always.',
       interests: ['Travel', 'Art', 'Pets'],
       soundtrack: 'Norah Jones – Sunrise',
@@ -221,6 +537,11 @@ const demoPeople = [
           'Finding a little café with a big personality. Bonus points if there’s live music.'),
   Person(
       id: 'isha',
+      heightCm: 158,
+      languages: ['English', 'Hindi', 'Marathi'],
+      drinking: 'regularly',
+      smoking: 'socially',
+      education: 'graduate',
       activeNow: true,
       bio: 'Road trips, loud playlists and late-night chai. Spontaneity is my love language.',
       interests: ['Road trips', 'Live music', 'Chai'],
@@ -241,6 +562,11 @@ const demoPeople = [
           'A spontaneous drive, a very specific playlist, and absolutely no rush to get home.'),
   Person(
       id: 'tara',
+      languages: ['English', 'Tamil'],
+      drinking: 'socially',
+      smoking: 'non_smoker',
+      education: 'phd',
+      familyPlans: 'wants_kids',
       bio: 'Doctor who unwinds in the kitchen. I’ll bake the tiramisu, you pick the movie.',
       interests: ['Cooking', 'Movies', 'Fitness'],
       verified: true,
@@ -798,13 +1124,66 @@ class PreviewStore extends ChangeNotifier {
   Timer? _matchPollTimer;
 
   List<Person> get _pool => live ? members : demoPeople;
-  RangeValues ages = const RangeValues(21, 40);
-  double distance = 25;
+  /// Everything chosen in the Discover filters sheet.
+  DiscoverFilters filters = const DiscoverFilters();
+
+  RangeValues get ages => filters.ages;
+  set ages(RangeValues v) => filters = filters.copyWith(ages: v);
+  double get distance => filters.distance;
+  set distance(double v) => filters = filters.copyWith(distance: v);
+  bool get verifiedOnly => filters.verifiedOnly;
+  set verifiedOnly(bool v) => filters = filters.copyWith(verifiedOnly: v);
+
+  /// Plus and up: only show people looking for one of these. Empty = everyone.
+  Set<LookingFor> get intentFilter => filters.intents;
 
   /// Discover asks the server for people within [distance] of where you
-  /// are (your shared position, or your city).
-  int? get _maxKm => distance.round();
-  bool verifiedOnly = false;
+  /// are (your shared position, or your city) — or everyone, nearest first,
+  /// when distance isn't strict.
+  int? get _maxKm => filters.strictDistance ? distance.round() : null;
+
+  /// Saves new filters, on this device too, and updates Discover.
+  void setFilters(DiscoverFilters next) {
+    filters = next;
+    _filtersTouched = true;
+    notifyListeners();
+    _saveFilters();
+  }
+
+  static const _filtersKey = 'everlane.discover_filters';
+  bool _filtersTouched = false;
+
+  /// Like dismissed announcements, filters are only remembered on a device
+  /// with a backend; tests and the bare preview keep them in memory.
+  void _saveFilters() {
+    if (backend == null) return;
+    final json = jsonEncode(filters.toJson());
+    SharedPreferences.getInstance()
+        .then((p) => p.setString(_filtersKey, json))
+        .catchError((Object _) => false);
+  }
+
+  /// Restores the filters saved on this device, at start-up.
+  Future<void> loadFilters() async {
+    if (backend == null) return;
+    try {
+      final p = await SharedPreferences.getInstance();
+      final raw = p.getString(_filtersKey);
+      // Changed before the saved ones arrived: keep the new choice.
+      if (raw == null || _filtersTouched) return;
+      final loaded =
+          DiscoverFilters.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      final refetch = loaded.strictDistance != filters.strictDistance ||
+          loaded.distance.round() != filters.distance.round();
+      filters = loaded.copyWith(
+          verifiedOnly: canFilterVerified && loaded.verifiedOnly,
+          intents: canFilterIntentions ? loaded.intents : const {});
+      notifyListeners();
+      if (refetch && members.isNotEmpty) refreshMembers().ignore();
+    } catch (_) {
+      // Defaults, then.
+    }
+  }
 
   bool paused = false;
   bool notifications = true;
@@ -900,8 +1279,6 @@ class PreviewStore extends ChangeNotifier {
   }
   bool get canSeeLikes => plan.atLeast(Plan.gold);
 
-  /// Plus and up: only show people looking for one of these. Empty = everyone.
-  final Set<LookingFor> intentFilter = {};
   bool get canFilterIntentions => plan.atLeast(Plan.plus);
 
   /// Plus and up: filter Discover down to selfie-verified profiles only.
@@ -1061,6 +1438,9 @@ class PreviewStore extends ChangeNotifier {
   /// Height in cm, and languages spoken (optional), from sign-up.
   int? myHeightCm;
   final Set<String> myLanguages = {};
+
+  /// Optional lifestyle answers (see [Lifestyle]); '' = prefer not to say.
+  String myDrinking = '', mySmoking = '', myEducation = '', myFamilyPlans = '';
   static List<String> languageOptions = [
     'English',
     'Hindi',
@@ -1159,19 +1539,16 @@ class PreviewStore extends ChangeNotifier {
   int get remaining =>
       plan.dailyLikes - (liked.length - sparked.length - messaged.length);
   bool get outOfLikes => remaining <= 0;
-  List<Person> get discover => paused
+  List<Person> get discover => discoverWith(filters);
+
+  /// Who Discover would show with [f] (the filters sheet's live count uses
+  /// it before anything is saved).
+  List<Person> discoverWith(DiscoverFilters f) => paused
       ? []
-      : _pool
-          .where((p) =>
-              !passed.contains(p.id) &&
-              !liked.contains(p.id) &&
-              !conversations.any((chat) => chat.person.id == p.id) &&
-              // A real member without a birthday has age 0; don't hide them.
-              (p.age == 0 || (p.age >= ages.start && p.age <= ages.end)) &&
-              p.distance <= distance &&
-              (!verifiedOnly || p.verified) &&
-              (intentFilter.isEmpty || p.lookingFor.any(intentFilter.contains)))
-          .toList();
+      : f.apply(_pool.where((p) =>
+          !passed.contains(p.id) &&
+          !liked.contains(p.id) &&
+          !conversations.any((chat) => chat.person.id == p.id)));
 
   /// People close by (within 5 km, shown as "Nearby"), closest first.
   /// Exact distances are never shown.
@@ -1625,7 +2002,7 @@ class PreviewStore extends ChangeNotifier {
     final accepted = <Hangout>[];
     try {
       final results = await Future.wait(
-          [b.hangoutsNear(maxKm: _maxKm), b.hangoutRequestsMine()]);
+          [b.hangoutsNear(maxKm: distance.round()), b.hangoutRequestsMine()]);
       hangouts
         ..clear()
         ..addAll(results[0].map((r) => Hangout.fromRow(r, b.photoUrl)));
@@ -1725,7 +2102,9 @@ class PreviewStore extends ChangeNotifier {
 
   void choosePlan(Plan next) {
     plan = next;
-    if (!next.atLeast(Plan.plus)) intentFilter.clear();
+    if (!next.atLeast(Plan.plus)) {
+      filters = filters.copyWith(intents: const {}, verifiedOnly: false);
+    }
     notifyListeners();
     final b = backend;
     if (b != null && b.signedIn) {
@@ -1753,6 +2132,10 @@ class PreviewStore extends ChangeNotifier {
         'looking_for': myLookingFor,
         'height_cm': myHeightCm,
         'languages': myLanguages.toList(),
+        'drinking': myDrinking,
+        'smoking': mySmoking,
+        'education': myEducation,
+        'family_plans': myFamilyPlans,
         'interests': myInterests.toList(),
         'prompt_label': myPromptLabel,
         'prompt_answer': myPrompt,
@@ -1799,6 +2182,10 @@ class PreviewStore extends ChangeNotifier {
     myLookingFor = 'Long term';
     myHeightCm = null;
     myLanguages.clear();
+    myDrinking = '';
+    mySmoking = '';
+    myEducation = '';
+    myFamilyPlans = '';
     myInterests.clear();
     myBirthday = null;
     myGender = '';
@@ -1929,6 +2316,10 @@ class PreviewStore extends ChangeNotifier {
     myLookingFor = row['looking_for'] as String? ?? 'Long term';
     myHeightCm = (row['height_cm'] as num?)?.toInt();
     myLanguages.addAll(List<String>.from(row['languages'] as List? ?? []));
+    myDrinking = row['drinking'] as String? ?? '';
+    mySmoking = row['smoking'] as String? ?? '';
+    myEducation = row['education'] as String? ?? '';
+    myFamilyPlans = row['family_plans'] as String? ?? '';
     myInterests.addAll(List<String>.from(row['interests'] as List? ?? []));
     myPromptLabel = row['prompt_label'] as String? ?? 'My ideal Sunday is';
     myPrompt = row['prompt_answer'] as String? ?? '';
