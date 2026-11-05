@@ -1,0 +1,104 @@
+<!--
+  TEMPLATE: to be reviewed by a lawyer before launch.
+  Replace every [placeholder] before publishing. Keep in sync with lib/legal.dart.
+-->
+<!DOCTYPE html>
+<html lang="en" data-doc="guidelines">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Community Guidelines · Everlane</title>
+<meta name="description" content="How we treat each other on Everlane.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #0B0A10; --text: #E4E4E7; --muted: #A1A1AA; --accent: #A855F7; --line: #2A2436; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 16px; line-height: 1.6; }
+  main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+  nav { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; margin-bottom: 28px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover, a:focus-visible { text-decoration: underline; }
+  .brand { font-weight: 700; color: var(--text); margin-right: auto; }
+  h1 { font-size: 30px; line-height: 1.2; margin: 0 0 6px; color: #fff; }
+  .updated { color: var(--muted); font-size: 14px; margin: 0 0 8px; }
+  section { border-top: 1px solid var(--line); padding-top: 4px; margin-top: 24px; }
+  h2 { font-size: 19px; line-height: 1.3; margin: 18px 0 8px; color: #fff; }
+  p { margin: 0 0 12px; }
+  ul { margin: 0 0 12px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  footer { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 20px; font-size: 14px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px 20px; }
+  footer span { margin-right: auto; }
+</style>
+</head>
+<body>
+<main>
+<nav><a class="brand" href="/">Everlane</a><a href="/">Back to Everlane</a><a href="/privacy.html">Privacy Policy</a><a href="/terms.html">Terms &amp; Conditions</a></nav>
+<h1>Community Guidelines</h1>
+<p class="updated">Last updated: 31 October 2026</p>
+<section>
+<h2>Be kind</h2>
+<p>Treat everyone with respect. No harassment, hate, threats or unwanted sexual messages.</p>
+</section>
+<section>
+<h2>Be real</h2>
+<p>Use your own photos and your real age. No fake profiles, impersonation or catfishing.</p>
+</section>
+<section>
+<h2>Stay safe</h2>
+<p>Never send money or share OTPs, UPI or bank details. Meet in public places and tell a friend where you’ll be.</p>
+</section>
+<section>
+<h2>No selling</h2>
+<p>No promotions, escort services, scams or links to other platforms.</p>
+</section>
+<section>
+<h2>Adults only</h2>
+<p>Everlane is for people 18 and over. We remove anyone younger.</p>
+</section>
+<section>
+<h2>Reporting</h2>
+<p>Report anything that breaks these rules from the person’s profile. Repeated reports lead to suspension.</p>
+</section>
+<footer><span>&copy; Everlane</span><a href="/">Home</a><a href="/privacy.html">Privacy Policy</a><a href="/terms.html">Terms &amp; Conditions</a><a href="/guidelines.html">Community Guidelines</a></footer>
+</main>
+<script>
+// Shows the version published in the admin panel (Legal → Documents); the
+// text above stays as the fallback if it can't be loaded.
+(function () {
+  var slug = document.documentElement.dataset.doc;
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  function body(text) {
+    var out = [], list = [];
+    var flush = function () { if (list.length) { out.push('<ul>' + list.join('') + '</ul>'); list = []; } };
+    String(text).split(/\n/).forEach(function (line) {
+      var t = line.trim();
+      if (/^[•\-\*] /.test(t)) { list.push('<li>' + esc(t.slice(2)) + '</li>'); return; }
+      flush();
+      if (t) out.push('<p>' + esc(t) + '</p>');
+    });
+    flush();
+    return out.join('');
+  }
+  fetch('https://fqtcazstfcusheakyown.supabase.co/rest/v1/rpc/legal_doc', {
+    method: 'POST',
+    headers: { 'apikey': 'sb_publishable_5XApbVFvpBBZ8hNQWEoZPA_4cRhdJp1', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_slug: slug })
+  }).then(function (r) { return r.ok ? r.json() : null; }).then(function (doc) {
+    if (!doc || !Array.isArray(doc.sections) || !doc.sections.length) return;
+    document.title = doc.title + ' · Everlane';
+    document.querySelector('h1').textContent = doc.title;
+    var up = document.querySelector('.updated');
+    if (up) up.textContent = 'Last updated: ' + doc.version;
+    document.querySelectorAll('main > section').forEach(function (s) { s.remove(); });
+    var html = doc.sections.map(function (s) {
+      return '<section><h2>' + esc(s.heading || '') + '</h2>' + body(s.body || '') + '</section>';
+    }).join('');
+    document.querySelector('footer').insertAdjacentHTML('beforebegin', html);
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

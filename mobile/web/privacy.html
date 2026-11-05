@@ -3,7 +3,7 @@
   Replace every [placeholder] before publishing. Keep in sync with lib/legal.dart.
 -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-doc="privacy">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -35,7 +35,7 @@
 </head>
 <body>
 <main>
-<nav><a class="brand" href="/">Everlane</a><a href="/">Back to Everlane</a><a href="/terms.html">Terms &amp; Conditions</a></nav>
+<nav><a class="brand" href="/">Everlane</a><a href="/">Back to Everlane</a><a href="/terms.html">Terms &amp; Conditions</a><a href="/guidelines.html">Community Guidelines</a></nav>
 <h1>Privacy Policy</h1>
 <p class="updated">Last updated: 31 October 2026</p>
 <section>
@@ -109,7 +109,43 @@
 <h2>Contact</h2>
 <p>[company legal name]<br>[registered address]<br>Email: [support email]</p>
 </section>
-<footer><span>&copy; Everlane</span><a href="/">Home</a><a href="/privacy.html">Privacy Policy</a><a href="/terms.html">Terms &amp; Conditions</a></footer>
+<footer><span>&copy; Everlane</span><a href="/">Home</a><a href="/privacy.html">Privacy Policy</a><a href="/terms.html">Terms &amp; Conditions</a><a href="/guidelines.html">Community Guidelines</a></footer>
 </main>
+<script>
+// Shows the version published in the admin panel (Legal → Documents); the
+// text above stays as the fallback if it can't be loaded.
+(function () {
+  var slug = document.documentElement.dataset.doc;
+  var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+  function body(text) {
+    var out = [], list = [];
+    var flush = function () { if (list.length) { out.push('<ul>' + list.join('') + '</ul>'); list = []; } };
+    String(text).split(/\n/).forEach(function (line) {
+      var t = line.trim();
+      if (/^[•\-\*] /.test(t)) { list.push('<li>' + esc(t.slice(2)) + '</li>'); return; }
+      flush();
+      if (t) out.push('<p>' + esc(t) + '</p>');
+    });
+    flush();
+    return out.join('');
+  }
+  fetch('https://fqtcazstfcusheakyown.supabase.co/rest/v1/rpc/legal_doc', {
+    method: 'POST',
+    headers: { 'apikey': 'sb_publishable_5XApbVFvpBBZ8hNQWEoZPA_4cRhdJp1', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_slug: slug })
+  }).then(function (r) { return r.ok ? r.json() : null; }).then(function (doc) {
+    if (!doc || !Array.isArray(doc.sections) || !doc.sections.length) return;
+    document.title = doc.title + ' · Everlane';
+    document.querySelector('h1').textContent = doc.title;
+    var up = document.querySelector('.updated');
+    if (up) up.textContent = 'Last updated: ' + doc.version;
+    document.querySelectorAll('main > section').forEach(function (s) { s.remove(); });
+    var html = doc.sections.map(function (s) {
+      return '<section><h2>' + esc(s.heading || '') + '</h2>' + body(s.body || '') + '</section>';
+    }).join('');
+    document.querySelector('footer').insertAdjacentHTML('beforebegin', html);
+  }).catch(function () {});
+})();
+</script>
 </body>
 </html>
