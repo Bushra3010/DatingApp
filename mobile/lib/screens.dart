@@ -1409,7 +1409,10 @@ class MessagesScreen extends StatelessWidget {
                   Flexible(
                       child: Text(chat.person.name,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontWeight: FontWeight.w600))),
+                          style: TextStyle(
+                              fontWeight: chat.unread > 0
+                                  ? FontWeight.w800
+                                  : FontWeight.w600))),
                 ]),
                 subtitle: Text(
                     chat.messages.isEmpty
@@ -1417,10 +1420,16 @@ class MessagesScreen extends StatelessWidget {
                         : chat.messages.last.text,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style:
-                        TextStyle(fontSize: 12, color: EverlaneColors.muted)),
-                trailing:
-                    Icon(Icons.chevron_right, color: EverlaneColors.muted),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight:
+                            chat.unread > 0 ? FontWeight.w600 : FontWeight.w400,
+                        color: chat.unread > 0
+                            ? EverlaneColors.plum
+                            : EverlaneColors.muted)),
+                trailing: chat.unread > 0
+                    ? UnreadBadge(chat.unread)
+                    : Icon(Icons.chevron_right, color: EverlaneColors.muted),
                 onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute<void>(
@@ -1467,6 +1476,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     // Live replies from a real match arrive through the store.
     widget.store.addListener(changed);
+    widget.store.markRead(widget.chat);
   }
 
   void changed() {
@@ -1496,6 +1506,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void dispose() {
     widget.store.removeListener(changed);
+    widget.store.closeChat(widget.chat);
     controller.dispose();
     scroll.dispose();
     super.dispose();
@@ -3305,6 +3316,28 @@ class _DetailActions extends StatelessWidget {
                                 onTap: () => showLikeComposer(
                                     context, store, person, 'photo'))),
                       ]))))));
+}
+
+/// The pink count of unread messages on a chat in the Messages list.
+class UnreadBadge extends StatelessWidget {
+  const UnreadBadge(this.count, {super.key});
+  final int count;
+  @override
+  Widget build(BuildContext context) => Semantics(
+      label: '$count unread',
+      child: Container(
+          constraints: const BoxConstraints(minWidth: 24),
+          height: 24,
+          padding: const EdgeInsets.symmetric(horizontal: 7),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+              gradient: EverlaneColors.premiumGradient,
+              borderRadius: BorderRadius.circular(12)),
+          child: Text(count > 99 ? '99+' : '$count',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700))));
 }
 
 /// Moves its child at a slower rate than the page scrolls.

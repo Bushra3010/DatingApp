@@ -608,6 +608,9 @@ class Conversation {
   /// while a like back is still turning into a match.
   String? matchId;
   Future<String?>? pendingMatch;
+
+  /// Messages from them you haven't opened the chat to see yet.
+  int unread = 0;
 }
 
 /// App state. The signed-in member's own profile and photos sync to Supabase
@@ -1400,6 +1403,41 @@ class PreviewStore extends ChangeNotifier {
     _listen(b, me);
     notifyListeners();
     _loadQuizAnswers(b).ignore();
+    _loadUnread(b).ignore();
+  }
+
+  /// Total unread messages, for the Messages tab.
+  int get unreadMessages =>
+      conversations.fold(0, (sum, c) => sum + c.unread);
+
+  /// The chat on screen right now: new messages there are read at once.
+  Conversation? openChat;
+
+  Future<void> _loadUnread(ProfileBackend b) async {
+    try {
+      final counts = await b.unread();
+      for (final c in conversations) {
+        c.unread = c == openChat ? 0 : counts[c.matchId] ?? 0;
+      }
+      notifyListeners();
+    } catch (_) {
+      // Counts just stay as they are.
+    }
+  }
+
+  /// Opening a chat clears its count, here and on the server.
+  void markRead(Conversation c) {
+    openChat = c;
+    if (c.unread == 0 && c.matchId == null) return;
+    c.unread = 0;
+    notifyListeners();
+    final b = backend;
+    final id = c.matchId;
+    if (b != null && b.signedIn && id != null) b.markRead(id).ignore();
+  }
+
+  void closeChat(Conversation c) {
+    if (openChat == c) openChat = null;
   }
 
   void _listen(ProfileBackend b, String me) {
@@ -1422,6 +1460,11 @@ class PreviewStore extends ChangeNotifier {
       for (final c in conversations) {
         if (c.matchId == m['match_id']) {
           c.messages.add(ChatMessage.fromRow(m));
+          if (c == openChat) {
+            b.markRead(c.matchId!).ignore();
+          } else {
+            c.unread++;
+          }
           notifyListeners();
           return;
         }
