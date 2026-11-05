@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'admin.dart';
 import 'auth.dart';
+import 'backend.dart' show errorMessage;
 import 'chemistry.dart';
 import 'cities.dart';
 import 'models.dart';
@@ -407,10 +409,10 @@ enum _SetupStep {
   lookingFor,
   interests,
   city,
-  photos;
 
-  /// Skippable steps show Skip and allow Continue with nothing picked.
-  bool get optional => this == languages || this == interests || this == city;
+  /// Only asked when an admin requires a bio at sign-up.
+  bio,
+  photos;
 }
 
 class _ProfileSetup extends StatefulWidget {
@@ -431,6 +433,7 @@ class _ProfileSetupState extends State<_ProfileSetup> {
 
   late final name = TextEditingController(text: widget.store.myName);
   late final city = TextEditingController(text: widget.store.myCity);
+  late final bio = TextEditingController(text: widget.store.myBio);
   late String gender = widget.store.myGender;
   late String interested = widget.store.interestedIn;
   late double height = (widget.store.myHeightCm ?? 165).toDouble();
@@ -452,12 +455,41 @@ class _ProfileSetupState extends State<_ProfileSetup> {
   late final yearWheel =
       FixedExtentScrollController(initialItem: year - firstYear);
 
-  _SetupStep get step => _SetupStep.values[index];
+  /// Sign-up rules set in the admin panel.
+  AppSettings get rules => widget.store.settings;
+  int get minAge => rules.adultAge;
+
+  List<_SetupStep> get steps => [
+        for (final s in _SetupStep.values)
+          if (s != _SetupStep.bio || rules.requireBio) s
+      ];
+
+  _SetupStep get step => steps[index.clamp(0, steps.length - 1)];
+
+  /// Skippable steps show Skip and allow Continue with nothing picked.
+  bool get optional => switch (step) {
+        _SetupStep.languages => true,
+        _SetupStep.interests => !rules.requireInterests,
+        _SetupStep.city => !rules.requireCity,
+        _ => false,
+      };
+
+  @override
+  void initState() {
+    super.initState();
+    // Continue follows the city when it's required.
+    city.addListener(_cityChanged);
+  }
+
+  void _cityChanged() {
+    if (mounted && rules.requireCity) setState(() {});
+  }
 
   @override
   void dispose() {
     name.dispose();
     city.dispose();
+    bio.dispose();
     dayWheel.dispose();
     monthWheel.dispose();
     yearWheel.dispose();
@@ -479,13 +511,30 @@ class _ProfileSetupState extends State<_ProfileSetup> {
 
   bool get canContinue => switch (step) {
         _SetupStep.name => name.text.trim().isNotEmpty,
-        _SetupStep.birthday => age >= 18,
+        _SetupStep.birthday => age >= minAge,
         _SetupStep.gender => gender.isNotEmpty,
         _SetupStep.interested => interested.isNotEmpty,
         _SetupStep.lookingFor => lookingFor.isNotEmpty,
-        _SetupStep.photos => widget.store.hasPhoto,
+        _SetupStep.interests => !rules.requireInterests || interests.isNotEmpty,
+        _SetupStep.city => !rules.requireCity || city.text.trim().isNotEmpty,
+        _SetupStep.bio => bio.text.trim().isNotEmpty,
+        _SetupStep.photos =>
+          widget.store.myPhotos.length >= rules.photosNeeded,
         _ => true,
       };
+
+  /// Why Continue is disabled, under the button.
+  String? get hint => canContinue
+      ? null
+      : switch (step) {
+          _SetupStep.interests => 'Pick at least one interest to continue.',
+          _SetupStep.city => 'Add your city to continue.',
+          _SetupStep.bio => 'Write a short bio to continue.',
+          _SetupStep.photos => rules.photosNeeded == 1
+              ? 'Add a photo to continue.'
+              : 'Add at least ${rules.photosNeeded} photos to continue.',
+          _ => null,
+        };
 
   void back() {
     FocusScope.of(context).unfocus();
@@ -498,7 +547,7 @@ class _ProfileSetupState extends State<_ProfileSetup> {
 
   void next() {
     FocusScope.of(context).unfocus();
-    if (index < _SetupStep.values.length - 1) {
+    if (index < steps.length - 1) {
       setState(() => index++);
     } else {
       save();
@@ -524,6 +573,7 @@ class _ProfileSetupState extends State<_ProfileSetup> {
     final store = widget.store
       ..myName = name.text.trim()
       ..myCity = city.text.trim()
+      ..myBio = rules.requireBio ? bio.text.trim() : widget.store.myBio
       ..myBirthday = birthday
       ..myGender = gender
       ..interestedIn = interested
@@ -541,15 +591,15 @@ class _ProfileSetupState extends State<_ProfileSetup> {
   }
 
   String get buttonLabel => switch (step) {
-        _SetupStep.birthday when age >= 18 => 'I’m $age y.o.',
-        _SetupStep.birthday => 'You must be 18 or older',
+        _SetupStep.birthday when age >= minAge => 'I’m $age y.o.',
+        _SetupStep.birthday => 'You must be $minAge or older',
         _SetupStep.photos => 'Finish',
         _ => 'Continue',
       };
 
   @override
   Widget build(BuildContext context) {
-    final total = _SetupStep.values.length;
+    final total = steps.length;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Padding(
           padding: const EdgeInsets.fromLTRB(8, 4, 12, 0),
@@ -572,7 +622,7 @@ class _ProfileSetupState extends State<_ProfileSetup> {
                             backgroundColor: EverlaneColors.line)))),
             SizedBox(
                 width: 64,
-                child: step.optional
+                child: optional
                     ? TextButton(onPressed: next, child: const Text('Skip'))
                     : null),
           ])),
@@ -588,6 +638,12 @@ class _ProfileSetupState extends State<_ProfileSetup> {
                           .animate(animation),
                       child: child)),
               child: KeyedSubtree(key: ValueKey(step), child: page(context)))),
+      if (hint != null)
+        Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
+            child: Text(hint!,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 13, color: EverlaneColors.muted))),
       Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
           child: GradientButton(
@@ -642,11 +698,11 @@ class _ProfileSetupState extends State<_ProfileSetup> {
               onDay: (i) => setState(() => day = i + 1),
               onMonth: (i) => setState(() => month = i + 1),
               onYear: (i) => setState(() => year = firstYear + i)),
-          if (age < 18) ...[
+          if (age < minAge) ...[
             const SizedBox(height: 18),
-            const Text('Everlane is for adults aged 18 and over.',
+            Text('Everlane is for adults aged $minAge and over.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: EverlaneColors.like)),
+                style: const TextStyle(color: EverlaneColors.like)),
           ],
         ]);
       case _SetupStep.gender:
@@ -743,9 +799,23 @@ class _ProfileSetupState extends State<_ProfileSetup> {
             'We use this to show people near you.', [
           CityField(controller: city),
         ]);
+      case _SetupStep.bio:
+        return titled('Tell people about you',
+            'A few lines about who you are and what you love.', [
+          TextField(
+              controller: bio,
+              maxLength: 300,
+              minLines: 3,
+              maxLines: 6,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                  hintText: 'Bookstore wanderer, filter coffee fan…')),
+        ]);
       case _SetupStep.photos:
         return titled('Add your photos',
-            'Add at least 1 (up to ${PreviewStore.maxPhotos}). Your first photo is your main one.',
+            rules.photosNeeded == 0
+                ? 'Add up to ${PreviewStore.maxPhotos}. Your first photo is your main one.'
+                : 'Add at least ${rules.photosNeeded} (up to ${PreviewStore.maxPhotos}). Your first photo is your main one.',
             [
               Wrap(spacing: 12, runSpacing: 12, children: [
                 for (var i = 0; i < store.myPhotos.length; i++)
@@ -943,10 +1013,59 @@ class _ShowMore extends StatelessWidget {
       ]));
 }
 
-class _AllSet extends StatelessWidget {
+class _AllSet extends StatefulWidget {
   const _AllSet({required this.store, required this.onDone});
   final PreviewStore store;
   final VoidCallback onDone;
+  @override
+  State<_AllSet> createState() => _AllSetState();
+}
+
+class _AllSetState extends State<_AllSet> {
+  final code = TextEditingController();
+  late bool marketing = widget.store.marketingConsent;
+  bool applying = false, applied = false;
+  String? codeMessage;
+
+  @override
+  void dispose() {
+    code.dispose();
+    super.dispose();
+  }
+
+  Future<void> applyCode() async {
+    final store = widget.store;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      applying = true;
+      codeMessage = null;
+    });
+    try {
+      final name = await store.applyReferral(code.text);
+      final days = store.settings.referralRewardDays;
+      final who = name.isEmpty ? 'Your friend' : name;
+      if (mounted) {
+        setState(() {
+          applied = true;
+          codeMessage = days > 0
+              ? 'Thanks — $who gets $days days of Plus.'
+              : 'Thanks — $who will be glad you joined.';
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => codeMessage =
+            errorMessage(e, 'That code didn’t work. Check it and try again.'));
+      }
+    } finally {
+      if (mounted) setState(() => applying = false);
+    }
+  }
+
+  void done() {
+    widget.store.marketingConsent = marketing;
+    widget.onDone();
+  }
 
   Widget item(bool done, String text) => Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -962,30 +1081,76 @@ class _AllSet extends StatelessWidget {
       ]));
 
   @override
-  Widget build(BuildContext context) =>
-      ListView(padding: const EdgeInsets.fromLTRB(28, 40, 28, 32), children: [
-        Text('You’re all set, ${store.myName}.',
-            style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 10),
-        Text('Your profile so far:',
-            style: TextStyle(color: EverlaneColors.muted)),
-        const SizedBox(height: 18),
-        item(true, 'Name and date of birth'),
-        item(true, 'Gender and who you’d like to meet'),
-        item(store.myHeightCm != null, 'Height'),
-        item(store.myLanguages.isNotEmpty, 'Languages · optional'),
-        item(true, 'Looking for: ${store.myLookingFor}'),
-        item(store.hasPhoto,
-            '${store.myPhotos.length} photo${store.myPhotos.length == 1 ? '' : 's'}'),
-        item(store.myInterests.isNotEmpty,
-            '${store.myInterests.length} interest${store.myInterests.length == 1 ? '' : 's'} · optional'),
-        item(false, 'A bio · add from your profile'),
-        const SizedBox(height: 24),
-        FilledButton(
-            onPressed: onDone,
-            style: FilledButton.styleFrom(backgroundColor: EverlaneColors.like),
-            child: const Text('Start exploring')),
-      ]);
+  Widget build(BuildContext context) {
+    final store = widget.store;
+    final invite = store.signedIn && store.referralsOn;
+    return ListView(padding: const EdgeInsets.fromLTRB(28, 40, 28, 32), children: [
+      Text('You’re all set, ${store.myName}.',
+          style: Theme.of(context).textTheme.headlineLarge),
+      const SizedBox(height: 10),
+      Text('Your profile so far:',
+          style: TextStyle(color: EverlaneColors.muted)),
+      const SizedBox(height: 18),
+      item(true, 'Name and date of birth'),
+      item(true, 'Gender and who you’d like to meet'),
+      item(store.myHeightCm != null, 'Height'),
+      item(store.myLanguages.isNotEmpty, 'Languages · optional'),
+      item(true, 'Looking for: ${store.myLookingFor}'),
+      item(store.hasPhoto,
+          '${store.myPhotos.length} photo${store.myPhotos.length == 1 ? '' : 's'}'),
+      item(store.myInterests.isNotEmpty,
+          '${store.myInterests.length} interest${store.myInterests.length == 1 ? '' : 's'} · optional'),
+      store.myBio.trim().isNotEmpty
+          ? item(true, 'A bio')
+          : item(false, 'A bio · add from your profile'),
+      if (invite) ...[
+        const SizedBox(height: 12),
+        const Text('Have an invite code?',
+            style: TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(
+              child: TextField(
+                  controller: code,
+                  enabled: !applied,
+                  textCapitalization: TextCapitalization.characters,
+                  onChanged: (_) => setState(() {}),
+                  decoration: const InputDecoration(
+                      hintText: 'Invite code · optional'))),
+          const SizedBox(width: 8),
+          TextButton(
+              onPressed: applying || applied || code.text.trim().isEmpty
+                  ? null
+                  : applyCode,
+              child: Text(applying ? 'Checking…' : 'Apply')),
+        ]),
+        if (codeMessage != null)
+          Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(codeMessage!,
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: applied
+                          ? EverlaneColors.boost
+                          : EverlaneColors.like))),
+      ],
+      const SizedBox(height: 12),
+      CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+          value: marketing,
+          onChanged: (v) => setState(() => marketing = v ?? false),
+          title: const Text('Send me tips and offers',
+              style: TextStyle(fontSize: 14)),
+          subtitle: Text('Optional. You can change this anytime.',
+              style: TextStyle(fontSize: 12, color: EverlaneColors.muted))),
+      const SizedBox(height: 12),
+      FilledButton(
+          onPressed: done,
+          style: FilledButton.styleFrom(backgroundColor: EverlaneColors.like),
+          child: const Text('Start exploring')),
+    ]);
+  }
 }
 
 class CompatibilityQuizScreen extends StatefulWidget {

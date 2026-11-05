@@ -478,8 +478,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Delete account'), 300,
         scrollable: find.byType(Scrollable).first);
-    // Clear of the bottom navigation bar.
-    await tester.drag(find.byType(Scrollable).first, const Offset(0, -250));
+    // Clear of the bottom navigation bar: Log out at the top, Delete below.
+    await tester.ensureVisible(find.text('Log out'));
     await tester.pumpAndSettle();
     expect(find.text('Log out'), findsOneWidget);
     expect(find.text('Preview · not signed in'), findsOneWidget);

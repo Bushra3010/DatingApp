@@ -18,6 +18,8 @@ dependencies:
   latlong2: ^0.10.1
   geolocator: ^14.1.2
   camera: ^0.12.1
+  shared_preferences: ^2.5.3
+  url_launcher: ^6.3.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

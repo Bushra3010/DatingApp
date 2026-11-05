@@ -385,6 +385,97 @@ class ProfileBackend {
   Future<void> stopListening(RealtimeChannel channel) =>
       client.removeChannel(channel);
 
+  // ---- Set by admins in the panel ----
+
+  /// Maintenance, minimum versions, feature flags, onboarding rules, the
+  /// minimum age and referral settings. Readable without signing in.
+  Future<Map<String, dynamic>> appSettings() async =>
+      _map(await client.rpc('app_settings'));
+
+  /// Whether the signed-in account is banned.
+  Future<bool> isBanned() async =>
+      _map(await client.rpc('access_check'))['banned'] == true;
+
+  /// Banners and notices meant for this member.
+  Future<List<Map<String, dynamic>>> myAnnouncements() async =>
+      _rows(await client.rpc('my_announcements'));
+
+  /// A legal document as published in the admin panel ('privacy', 'terms'
+  /// or 'guidelines'), or null while it's unpublished.
+  Future<Map<String, dynamic>?> legalDoc(String slug) async {
+    final data = await client.rpc('legal_doc', params: {'p_slug': slug});
+    final row = _map(data);
+    return row.isEmpty ? null : row;
+  }
+
+  // ---- Help & support ----
+
+  Future<List<Map<String, dynamic>>> faq() async => _rows(await client
+      .from('faq')
+      .select()
+      .eq('active', true)
+      .order('position'));
+
+  /// Returns the new ticket's id.
+  Future<String> createTicket(
+          {required String subject,
+          required String category,
+          required String body}) async {
+    final data = await client.rpc('create_ticket', params: {
+      'p_subject': subject,
+      'p_category': category,
+      'p_body': body,
+    });
+    if (data is String) return data;
+    final row = _map(data);
+    return '${row['id'] ?? row['create_ticket'] ?? row.values.firstOrNull ?? ''}';
+  }
+
+  Future<List<Map<String, dynamic>>> myTickets() async =>
+      _rows(await client.rpc('my_tickets'));
+
+  Future<List<Map<String, dynamic>>> ticketThread(String ticket) async =>
+      _rows(await client.rpc('ticket_thread', params: {'p_ticket': ticket}));
+
+  Future<void> replyTicket(String ticket, String body) => client
+      .rpc('reply_ticket', params: {'p_ticket': ticket, 'p_body': body});
+
+  // ---- Your data ----
+
+  /// [kind] is 'export' or 'deletion'.
+  Future<void> requestMyData(String kind, {String details = ''}) => client
+      .rpc('request_my_data', params: {'p_kind': kind, 'p_details': details});
+
+  Future<List<Map<String, dynamic>>> myDataRequests() async =>
+      _rows(await client.rpc('my_data_requests'));
+
+  // ---- Referrals and consent ----
+
+  /// {code, joined, reward_days}.
+  Future<Map<String, dynamic>> myReferral() async =>
+      _map(await client.rpc('my_referral'));
+
+  /// Returns the name of the friend who invited you.
+  Future<String> applyReferral(String code) async {
+    final data = await client.rpc('apply_referral', params: {'p_code': code});
+    if (data is String) return data;
+    final row = _map(data);
+    return '${row['name'] ?? row['apply_referral'] ?? row.values.firstOrNull ?? ''}';
+  }
+
+  Future<void> recordConsent(
+          {required String termsVersion, required bool marketing}) =>
+      client.rpc('record_consent', params: {
+        'p_terms_version': termsVersion,
+        'p_marketing': marketing,
+      });
+
+  /// An RPC returning one row may come back as a map or a one-row list.
+  static Map<String, dynamic> _map(dynamic data) {
+    if (data is List) data = data.isEmpty ? null : data.first;
+    return data is Map ? Map<String, dynamic>.from(data) : {};
+  }
+
   static List<Map<String, dynamic>> _rows(dynamic data) =>
       [for (final r in data as List) Map<String, dynamic>.from(r as Map)];
 
@@ -408,3 +499,11 @@ class ProfileBackend {
 /// (migration 007) with this error.
 bool isBannedWordError(Object e) =>
     e is PostgrestException && e.message.contains('banned_word');
+
+/// The server's own words for a refused request (e.g. "Invalid invite
+/// code"), or [fallback] for anything else.
+String errorMessage(Object e, String fallback) => switch (e) {
+      PostgrestException(:final message) when message.isNotEmpty => message,
+      AuthException(:final message) when message.isNotEmpty => message,
+      _ => fallback,
+    };

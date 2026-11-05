@@ -3,6 +3,7 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'admin.dart';
 import 'cities.dart';
 import 'crossed_paths.dart';
 import 'match_celebration.dart';
@@ -16,6 +17,7 @@ import 'hangouts.dart';
 import 'introductions.dart';
 import 'legal.dart';
 import 'onboarding.dart';
+import 'support.dart';
 
 class DiscoverScreen extends StatelessWidget {
   const DiscoverScreen({super.key, required this.store});
@@ -60,7 +62,7 @@ class DiscoverScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final people = store.discover;
     if (people.isEmpty) {
-      return EmptyState(
+      final empty = EmptyState(
         icon: Icons.wb_sunny_outlined,
         title: store.paused ? 'Take your time.' : 'You’re all caught up.',
         detail: store.paused
@@ -78,7 +80,7 @@ class DiscoverScreen extends StatelessWidget {
               },
               child: Text(
                   store.paused ? 'Resume discovering' : 'Adjust preferences')),
-          if (!store.paused && store.canUndo) ...[
+          if (!store.paused && store.canUndo && store.settings.rewind) ...[
             const SizedBox(height: 8),
             TextButton.icon(
                 onPressed: () => undoPass(context),
@@ -87,6 +89,8 @@ class DiscoverScreen extends StatelessWidget {
           ],
         ]),
       );
+      if (store.banner == null) return empty;
+      return ListView(children: [AnnouncementBanner(store: store), empty]);
     }
     final person = people.first;
     final card = GlobalObjectKey<SwipeCardState>(person);
@@ -123,7 +127,9 @@ class DiscoverScreen extends StatelessWidget {
         context,
         editorialRoute<void>(
             (_) => PersonDetailsScreen(person: person, store: store)));
+    final flags = store.settings;
     return Column(children: [
+      AnnouncementBanner(store: store),
       Padding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
           child: SizedBox(
@@ -148,10 +154,14 @@ class DiscoverScreen extends StatelessWidget {
                       person: person,
                       onOpen: details,
                       onMore: () => showSafety(context, store, person),
-                      onBoost: () => showBoost(context, store),
+                      onBoost:
+                          flags.boost ? () => showBoost(context, store) : null,
                       onPass: passTap,
                       onLike: like,
-                      onSpark: () => showSpark(context, store, person),
+                      onSpark: flags.sparks
+                          ? () => showSpark(context, store, person)
+                          : null,
+                      showUndo: flags.rewind,
                       onUndo: store.canUndo ? () => undoPass(context) : null,
                       onPrompt: (target) {
                         HapticFeedback.selectionClick();
@@ -372,9 +382,16 @@ class _PersonCard extends StatelessWidget {
       required this.onLike,
       required this.onSpark,
       required this.onUndo,
-      required this.onPrompt});
+      required this.onPrompt,
+      this.showUndo = true});
   final Person person;
-  final VoidCallback onOpen, onMore, onBoost, onPass, onLike, onSpark;
+  final VoidCallback onOpen, onMore, onPass, onLike;
+
+  /// Null hides the button (switched off in the admin panel).
+  final VoidCallback? onBoost, onSpark;
+
+  /// False hides Undo altogether (Rewind switched off).
+  final bool showUndo;
 
   /// Null when there is no pass to undo.
   final VoidCallback? onUndo;
@@ -461,15 +478,18 @@ class _PersonCard extends StatelessWidget {
                                         fontWeight: FontWeight.w600))),
                           ]))),
                         const Spacer(),
-                        Material(
-                            color: Colors.black.withValues(alpha: .35),
-                            shape: const CircleBorder(),
-                            child: IconButton(
-                                tooltip: 'Boost your profile',
-                                onPressed: onBoost,
-                                icon: const Icon(Icons.bolt_rounded,
-                                    color: EverlaneColors.lavender, size: 22))),
-                        const SizedBox(width: 8),
+                        if (onBoost != null) ...[
+                          Material(
+                              color: Colors.black.withValues(alpha: .35),
+                              shape: const CircleBorder(),
+                              child: IconButton(
+                                  tooltip: 'Boost your profile',
+                                  onPressed: onBoost,
+                                  icon: const Icon(Icons.bolt_rounded,
+                                      color: EverlaneColors.lavender,
+                                      size: 22))),
+                          const SizedBox(width: 8),
+                        ],
                         Material(
                             color: Colors.black.withValues(alpha: .35),
                             shape: const CircleBorder(),
@@ -534,22 +554,26 @@ class _PersonCard extends StatelessWidget {
                       right: 14,
                       bottom: big + 30,
                       child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        _RoundAction(
-                            icon: Icons.star_rounded,
-                            label: 'Send ${person.name} a Spark',
-                            color: const Color(0xFF2A1A05),
-                            size: small + 4,
-                            gradient: _goldGradient,
-                            glow: const Color(0x80F59E0B),
-                            onTap: onSpark),
-                        const SizedBox(height: 12),
-                        _RoundAction(
-                            icon: Icons.undo_rounded,
-                            label: 'Undo last pass',
-                            color: Colors.white,
-                            size: small,
-                            onTap: onUndo),
-                        const SizedBox(height: 12),
+                        if (onSpark != null) ...[
+                          _RoundAction(
+                              icon: Icons.star_rounded,
+                              label: 'Send ${person.name} a Spark',
+                              color: const Color(0xFF2A1A05),
+                              size: small + 4,
+                              gradient: _goldGradient,
+                              glow: const Color(0x80F59E0B),
+                              onTap: onSpark),
+                          const SizedBox(height: 12),
+                        ],
+                        if (showUndo) ...[
+                          _RoundAction(
+                              icon: Icons.undo_rounded,
+                              label: 'Undo last pass',
+                              color: Colors.white,
+                              size: small,
+                              onTap: onUndo),
+                          const SizedBox(height: 12),
+                        ],
                         _RoundAction(
                             icon: Icons.chat_bubble_rounded,
                             label: 'Ask about this photo',
@@ -675,11 +699,13 @@ class PersonDetailsScreen extends StatelessWidget {
                         const SizedBox(height: 22),
                         VoicePrompt.of(person),
                       ],
-                      const SizedBox(height: 22),
-                      ListenableBuilder(
-                          listenable: store,
-                          builder: (context, _) =>
-                              ChemistryCard(store: store, person: person)),
+                      if (store.settings.quiz) ...[
+                        const SizedBox(height: 22),
+                        ListenableBuilder(
+                            listenable: store,
+                            builder: (context, _) =>
+                                ChemistryCard(store: store, person: person)),
+                      ],
                       const SizedBox(height: 30),
                       const DetailHeading(
                           icon: Icons.person_outline_rounded,
@@ -970,13 +996,19 @@ class ExploreScreen extends StatelessWidget {
         Text('Meet people who are looking for the same thing you are.',
             style: TextStyle(color: EverlaneColors.muted)),
         const SizedBox(height: 24),
-        HangoutsBanner(store: store),
-        const SizedBox(height: 12),
-        IntroductionBanner(store: store),
-        const SizedBox(height: 12),
+        if (store.settings.hangouts) ...[
+          HangoutsBanner(store: store),
+          const SizedBox(height: 12),
+        ],
+        if (store.settings.introductions) ...[
+          IntroductionBanner(store: store),
+          const SizedBox(height: 12),
+        ],
         _NearbyBanner(store: store),
-        const SizedBox(height: 12),
-        _CrossedPathsBanner(store: store),
+        if (store.settings.crossedPaths) ...[
+          const SizedBox(height: 12),
+          _CrossedPathsBanner(store: store),
+        ],
         const SizedBox(height: 24),
         GridView(
             shrinkWrap: true,
@@ -1261,8 +1293,12 @@ class LikesScreen extends StatelessWidget {
   const LikesScreen({super.key, required this.store});
   final PreviewStore store;
   @override
-  Widget build(BuildContext context) =>
-      ListView(padding: const EdgeInsets.all(24), children: [
+  Widget build(BuildContext context) => !store.settings.likesYou
+      ? const EmptyState(
+          icon: Icons.favorite_border,
+          title: 'Not available right now.',
+          detail: 'Likes you is taking a short break. Check back soon.')
+      : ListView(padding: const EdgeInsets.all(24), children: [
         const Eyebrow('The feeling could be mutual'),
         const SizedBox(height: 10),
         Text('Likes you', style: Theme.of(context).textTheme.headlineLarge),
@@ -1741,7 +1777,9 @@ class _MyVoicePrompt extends StatelessWidget {
   final PreviewStore store;
   @override
   Widget build(BuildContext context) {
+    final canRecord = store.settings.voicePrompts;
     if (!store.hasVoice) {
+      if (!canRecord) return const SizedBox.shrink();
       return OutlinedButton.icon(
           onPressed: () => recordVoicePrompt(context, store),
           style: OutlinedButton.styleFrom(minimumSize: const Size(0, 48)),
@@ -1757,10 +1795,11 @@ class _MyVoicePrompt extends StatelessWidget {
           seconds: store.myVoiceSeconds,
           bytes: store.myVoice,
           url: store.myVoiceUrl),
-      TextButton.icon(
-          onPressed: () => recordVoicePrompt(context, store),
-          icon: const Icon(Icons.mic_none_rounded, size: 18),
-          label: const Text('Record again')),
+      if (canRecord)
+        TextButton.icon(
+            onPressed: () => recordVoicePrompt(context, store),
+            icon: const Icon(Icons.mic_none_rounded, size: 18),
+            label: const Text('Record again')),
     ]);
   }
 }
@@ -1979,23 +2018,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ]))),
       const SizedBox(height: 18),
       Wrap(alignment: WrapAlignment.center, spacing: 10, runSpacing: 10, children: [
-        _pill(
-            icon: store.myVerified
-                ? Icons.verified_rounded
-                : store.verificationStatus == 'pending'
-                    ? Icons.hourglass_top_rounded
-                    : Icons.verified_outlined,
-            label: store.myVerified
-                ? 'Verified'
-                : switch (store.verificationStatus) {
-                    'pending' => 'Verification pending',
-                    'rejected' => 'Verify again',
-                    _ => 'Get verified',
-                  },
-            color: store.myVerified ? const Color(0xFF60A5FA) : null,
-            onTap: store.myVerified || store.verificationStatus == 'pending'
-                ? null
-                : () => verifyMe(context, store)),
+        if (store.myVerified || store.settings.selfieVerification)
+          _pill(
+              icon: store.myVerified
+                  ? Icons.verified_rounded
+                  : store.verificationStatus == 'pending'
+                      ? Icons.hourglass_top_rounded
+                      : Icons.verified_outlined,
+              label: store.myVerified
+                  ? 'Verified'
+                  : switch (store.verificationStatus) {
+                      'pending' => 'Verification pending',
+                      'rejected' => 'Verify again',
+                      _ => 'Get verified',
+                    },
+              color: store.myVerified ? const Color(0xFF60A5FA) : null,
+              onTap: store.myVerified || store.verificationStatus == 'pending'
+                  ? null
+                  : () => verifyMe(context, store)),
         _pill(
             icon: Icons.visibility_outlined,
             label: 'Preview',
@@ -2122,8 +2162,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onTap: () => editProfile(context, store)),
           ]),
       _MembershipBanner(store: store),
-      const SizedBox(height: 12),
-      QuizCard(store: store),
+      if (store.settings.quiz) ...[
+        const SizedBox(height: 12),
+        QuizCard(store: store),
+      ],
+      if (store.referralsOn && store.signedIn) ...[
+        const SizedBox(height: 12),
+        InviteCard(store: store),
+      ],
       const SizedBox(height: 16),
       _ProfileSection(
           title: 'Privacy & safety',
@@ -2206,6 +2252,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const Divider(height: 1),
               ListTile(
                   contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.handshake_outlined),
+                  title: const Text('Community guidelines'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => openGuidelines(context)),
+              const Divider(height: 1),
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.logout_rounded),
                   title: const Text('Log out'),
                   subtitle: Text(
@@ -2264,6 +2317,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   store.darkMode = value;
                   store.update();
                 }),
+            const Divider(height: 1),
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Download my data'),
+                subtitle: Text('Get a copy of what we hold about you',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => openYourData(context, store)),
+            const Divider(height: 1),
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Request account deletion review'),
+                subtitle: Text('Our team reviews and removes your data',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => openYourData(context, store)),            const Divider(height: 1),
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Help & support'),
+                subtitle: Text('Answers, contact us and your requests',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (store.unreadTickets > 0)
+                    const Badge(
+                        backgroundColor: EverlaneColors.like, smallSize: 8),
+                  const Icon(Icons.chevron_right),
+                ]),
+                onTap: () => openHelp(context, store)),
           ]),
       const SizedBox(height: 12),
       const Center(
@@ -2886,13 +2967,15 @@ class _EditProfileFormState extends State<_EditProfileForm> {
               validator: (v) => v == null || v.trim().isEmpty
                   ? 'Tell us a little about this'
                   : null),
-          const SizedBox(height: 8),
-          const Text('Voice prompt',
-              style: TextStyle(fontWeight: FontWeight.w700)),
-          const SizedBox(height: 10),
-          ListenableBuilder(
-              listenable: store,
-              builder: (context, _) => _MyVoicePrompt(store: store)),
+          if (store.settings.voicePrompts || store.hasVoice) ...[
+            const SizedBox(height: 8),
+            const Text('Voice prompt',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 10),
+            ListenableBuilder(
+                listenable: store,
+                builder: (context, _) => _MyVoicePrompt(store: store)),
+          ],
           const SizedBox(height: 18),
           Row(children: [
             Expanded(
