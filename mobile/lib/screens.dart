@@ -491,15 +491,19 @@ class _PersonCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Row(children: [
+                              // Long names shrink to fit, so the age always shows.
                               Flexible(
                                   child: GestureDetector(
                                       onTap: onOpen,
-                                      child: Text.rich(
-                                          EverlaneFonts.nameAge(
-                                              person.name, person.age,
-                                              size: 38),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis))),
+                                      child: FittedBox(
+                                          fit: BoxFit.scaleDown,
+                                          alignment: Alignment.centerLeft,
+                                          child: Text.rich(
+                                              EverlaneFonts.nameAge(
+                                                  person.name, person.age,
+                                                  size: 38),
+                                              maxLines: 1,
+                                              softWrap: false)))),
                               if (person.verified) ...[
                                 const SizedBox(width: 8),
                                 const Tooltip(
