@@ -3408,18 +3408,19 @@ class UnreadBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
       label: '$count unread',
+      // Sized to its number: a round dot for 1–9, a short pill for more.
       child: Container(
-          constraints: const BoxConstraints(minWidth: 24),
-          height: 24,
-          padding: const EdgeInsets.symmetric(horizontal: 7),
-          alignment: Alignment.center,
+          constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: BoxDecoration(
               gradient: EverlaneColors.premiumGradient,
-              borderRadius: BorderRadius.circular(12)),
+              borderRadius: BorderRadius.circular(11)),
           child: Text(count > 99 ? '99+' : '$count',
+              textAlign: TextAlign.center,
               style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
+                  height: 1.2,
                   fontWeight: FontWeight.w700))));
 }
 
