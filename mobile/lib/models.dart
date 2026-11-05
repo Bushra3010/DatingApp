@@ -2585,6 +2585,16 @@ class PreviewStore extends ChangeNotifier {
   bool get referralsOn => settings.referralsOn;
   Referral? referral;
 
+  /// A friend's invite code entered at sign-up, applied once the new
+  /// member's profile is saved (end of onboarding). Also kept on the
+  /// account, so it survives confirming the email on another device.
+  String pendingReferralCode = '';
+  String get signUpReferralCode {
+    if (pendingReferralCode.isNotEmpty) return pendingReferralCode;
+    final meta = backend?.user?.userMetadata?['referral_code'];
+    return meta is String ? meta.trim() : '';
+  }
+
   Future<void> loadReferral() async {
     final b = backend;
     if (b == null || !b.signedIn || !referralsOn) return;

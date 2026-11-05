@@ -1022,10 +1022,21 @@ class _AllSet extends StatefulWidget {
 }
 
 class _AllSetState extends State<_AllSet> {
-  final code = TextEditingController();
+  // A code entered at sign-up is filled in and applied straight away.
+  late final code = TextEditingController(text: widget.store.signUpReferralCode);
   late bool marketing = widget.store.marketingConsent;
   bool applying = false, applied = false;
   String? codeMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    if (code.text.isNotEmpty && widget.store.signedIn && widget.store.referralsOn) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) applyCode();
+      });
+    }
+  }
 
   @override
   void dispose() {

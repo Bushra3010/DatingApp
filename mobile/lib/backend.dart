@@ -22,8 +22,13 @@ class ProfileBackend {
   User? get user => client.auth.currentUser;
   bool get signedIn => user != null;
 
-  Future<void> signUp(String email, String password) async {
-    final res = await client.auth.signUp(email: email, password: password);
+  /// [referral] is a friend's invite code, kept on the account until the
+  /// new member finishes their profile and it can be applied.
+  Future<void> signUp(String email, String password, {String referral = ''}) async {
+    final res = await client.auth.signUp(
+        email: email,
+        password: password,
+        data: referral.isEmpty ? null : {'referral_code': referral});
     // With email confirmation on, Supabase creates the user but no session.
     if (res.session == null) {
       throw const AuthException(

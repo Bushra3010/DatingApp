@@ -34,6 +34,7 @@ class _AuthFlowState extends State<_AuthFlow> {
   final phone = TextEditingController();
   final code = TextEditingController();
   final email = TextEditingController();
+  final referral = TextEditingController();
   final password = TextEditingController();
   bool busy = false, hidden = true;
   String? error;
@@ -44,6 +45,7 @@ class _AuthFlowState extends State<_AuthFlow> {
     code.dispose();
     email.dispose();
     password.dispose();
+    referral.dispose();
     super.dispose();
   }
 
@@ -319,6 +321,18 @@ class _AuthFlowState extends State<_AuthFlow> {
                     icon: Icon(hidden
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined)))),
+        if (signUp && widget.store.referralsOn) ...[
+          const SizedBox(height: 12),
+          TextField(
+              controller: referral,
+              textCapitalization: TextCapitalization.characters,
+              autocorrect: false,
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(
+                  labelText: 'Referral code (optional)',
+                  hintText: 'A friend’s invite code',
+                  prefixIcon: Icon(Icons.card_giftcard_rounded))),
+        ],
         _error(),
         const SizedBox(height: 20),
         GradientButton(
@@ -342,7 +356,9 @@ class _AuthFlowState extends State<_AuthFlow> {
                     }
                     run(() async {
                       if (signUp) {
-                        await b.emailSignUp(e, password.text);
+                        final code = referral.text.trim().toUpperCase();
+                        widget.store.pendingReferralCode = code;
+                        await b.emailSignUp(e, password.text, referral: code);
                       } else {
                         await b.emailLogIn(e, password.text);
                       }
@@ -365,7 +381,8 @@ class ProfileBackendCalls {
   Future<void> sendCode(String phone) => store.backend!.sendPhoneCode(phone);
   Future<void> verifyCode(String phone, String code) =>
       store.backend!.verifyPhoneCode(phone, code);
-  Future<void> emailSignUp(String e, String p) => store.backend!.signUp(e, p);
+  Future<void> emailSignUp(String e, String p, {String referral = ''}) =>
+      store.backend!.signUp(e, p, referral: referral);
   Future<void> emailLogIn(String e, String p) => store.backend!.logIn(e, p);
 }
 
