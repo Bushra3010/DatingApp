@@ -458,25 +458,7 @@ class _PersonCard extends StatelessWidget {
                       left: 14,
                       right: 10,
                       child: Row(children: [
-                        if (person.activeNow)
-                          const Flexible(
-                              child: _GlassPill(
-                                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                            DecoratedBox(
-                                decoration: BoxDecoration(
-                                    color: Color(0xFF22C55E),
-                                    shape: BoxShape.circle),
-                                child: SizedBox(width: 8, height: 8)),
-                            SizedBox(width: 7),
-                            Flexible(
-                                child: Text('Active now',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.w600))),
-                          ]))),
+                        // Activity now shows at the bottom (PresenceBadge).
                         const Spacer(),
                         if (onBoost != null) ...[
                           Material(
@@ -595,15 +577,14 @@ class _PersonCard extends StatelessWidget {
                             size: big,
                             fill: Colors.white,
                             onTap: onPass),
+                        // Activity badge; read-only, so swipes and taps
+                        // still reach the card.
                         Expanded(
-                            child: Text('SWIPE OR TAP',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontSize: 13,
-                                    letterSpacing: 2.4,
-                                    fontWeight: FontWeight.w500,
-                                    color:
-                                        Colors.white.withValues(alpha: .7)))),
+                            child: IgnorePointer(
+                                child: Center(
+                                    child: person.presence == null
+                                        ? const SizedBox.shrink()
+                                        : PresenceBadge(person.presence!)))),
                         _RoundAction(
                             icon: Icons.favorite_rounded,
                             label: 'Like ${person.name}’s photo',
@@ -2179,6 +2160,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             SwitchListTile(
                 contentPadding: EdgeInsets.zero,
+                title: const Text('Show when I’m online'),
+                subtitle: Text('Others see “Online” or “Recently online” on your card',
+                    style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
+                value: store.showOnline,
+                onChanged: store.setShowOnline),
+            const Divider(height: 1),
+            SwitchListTile(
+                contentPadding: EdgeInsets.zero,
                 title: const Text('Invisible mode'),
                 subtitle: Text('Only people you like can see you',
                     style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),
@@ -3399,6 +3388,34 @@ class _DetailActions extends StatelessWidget {
                                 onTap: () => showLikeComposer(
                                     context, store, person, 'photo'))),
                       ]))))));
+}
+
+/// "Online", "New here" or "Recently online" on a Discover card.
+class PresenceBadge extends StatelessWidget {
+  const PresenceBadge(this.presence, {super.key});
+  final Presence presence;
+  @override
+  Widget build(BuildContext context) => Semantics(
+      label: presence.label,
+      child: _GlassPill(
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+        presence == Presence.newHere
+            ? Icon(Icons.auto_awesome_rounded, size: 13, color: presence.color)
+            : Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                    color: presence.color, shape: BoxShape.circle)),
+        const SizedBox(width: 6),
+        Flexible(
+            child: Text(presence.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w600))),
+      ])));
 }
 
 /// The pink count of unread messages on a chat in the Messages list.

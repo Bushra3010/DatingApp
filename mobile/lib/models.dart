@@ -38,6 +38,17 @@ enum LookingFor {
   final Color color;
 }
 
+/// Activity shown on a Discover card, in order of priority.
+enum Presence {
+  online('Online', Color(0xFF22C55E)),
+  newHere('New here', Color(0xFF3B82F6)),
+  recent('Recently online', Color(0xFFF59E0B));
+
+  const Presence(this.label, this.color);
+  final String label;
+  final Color color;
+}
+
 class Person {
   const Person(
       {required this.id,
@@ -61,9 +72,32 @@ class Person {
       this.photoUrls = const [],
       this.remote = false,
       this.heightCm,
-      this.languages = const []});
+      this.languages = const [],
+      this.lastSeenAt,
+      this.joinedAt});
 
   final int? heightCm;
+
+  /// When a real member was last active (null when they hide it, and for
+  /// automated profiles), and when they joined.
+  final DateTime? lastSeenAt, joinedAt;
+
+  /// The Discover card's activity badge, or null for none.
+  Presence? get presence {
+    final now = DateTime.now();
+    final seen = lastSeenAt;
+    if (!remote) return activeNow ? Presence.online : null;
+    if (seen != null && now.difference(seen) < const Duration(minutes: 5)) {
+      return Presence.online;
+    }
+    if (joinedAt != null && now.difference(joinedAt!) <= const Duration(days: 7)) {
+      return Presence.newHere;
+    }
+    if (seen != null && now.difference(seen) < const Duration(hours: 24)) {
+      return Presence.recent;
+    }
+    return null;
+  }
   final List<String> languages;
 
   /// A real member, from a Supabase card (see `discover_members`).
@@ -101,6 +135,8 @@ class Person {
           for (final path in List<String>.from(r['photos'] as List? ?? const []))
             photoUrl(path)
         ],
+        lastSeenAt: DateTime.tryParse(r['last_seen_at'] as String? ?? '')?.toLocal(),
+        joinedAt: DateTime.tryParse(r['joined_at'] as String? ?? '')?.toLocal(),
         remote: true);
   }
 
@@ -852,6 +888,16 @@ class PreviewStore extends ChangeNotifier {
   /// Hidden from Discover except to people you've liked. A privacy control,
   /// so it's free.
   bool invisible = false;
+
+  /// Others see "Online" / "Recently online" on your card (Preferences).
+  bool showOnline = true;
+
+  void setShowOnline(bool value) {
+    showOnline = value;
+    notifyListeners();
+    final b = backend;
+    if (b != null && b.signedIn) b.setShowOnline(value).ignore();
+  }
   bool get canSeeLikes => plan.atLeast(Plan.gold);
 
   /// Plus and up: only show people looking for one of these. Empty = everyone.
@@ -1452,7 +1498,10 @@ class PreviewStore extends ChangeNotifier {
     if (_channel != null) return;
     _matchPollTimer?.cancel();
     var pollCount = 0;
+    b.touchPresence().ignore();
     _matchPollTimer = Timer.periodic(const Duration(seconds: 5), (_) async {
+      // Tell the server you're around, every two minutes or so.
+      if (pollCount % 24 == 0) backend?.touchPresence().ignore();
       if (!signedIn || backend == null) return;
       try {
         await backend!.checkBotReplies();
@@ -1909,6 +1958,7 @@ class PreviewStore extends ChangeNotifier {
       }
     }
     myVerified = row['verified'] as bool? ?? false;
+    showOnline = row['show_online_status'] as bool? ?? true;
     if (!myVerified) _loadVerification(b).ignore();
     (row['onboarding_answers'] as Map? ?? {}).forEach((k, v) =>
         onboardingAnswers[k as String] = List<String>.from(v as List));

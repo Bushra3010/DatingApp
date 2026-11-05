@@ -1,3 +1,4 @@
+import 'package:everlane/models.dart';
 import 'package:everlane/screens.dart' show UnreadBadge;
 import 'package:everlane/side_menu.dart';
 import 'package:flutter/material.dart';
@@ -68,5 +69,22 @@ void main() {
     expect(size.width, lessThan(40));
     expect(size.height, lessThan(30));
     expect(find.text('3'), findsOneWidget);
+  });
+
+  test('Presence: online, then new, then recently online, else none', () {
+    Person p({DateTime? seen, DateTime? joined}) => Person(
+        id: 'x', name: 'A', age: 25, job: '', photo: '', distance: 1,
+        answer: '', lookingFor: const [], remote: true,
+        lastSeenAt: seen, joinedAt: joined);
+    final now = DateTime.now();
+    final old = now.subtract(const Duration(days: 30));
+    expect(p(seen: now, joined: old).presence, Presence.online);
+    expect(p(seen: now.subtract(const Duration(hours: 2)), joined: now)
+        .presence, Presence.newHere);
+    expect(p(seen: now.subtract(const Duration(hours: 2)), joined: old)
+        .presence, Presence.recent);
+    expect(p(seen: now.subtract(const Duration(days: 2)), joined: old)
+        .presence, isNull);
+    expect(p().presence, isNull, reason: 'hidden status or an automated profile');
   });
 }
