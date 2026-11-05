@@ -305,6 +305,15 @@ class ProfileBackend {
         .order('created_at'));
   }
 
+  /// Unread messages per match id (only matches that have any).
+  Future<Map<String, int>> unread() async => {
+        for (final r in _rows(await client.rpc('my_unread')))
+          r['match_id'] as String: (r['unread'] as num).toInt()
+      };
+
+  Future<void> markRead(String matchId) =>
+      client.rpc('mark_read', params: {'p_match': matchId});
+
   /// Likes [to]; returns the match id if they had already liked you back.
   Future<String?> like(String to, {String target = 'photo', String comment = ''}) async {
     final me = user!.id;
