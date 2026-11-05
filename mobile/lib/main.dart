@@ -187,12 +187,14 @@ class _EverlaneShellState extends State<EverlaneShell> {
   void initState() {
     super.initState();
     widget.store.newMatch.addListener(celebrate);
+    widget.store.hangoutAccepted.addListener(hangoutAccepted);
     widget.store.addListener(showNotices);
     WidgetsBinding.instance.addPostFrameCallback((_) => showNotices());
   }
 
   @override
   void dispose() {
+    widget.store.hangoutAccepted.removeListener(hangoutAccepted);
     widget.store.newMatch.removeListener(celebrate);
     widget.store.removeListener(showNotices);
     super.dispose();
@@ -206,6 +208,21 @@ class _EverlaneShellState extends State<EverlaneShell> {
     await showNoticeAnnouncement(context, widget.store, notice);
     showingNotice = false;
     if (mounted) WidgetsBinding.instance.addPostFrameCallback((_) => showNotices());
+  }
+
+  /// A host said yes to your hangout request.
+  void hangoutAccepted() {
+    final text = widget.store.hangoutAccepted.value;
+    if (text == null || !mounted) return;
+    widget.store.hangoutAccepted.value = null;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(text),
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+              label: 'View',
+              onPressed: () => setState(() => selected = hangoutsTab))));
   }
 
   /// A real member liked you back (or you liked them back from Discover):

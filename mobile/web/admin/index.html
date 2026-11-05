@@ -996,6 +996,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
       <form class="card pad" id="hgOfficialForm" style="margin-bottom:12px">
         <h3>Host a plan as Everlane</h3>
         <div class="formgrid">
+          <div><label for="hoHost">Host name <span class="sub" style="font-weight:500">(shown as “Hosted by … · Everlane team”)</span></label><input type="text" id="hoHost" maxlength="40" placeholder="e.g. Priya from Everlane"></div>
           <div><label for="hoKind">What</label><select id="hoKind"></select></div>
           <div><label for="hoTitle">Title</label><input type="text" id="hoTitle" maxlength="60" placeholder="e.g. Sunday brunch with the Everlane team"></div>
           <div><label for="hoDate">Date</label><input type="date" id="hoDate" class="fld"></div>
@@ -3326,7 +3327,7 @@ $('#hgOfficialForm').onsubmit = async e => {
   if (!(Number.isInteger(spots) && spots >= 1 && spots <= 8)) return toast('Spots is 1 to 8');
   $('#hoCreate').disabled = true;
   const { error } = await sb.rpc('admin_create_hangout', { kind: $('#hoKind').value, title, starts_at: starts.toISOString(), area, venue, city,
-    note: note || null, looking_for: looking_for || null, spots });
+    note: note || null, looking_for: looking_for || null, spots, host_name: $('#hoHost').value.trim() });
   $('#hoCreate').disabled = false;
   if (error) return fail(error);
   $('#hgOfficialForm').reset(); $('#hoSpots').value = 4;

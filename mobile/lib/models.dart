@@ -754,6 +754,10 @@ class PreviewStore extends ChangeNotifier {
   /// Set when a new match arrives (your like back, or theirs); the app shell
   /// shows the celebration and clears it.
   final ValueNotifier<Conversation?> newMatch = ValueNotifier(null);
+
+  /// "Your hangout request is accepted" for the app shell to show (instead
+  /// of a match celebration, since a hangout connects you through a match).
+  final ValueNotifier<String?> hangoutAccepted = ValueNotifier(null);
   RealtimeChannel? _channel;
   Timer? _matchPollTimer;
 
@@ -1455,6 +1459,8 @@ class PreviewStore extends ChangeNotifier {
         pollCount++;
         if (pollCount % 12 == 0) {
           await backend!.myMatches();
+          // Waiting on a host? Check now and then whether they said yes.
+          if (hangouts.any((h) => h.status == 'pending')) await loadHangouts();
         }
       } catch (_) {}
     });
@@ -1481,6 +1487,18 @@ class PreviewStore extends ChangeNotifier {
       final row = rows.where((r) => r['match_id'] == matchId).firstOrNull;
       if (row == null) return;
       final p = Person.fromCard(row, b.photoUrl, voiceUrl: b.voiceUrl);
+      // A host accepting a hangout request connects you: say that, rather
+      // than celebrating a match. (The host, who accepted, needs no news.)
+      if (m['origin'] == 'hangout') {
+        _addMatch(p, matchId, celebrate: false);
+        final accepted = await loadHangouts();
+        if (accepted.isEmpty &&
+            hangouts.any((h) => h.host?.id == p.id && h.status == 'accepted')) {
+          hangoutAccepted.value =
+              'Your hangout request is accepted 🎉 You can now chat with ${p.name}.';
+        }
+        return;
+      }
       // You liked them back from Likes: that screen already celebrated.
       final mine = conversations.any((c) => c.person.id == p.id);
       _addMatch(p, matchId, celebrate: !mine);
@@ -1547,17 +1565,29 @@ class PreviewStore extends ChangeNotifier {
   }
 
   /// Plans within your Discover distance, and requests to your own plans.
-  Future<void> loadHangouts() async {
+  /// Reloads plans near you; returns the plans whose request (yours) was
+  /// accepted since the last load, and announces them.
+  Future<List<Hangout>> loadHangouts() async {
     final b = backend;
-    if (b == null || !b.signedIn) return;
+    if (b == null || !b.signedIn) return const [];
     hangoutsLoading = true;
     notifyListeners();
+    final before = {for (final h in hangouts) h.id: h.status};
+    final accepted = <Hangout>[];
     try {
       final results = await Future.wait(
           [b.hangoutsNear(maxKm: _maxKm), b.hangoutRequestsMine()]);
       hangouts
         ..clear()
         ..addAll(results[0].map((r) => Hangout.fromRow(r, b.photoUrl)));
+      for (final h in hangouts) {
+        if (h.status == 'accepted' && before[h.id] == 'pending') accepted.add(h);
+      }
+      if (accepted.isNotEmpty) {
+        final h = accepted.first;
+        hangoutAccepted.value =
+            'Your hangout request is accepted 🎉 “${h.title}”${h.venue.isEmpty ? '' : ' at ${h.venue}'}';
+      }
       hangoutRequests
         ..clear()
         ..addAll(results[1].map((r) => HangoutRequest(
@@ -1576,6 +1606,7 @@ class PreviewStore extends ChangeNotifier {
       hangoutsLoading = false;
       notifyListeners();
     }
+    return accepted;
   }
 
   /// Asks to join [h]. Plans with an icebreaker need a [voice] answer (a WAV

@@ -522,7 +522,9 @@ class _HangoutCard extends StatelessWidget {
                   ]),
                   Text(
                       h.official
-                          ? 'Hosted by the Everlane team'
+                          ? hostName == 'Everlane'
+                              ? 'Hosted by the Everlane team'
+                              : 'Hosted by $hostName · Everlane team'
                           : 'Hosted by $hostName',
                       style: TextStyle(
                           fontSize: 11,
@@ -1038,7 +1040,7 @@ class _HostPlanFormState extends State<_HostPlanForm> {
             icon: const Icon(Icons.add_circle_outline)),
       ]),
       const SizedBox(height: 6),
-      Text('Your post stays up for 24 hours. If you haven’t accepted anyone by then, it comes down.',
+      Text('Your post stays up for up to 24 hours and comes down 30 minutes after the plan starts.',
           style: TextStyle(fontSize: 12, color: EverlaneColors.muted, height: 1.4)),
       const SizedBox(height: 4),
       Text('Meet in a public place and tell a friend where you’ll be.',
