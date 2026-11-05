@@ -66,6 +66,7 @@ class _EverlaneAppState extends State<EverlaneApp> {
     legalBackend = store.backend;
     store.loadSettings();
     store.loadContent();
+    store.loadFilters();
     if (!store.signedIn) store.loadAnnouncements();
     // A returning member with a saved session goes straight to their profile.
     if (store.signedIn) {
