@@ -1,12 +1,15 @@
 import 'dart:async';
-import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'
-    show AuthException, RealtimeChannel;
+// Comes with supabase_flutter; see pubspec.yaml.
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show RealtimeChannel;
+import 'admin.dart';
 import 'backend.dart';
 import 'chemistry.dart';
 import 'cities.dart';
+import 'legal.dart' show termsVersion;
 import 'question_bank.dart';
 import 'theme.dart';
 
@@ -787,6 +790,7 @@ class PreviewStore extends ChangeNotifier {
   void finishOnboarding() {
     onboarded = true;
     notifyListeners();
+    _recordConsent();
     // Discovery matches on your saved gender and preferences, so load it
     // once the finished profile is saved.
     saveProfile().then((_) => refreshMembers());
@@ -1692,7 +1696,8 @@ class PreviewStore extends ChangeNotifier {
   /// in (tests, or the account-less preview).
   Future<void> saveProfile() {
     final b = backend;
-    if (b == null || !b.signedIn) return Future.value();
+    // A restricted account is never written to from the app.
+    if (b == null || !b.signedIn || restriction != null) return Future.value();
     return b.saveProfile(profileRow).then((_) {
       if (syncError != null) {
         syncError = null;
@@ -1788,22 +1793,44 @@ class PreviewStore extends ChangeNotifier {
   Future<bool> loadProfile() async {
     final b = backend;
     if (b == null || !b.signedIn) return false;
+    final banned = _banned(b);
     final row = await b.loadProfile();
+    // Blocked and suspended members stay signed in, but only to appeal or
+    // log out (see AccountRestrictedScreen); nothing else loads.
     if (row?['blocked'] == true) {
-      await b.logOut();
       startFreshAccount();
-      throw const AuthException(
-          'This account has been blocked. Contact support if you think this is a mistake.');
+      restriction = const AccountRestriction(
+          title: 'Account blocked',
+          message:
+              'This account has been blocked for breaking our community guidelines. If you think this is a mistake, you can appeal.');
+      notifyListeners();
+      return false;
     }
     final suspendedUntil =
         DateTime.tryParse(row?['suspended_until'] as String? ?? '')?.toLocal();
     if (suspendedUntil != null && suspendedUntil.isAfter(DateTime.now())) {
-      await b.logOut();
       startFreshAccount();
       final d = suspendedUntil;
-      throw AuthException(
-          'This account is suspended until ${d.day}/${d.month}/${d.year}. Contact support if you think this is a mistake.');
+      restriction = AccountRestriction(
+          title: 'Account suspended',
+          message:
+              'This account is suspended until ${d.day}/${d.month}/${d.year}. If you think this is a mistake, you can appeal.');
+      notifyListeners();
+      return false;
     }
+    if (await banned) {
+      await b.logOut();
+      startFreshAccount();
+      restriction = const AccountRestriction(
+          title: 'Account unavailable',
+          message:
+              'This account can’t use Everlane. Contact support if you think this is a mistake.',
+          canAppeal: false);
+      notifyListeners();
+      return false;
+    }
+    loadAnnouncements().ignore();
+    loadTickets().ignore();
     startFreshAccount();
     if (row == null) {
       await _loadCommunitySafely();
@@ -1875,8 +1902,248 @@ class PreviewStore extends ChangeNotifier {
 
   Future<void> logOut() async {
     _restoreDemo();
+    _clearAccountExtras();
     await backend?.logOut();
     startFreshAccount();
+  }
+
+  // ---- Set by admins in the panel (see admin.dart) ----
+
+  /// Safe defaults until `app_settings()` loads, and for good without a
+  /// backend: everything on, nothing blocked.
+  AppSettings settings = const AppSettings();
+
+  bool get maintenance => settings.maintenance;
+  bool get updateRequired => settings.needsUpdate(appVersion,
+      web: kIsWeb, platform: defaultTargetPlatform);
+
+  /// Loaded at start-up and whenever the app comes back to the front.
+  Future<void> loadSettings() async {
+    final b = backend;
+    if (b == null) return;
+    try {
+      settings = AppSettings.fromJson(await b.appSettings());
+      notifyListeners();
+    } catch (_) {
+      // Keep the last known settings.
+    }
+  }
+
+  /// Set when the signed-in account is blocked, suspended or banned; the
+  /// app then shows only AccountRestrictedScreen.
+  AccountRestriction? restriction;
+
+  void clearRestriction() {
+    restriction = null;
+    notifyListeners();
+  }
+
+  Future<bool> _banned(ProfileBackend b) async {
+    try {
+      return await b.isBanned();
+    } catch (_) {
+      return false; // the database still enforces it
+    }
+  }
+
+  void _clearAccountExtras() {
+    restriction = null;
+    announcements.clear();
+    tickets.clear();
+    dataRequests.clear();
+    referral = null;
+  }
+
+  // ---- Announcements ----
+
+  /// Newest first.
+  final List<Announcement> announcements = [];
+
+  /// Remembered on this device, so a dismissed one stays gone.
+  final Set<String> dismissedAnnouncements = {};
+  bool _dismissedLoaded = false;
+  static const _dismissedKey = 'everlane.dismissed_announcements';
+
+  Announcement? get banner => announcements
+      .where((a) => a.isBanner && !dismissedAnnouncements.contains(a.id))
+      .firstOrNull;
+  Announcement? get pendingNotice => announcements
+      .where((a) => a.isNotice && !dismissedAnnouncements.contains(a.id))
+      .firstOrNull;
+
+  void dismissAnnouncement(String id) {
+    if (!dismissedAnnouncements.add(id)) return;
+    notifyListeners();
+    if (backend == null) return;
+    SharedPreferences.getInstance()
+        .then((p) =>
+            p.setStringList(_dismissedKey, dismissedAnnouncements.toList()))
+        .catchError((Object _) => false);
+  }
+
+  Future<void> loadAnnouncements() async {
+    final b = backend;
+    if (b == null) return;
+    try {
+      if (!_dismissedLoaded) {
+        _dismissedLoaded = true;
+        try {
+          final p = await SharedPreferences.getInstance();
+          dismissedAnnouncements.addAll(p.getStringList(_dismissedKey) ?? []);
+        } catch (_) {
+          // Not remembered across launches, then.
+        }
+      }
+      final rows = await b.myAnnouncements();
+      final list = [for (final r in rows) Announcement.fromRow(r)]
+        ..sort((x, y) => (y.createdAt ?? DateTime(0))
+            .compareTo(x.createdAt ?? DateTime(0)));
+      announcements
+        ..clear()
+        ..addAll(list);
+      notifyListeners();
+    } catch (_) {
+      // No announcements, then.
+    }
+  }
+
+  // ---- Help & support ----
+
+  /// Help center articles; null until loaded.
+  List<FaqItem>? faq;
+  bool faqFailed = false;
+
+  Future<void> loadFaq() async {
+    final b = backend;
+    if (b == null) {
+      // Called from initState, so no notify: the screen reads it next.
+      faq ??= const [];
+      return;
+    }
+    try {
+      faq = [for (final r in await b.faq()) FaqItem.fromRow(r)];
+      faqFailed = false;
+    } catch (_) {
+      faqFailed = faq == null;
+      faq ??= const [];
+    }
+    notifyListeners();
+  }
+
+  /// Contact support, appeals and data requests need an account.
+  bool get canContactSupport => signedIn;
+
+  final List<SupportTicket> tickets = [];
+  int get unreadTickets => tickets.where((t) => t.unread > 0).length;
+
+  Future<void> loadTickets() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    try {
+      final rows = await b.myTickets();
+      tickets
+        ..clear()
+        ..addAll(rows.map(SupportTicket.fromRow));
+      notifyListeners();
+    } catch (_) {
+      // Keep what we had.
+    }
+  }
+
+  /// Returns the new ticket's id. Throws if it couldn't be sent.
+  Future<String> createTicket(
+      {required String subject,
+      required String category,
+      required String body}) async {
+    final b = backend;
+    if (b == null || !b.signedIn) {
+      throw StateError('Sign in to contact support.');
+    }
+    final id =
+        await b.createTicket(subject: subject, category: category, body: body);
+    loadTickets().ignore();
+    return id;
+  }
+
+  Future<List<TicketMessage>> ticketThread(String ticket) async {
+    final b = backend;
+    if (b == null || !b.signedIn) return const [];
+    final rows = await b.ticketThread(ticket);
+    // Opening a thread reads it.
+    loadTickets().ignore();
+    return [for (final r in rows) TicketMessage.fromRow(r)];
+  }
+
+  Future<void> replyTicket(String ticket, String body) async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    await b.replyTicket(ticket, body);
+  }
+
+  // ---- Your data ----
+
+  final List<DataRequest> dataRequests = [];
+
+  Future<void> loadDataRequests() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    try {
+      final rows = await b.myDataRequests();
+      dataRequests
+        ..clear()
+        ..addAll(rows.map(DataRequest.fromRow));
+      notifyListeners();
+    } catch (_) {
+      // Keep what we had.
+    }
+  }
+
+  /// [kind] is 'export' or 'deletion'. Throws if it couldn't be sent.
+  Future<void> requestMyData(String kind) async {
+    final b = backend;
+    if (b == null || !b.signedIn) {
+      throw StateError('Sign in to request your data.');
+    }
+    await b.requestMyData(kind);
+    await loadDataRequests();
+  }
+
+  // ---- Referrals and consent ----
+
+  bool get referralsOn => settings.referralsOn;
+  Referral? referral;
+
+  Future<void> loadReferral() async {
+    final b = backend;
+    if (b == null || !b.signedIn || !referralsOn) return;
+    try {
+      referral = Referral.fromJson(await b.myReferral());
+      notifyListeners();
+    } catch (_) {
+      // The invite card just doesn't show.
+    }
+  }
+
+  /// Returns the name of the friend who invited you. Throws with the
+  /// server's message (e.g. an unknown code).
+  Future<String> applyReferral(String code) async {
+    final b = backend;
+    if (b == null || !b.signedIn) {
+      throw StateError('Sign in to use an invite code.');
+    }
+    return b.applyReferral(code.trim());
+  }
+
+  /// "Send me tips and offers", from the last onboarding step.
+  bool marketingConsent = false;
+
+  void _recordConsent() {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    final marketing = marketingConsent;
+    termsVersion()
+        .then((v) => b.recordConsent(termsVersion: v, marketing: marketing))
+        .catchError((Object _) {});
   }
 }
 

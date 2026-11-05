@@ -3,13 +3,16 @@ import 'dart:ui' show ImageFilter;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'admin.dart';
 import 'backend.dart';
 import 'models.dart';
 import 'onboarding.dart';
 import 'hangouts.dart';
+import 'legal.dart' show legalBackend;
 import 'match_celebration.dart';
 import 'screens.dart';
 import 'side_menu.dart';
+import 'support.dart';
 import 'supabase_config.dart';
 import 'theme.dart';
 
@@ -27,27 +30,43 @@ Future<void> main() async {
 }
 
 class EverlaneApp extends StatefulWidget {
-  const EverlaneApp({super.key, this.onboarded = false, this.backend});
+  const EverlaneApp(
+      {super.key, this.onboarded = false, this.backend, this.store});
 
   /// Skips first-launch onboarding (used by tests).
   final bool onboarded;
 
   /// Supabase for the member's own account and profile; null in tests.
   final ProfileBackend? backend;
+
+  /// A ready-made store (tests use it to set admin settings and the like).
+  final PreviewStore? store;
   @override
   State<EverlaneApp> createState() => _EverlaneAppState();
 }
 
 class _EverlaneAppState extends State<EverlaneApp> {
-  late final store = PreviewStore(backend: widget.backend);
+  late final store = widget.store ?? PreviewStore(backend: widget.backend);
+
+  /// Admin settings (maintenance, versions, flags) are re-checked whenever
+  /// the app comes back to the front.
+  late final AppLifecycleListener lifecycle;
 
   @override
   void initState() {
     super.initState();
-    store.onboarded = widget.onboarded;
+    if (widget.onboarded) store.onboarded = true;
     EverlaneColors.dark = store.darkMode;
     store.addListener(syncTheme);
+    lifecycle = AppLifecycleListener(onResume: () {
+      store.loadSettings();
+      store.loadAnnouncements();
+      store.loadTickets();
+    });
+    legalBackend = store.backend;
+    store.loadSettings();
     store.loadContent();
+    if (!store.signedIn) store.loadAnnouncements();
     // A returning member with a saved session goes straight to their profile.
     if (store.signedIn) {
       store.restoring = true;
@@ -73,6 +92,7 @@ class _EverlaneAppState extends State<EverlaneApp> {
 
   @override
   void dispose() {
+    lifecycle.dispose();
     store.removeListener(syncTheme);
     store.dispose();
     EverlaneColors.dark = true;
@@ -86,11 +106,18 @@ class _EverlaneAppState extends State<EverlaneApp> {
       theme: everlaneTheme(),
       home: ListenableBuilder(
           listenable: store,
-          builder: (context, _) => store.restoring
-              ? const _Splash()
-              : store.onboarded
-                  ? EverlaneShell(store: store)
-                  : OnboardingFlow(store: store)));
+          builder: (context, _) {
+            // What admins set in the panel comes first.
+            if (store.maintenance) return MaintenanceScreen(store: store);
+            if (store.updateRequired) return UpdateRequiredScreen(store: store);
+            if (store.restriction case final r?) {
+              return AccountRestrictedScreen(store: store, restriction: r);
+            }
+            if (store.restoring) return const _Splash();
+            return store.onboarded
+                ? EverlaneShell(store: store)
+                : OnboardingFlow(store: store);
+          }));
 }
 
 class _Splash extends StatefulWidget {
@@ -141,16 +168,44 @@ class _EverlaneShellState extends State<EverlaneShell> {
   int selected = 0;
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  /// Tabs in order: Discover, Hangouts, Likes you, Messages, You. [selected]
+  /// is always one of these; Hangouts drops out of the bar when an admin
+  /// switches it off, without shifting the others.
+  static const discoverTab = 0, hangoutsTab = 1, likesTab = 2, profileTab = 4;
+
+  List<int> get visibleTabs => [
+        discoverTab,
+        if (widget.store.settings.hangouts) hangoutsTab,
+        likesTab,
+        3,
+        profileTab,
+      ];
+
+  bool showingNotice = false;
+
   @override
   void initState() {
     super.initState();
     widget.store.newMatch.addListener(celebrate);
+    widget.store.addListener(showNotices);
+    WidgetsBinding.instance.addPostFrameCallback((_) => showNotices());
   }
 
   @override
   void dispose() {
     widget.store.newMatch.removeListener(celebrate);
+    widget.store.removeListener(showNotices);
     super.dispose();
+  }
+
+  /// 'notice' announcements open once, one after another.
+  Future<void> showNotices() async {
+    final notice = widget.store.pendingNotice;
+    if (notice == null || showingNotice || !mounted) return;
+    showingNotice = true;
+    await showNoticeAnnouncement(context, widget.store, notice);
+    showingNotice = false;
+    if (mounted) WidgetsBinding.instance.addPostFrameCallback((_) => showNotices());
   }
 
   /// A real member liked you back (or you liked them back from Discover):
@@ -186,6 +241,9 @@ class _EverlaneShellState extends State<EverlaneShell> {
       listenable: widget.store,
       builder: (context, _) {
         final store = widget.store;
+        final tabs = visibleTabs;
+        // Hangouts was switched off while it was open.
+        if (!tabs.contains(selected)) selected = discoverTab;
         return ColoredBox(
             color: EverlaneColors.dark
                 ? const Color(0xFF07060B)
@@ -216,7 +274,9 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                 'People who have liked your profile',
                                 const Color(0xFFF472B6),
                                 fromMenu(() => setState(() => selected = 2)),
-                                badge: store.incoming.length),
+                                badge: store.settings.likesYou
+                                    ? store.incoming.length
+                                    : 0),
                             SideMenuItem(
                                 const TwoHeartsIcon(),
                                 'Connections',
@@ -229,12 +289,14 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                 'What you’re looking for',
                                 const Color(0xFFA78BFA),
                                 fromMenu(() => showFilters(context, store))),
-                            SideMenuItem(
-                                const Icon(Icons.calendar_today_outlined),
-                                'Hangouts',
-                                'Host a plan or join one near you',
-                                const Color(0xFFF9A8D4),
-                                fromMenu(() => setState(() => selected = 1))),
+                            if (store.settings.hangouts)
+                              SideMenuItem(
+                                  const Icon(Icons.calendar_today_outlined),
+                                  'Hangouts',
+                                  'Host a plan or join one near you',
+                                  const Color(0xFFF9A8D4),
+                                  fromMenu(() =>
+                                      setState(() => selected = hangoutsTab))),
                             SideMenuItem(
                                 const Icon(Icons.travel_explore_rounded),
                                 'Explore',
@@ -259,6 +321,20 @@ class _EverlaneShellState extends State<EverlaneShell> {
                                 'Account, privacy and app preferences',
                                 const Color(0xFFC4B5FD),
                                 fromMenu(() => setState(() => selected = 4))),
+                            SideMenuItem(
+                                const Icon(Icons.help_outline_rounded),
+                                'Help & support',
+                                'Answers, requests and your data',
+                                const Color(0xFFA78BFA),
+                                fromMenu(() => openHelp(context, store)),
+                                badge: store.unreadTickets),
+                            if (store.referralsOn && store.signedIn)
+                              SideMenuItem(
+                                  const Icon(Icons.card_giftcard_rounded),
+                                  'Invite friends',
+                                  'Share your code, get Plus',
+                                  const Color(0xFFF472B6),
+                                  fromMenu(() => openInvite(context, store))),
                           ]),
                       appBar: AppBar(
                           toolbarHeight: 88,
@@ -297,32 +373,50 @@ class _EverlaneShellState extends State<EverlaneShell> {
                           ])),
                       body: IndexedStack(index: selected, children: [
                         DiscoverScreen(store: store),
-                        HangoutsScreen(store: store, embedded: true),
+                        store.settings.hangouts
+                            ? HangoutsScreen(store: store, embedded: true)
+                            : const SizedBox.shrink(),
                         LikesScreen(store: store),
                         MessagesScreen(store: store),
                         ProfileScreen(store: store)
                       ]),
                       bottomNavigationBar: _PillNavBar(
-                          selected: selected,
-                          onSelect: (value) {
+                          // Bar positions map to tab ids through [tabs].
+                          selected: tabs.indexOf(selected),
+                          onSelect: (i) {
+                            final value = tabs[i];
                             setState(() => selected = value);
                             // Pick up anyone who joined since.
-                            if (value == 0) store.refreshMembers();
-                            if (value == 1) store.loadHangouts();
+                            if (value == discoverTab) store.refreshMembers();
+                            if (value == hangoutsTab) store.loadHangouts();
                           },
                           items: [
-                            const _NavItem(Icons.home_outlined,
-                                Icons.home_rounded, 'Discover'),
-                            const _NavItem(Icons.groups_outlined,
-                                Icons.groups_rounded, 'Hangouts'),
-                            _NavItem(Icons.favorite_border_rounded,
-                                Icons.favorite_rounded, 'Likes you',
-                                dot: store.incoming.isNotEmpty),
-                            _NavItem(Icons.chat_bubble_outline_rounded,
-                                Icons.chat_bubble_rounded, 'Messages',
-                                dot: store.unreadMessages > 0),
-                            const _NavItem(Icons.person_outline_rounded,
-                                Icons.person_rounded, 'You'),
+                            for (final tab in tabs)
+                              switch (tab) {
+                                discoverTab => const _NavItem(
+                                    Icons.home_outlined,
+                                    Icons.home_rounded,
+                                    'Discover'),
+                                hangoutsTab => const _NavItem(
+                                    Icons.groups_outlined,
+                                    Icons.groups_rounded,
+                                    'Hangouts'),
+                                likesTab => _NavItem(
+                                    Icons.favorite_border_rounded,
+                                    Icons.favorite_rounded,
+                                    'Likes you',
+                                    dot: store.settings.likesYou &&
+                                        store.incoming.isNotEmpty),
+                                profileTab => const _NavItem(
+                                    Icons.person_outline_rounded,
+                                    Icons.person_rounded,
+                                    'You'),
+                                _ => _NavItem(
+                                    Icons.chat_bubble_outline_rounded,
+                                    Icons.chat_bubble_rounded,
+                                    'Messages',
+                                    dot: store.unreadMessages > 0),
+                              }
                           ]),
                     ))));
       });

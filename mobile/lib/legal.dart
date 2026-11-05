@@ -5,6 +5,7 @@
 
 import 'package:flutter/material.dart';
 
+import 'backend.dart';
 import 'theme.dart';
 
 const legalUpdated = '31 October 2026';
@@ -133,16 +134,125 @@ const termsSections = <(String, String)>[
   ),
 ];
 
-/// Shows a legal document (Privacy Policy or Terms) as a readable, scrollable
-/// list of sections, centred at a comfortable reading width.
-class LegalScreen extends StatelessWidget {
-  const LegalScreen({super.key, required this.title, required this.sections});
+/// Community Guidelines, used when the published version can't be loaded.
+const guidelinesSections = <(String, String)>[
+  (
+    'Be kind',
+    'Treat everyone with respect, online and when you meet. No harassment, hate speech, threats or bullying. A polite "no thanks" is always fine.',
+  ),
+  (
+    'Be real',
+    'Use your own name, age and recent photos of you. Don\'t pretend to be someone else or mislead people about who you are.',
+  ),
+  (
+    'Stay safe',
+    'Meet in public places, tell a friend your plans and keep personal and financial details private until you trust someone.',
+  ),
+  (
+    'No selling',
+    'Everlane is for meeting people, not for promoting products, services, other apps or asking for money. No spam, scams or solicitation.',
+  ),
+  (
+    'Adults only',
+    'You must be 18 or older to use Everlane. No sexual content involving minors, ever. We report it to the authorities.',
+  ),
+  (
+    'Reporting',
+    'If someone breaks these guidelines, report them from their profile or your chat. Reports are confidential, and our team reviews every one.',
+  ),
+];
+
+/// A legal document as published in the admin panel (`legal_doc()`).
+class LegalDoc {
+  const LegalDoc(
+      {required this.title, required this.sections, required this.version});
+
+  /// Null when the row has no usable sections.
+  static LegalDoc? fromJson(Map<String, dynamic> j, String fallbackTitle) {
+    final sections = [
+      for (final s in j['sections'] as List? ?? const [])
+        if (s is Map)
+          ('${s['heading'] ?? ''}', '${s['body'] ?? ''}')
+    ].where((s) => s.$1.isNotEmpty || s.$2.isNotEmpty).toList();
+    if (sections.isEmpty) return null;
+    final title = j['title'];
+    final version = j['version'];
+    return LegalDoc(
+        title: title is String && title.isNotEmpty ? title : fallbackTitle,
+        sections: sections,
+        version: version is String && version.isNotEmpty ? version : legalUpdated);
+  }
+
+  final String title, version;
+  final List<(String, String)> sections;
+}
+
+/// Set at start-up when Supabase is reachable; null in tests and offline,
+/// where the built-in documents above are shown.
+ProfileBackend? legalBackend;
+
+/// Published documents loaded so far, by slug.
+final Map<String, LegalDoc> legalDocs = {};
+
+/// The published document, or null (no backend, offline, or unpublished).
+Future<LegalDoc?> loadLegalDoc(String slug, {String title = ''}) async {
+  final b = legalBackend;
+  if (b == null) return legalDocs[slug];
+  try {
+    final row = await b.legalDoc(slug);
+    final doc = row == null ? null : LegalDoc.fromJson(row, title);
+    if (doc != null) legalDocs[slug] = doc;
+    return doc ?? legalDocs[slug];
+  } catch (_) {
+    return legalDocs[slug];
+  }
+}
+
+/// The terms version a member agrees to: the published one when known.
+Future<String> termsVersion() async =>
+    (await loadLegalDoc('terms'))?.version ?? legalUpdated;
+
+/// Shows a legal document as a readable, scrollable list of sections,
+/// centred at a comfortable reading width. With a [slug] it shows the
+/// version published in the admin panel, falling back to [sections].
+class LegalScreen extends StatefulWidget {
+  const LegalScreen(
+      {super.key, required this.title, required this.sections, this.slug});
 
   final String title;
   final List<(String, String)> sections;
 
+  /// 'privacy', 'terms' or 'guidelines'.
+  final String? slug;
+
+  @override
+  State<LegalScreen> createState() => _LegalScreenState();
+}
+
+class _LegalScreenState extends State<LegalScreen> {
+  late LegalDoc? doc = widget.slug == null ? null : legalDocs[widget.slug];
+  late bool loading = widget.slug != null && legalBackend != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final slug = widget.slug;
+    if (slug == null || legalBackend == null) return;
+    loadLegalDoc(slug, title: widget.title).then((d) {
+      if (mounted) {
+        setState(() {
+          doc = d;
+          loading = false;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final title = doc?.title ?? widget.title;
+    final sections = doc?.sections ?? widget.sections;
+    final version = doc?.version ?? legalUpdated;
     final text = Theme.of(context).textTheme;
     final body = text.bodyLarge?.copyWith(fontSize: 15, height: 1.5) ??
         const TextStyle(fontSize: 15, height: 1.5);
@@ -153,36 +263,38 @@ class LegalScreen extends StatelessWidget {
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 640),
-            child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
-              itemCount: sections.length + 1,
-              itemBuilder: (context, i) {
-                if (i == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text('Last updated: $legalUpdated',
-                        style: body.copyWith(
-                            fontSize: 13, color: EverlaneColors.muted)),
-                  );
-                }
-                final (heading, content) = sections[i - 1];
-                return Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(heading,
-                          style: body.copyWith(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              height: 1.3)),
-                      const SizedBox(height: 8),
-                      SelectableText(content, style: body),
-                    ],
+            child: loading && doc == null
+                ? const CircularProgressIndicator(color: EverlaneColors.like)
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 40),
+                    itemCount: sections.length + 1,
+                    itemBuilder: (context, i) {
+                      if (i == 0) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text('Last updated: $version',
+                              style: body.copyWith(
+                                  fontSize: 13, color: EverlaneColors.muted)),
+                        );
+                      }
+                      final (heading, content) = sections[i - 1];
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(heading,
+                                style: body.copyWith(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w700,
+                                    height: 1.3)),
+                            const SizedBox(height: 8),
+                            SelectableText(content, style: body),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ),
       ),
@@ -194,14 +306,26 @@ class LegalScreen extends StatelessWidget {
 void openPrivacyPolicy(BuildContext context) {
   Navigator.of(context).push(MaterialPageRoute<void>(
     builder: (_) => const LegalScreen(
-        title: 'Privacy Policy', sections: privacyPolicySections),
+        title: 'Privacy Policy',
+        sections: privacyPolicySections,
+        slug: 'privacy'),
   ));
 }
 
 /// Opens the Terms & Conditions.
 void openTerms(BuildContext context) {
   Navigator.of(context).push(MaterialPageRoute<void>(
-    builder: (_) =>
-        const LegalScreen(title: 'Terms & Conditions', sections: termsSections),
+    builder: (_) => const LegalScreen(
+        title: 'Terms & Conditions', sections: termsSections, slug: 'terms'),
+  ));
+}
+
+/// Opens the Community Guidelines.
+void openGuidelines(BuildContext context) {
+  Navigator.of(context).push(MaterialPageRoute<void>(
+    builder: (_) => const LegalScreen(
+        title: 'Community guidelines',
+        sections: guidelinesSections,
+        slug: 'guidelines'),
   ));
 }

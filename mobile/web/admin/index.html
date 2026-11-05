@@ -578,49 +578,40 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
 
-  /* Header kill switch and role preview */
+  /* Header kill switch */
   button.pill { border: 0; cursor: pointer; font-family: Inter, system-ui, sans-serif; padding: 4px 10px; }
   button.pill:disabled { cursor: default; opacity: .6; }
-  .preview-role { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 12px; font-weight: 500; color: var(--mute); white-space: nowrap; }
-  .preview-role select { width: auto; padding: 5px 8px; font-size: 12.5px; }
-
-  /* Sample (preview) pages ported from the prototype; scoped to .mk so the real views keep their styles. */
-  .mkban { font-size: 13px; font-weight: 600; color: var(--ink); background: rgba(180,83,9,.10); border: 1px solid rgba(180,83,9,.35);
-           border-left: 4px solid var(--warn); border-radius: 10px; padding: 9px 12px; margin: 12px 0 4px; }
-  .mk h2 { margin: 12px 0 2px; } .mk h3 { margin-bottom: 10px; } .mk h4 { margin: 12px 0 6px; }
-  .mk p.sub { margin: 0 0 12px; }
-  .mk .card { padding: 14px; margin-bottom: 12px; min-width: 0; }
-  .mk .card > .chips { padding: 0; } .mk .chips { margin-bottom: 10px; }
-  .mk .btn { border: 0; background: linear-gradient(90deg, var(--acc), var(--acc2)); color: #fff; padding: 9px 15px; }
-  .mk .btn.s { background: var(--bg); color: var(--ink); border: 1px solid var(--line); }
-  .mk .btn.d { background: var(--bad); color: #fff; } .mk .btn.g { background: var(--ok); color: #fff; }
-  .mk .btn.sm { padding: 5px 10px; font-size: 12.5px; }
-  .mk label.l { display: block; font-weight: 600; font-size: 12.5px; margin: 10px 0 5px; }
-  .mk textarea.fld { min-height: 80px; }
-  .mk .kpi i { display: inline; color: var(--ok); margin: 0 0 0 6px; }
-  .mk .bl { grid-template-columns: minmax(70px, 110px) 1fr minmax(50px, auto); }
-  .mk th { position: static; padding: 7px 6px; } .mk td { padding: 8px 6px; }
-  .mk tbody tr { cursor: default; } .mk tbody tr:hover { background: none; }
-  .mk tr.r { cursor: pointer; } .mk tr.r:hover { background: var(--bg); }
-  .mk .nw { white-space: nowrap; }
-  .mk .set { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--line); }
-  .mk .set > span:first-child { min-width: 0; }
-  .mk .set span small { display: block; color: var(--mute); font-size: 12px; }
-  .mk .sw { width: 44px; height: 26px; border-radius: 20px; background: var(--line); border: 0; position: relative; cursor: pointer; flex: none; }
-  .mk .sw:after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: left .2s; }
-  .mk .sw.on { background: var(--acc); } .mk .sw.on:after { left: 21px; } .mk .sw[disabled] { opacity: .45; }
-  .md { position: fixed; inset: 0; background: var(--scrim); display: none; align-items: flex-start; justify-content: center; padding: 18px 12px; z-index: 60; overflow: auto; }
-  .md.on { display: flex; }
-  .mb { background: var(--surf); border: 1px solid var(--line); border-radius: 18px; max-width: 720px; width: 100%; padding: 18px; margin: auto 0; box-shadow: var(--sh); }
   .heat { display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
   .heat .hc { border-radius: 10px; padding: 9px 10px; font-size: 12px; color: #fff; font-weight: 600; }
-  .mk .heat { display: grid; gap: 4px; }
-  .mk .hc { border-radius: 8px; padding: 8px; text-align: center; font-size: 12px; color: #fff; font-weight: 600; }
-  .mk .ph { width: 100%; aspect-ratio: 3/4; border-radius: 12px; display: grid; place-items: center; font: 700 34px Inter, system-ui, sans-serif; color: rgba(255,255,255,.9); }
-  .mk .imp { position: sticky; top: 0; z-index: 40; background: var(--warn); color: #fff; padding: 8px 12px; border-radius: 10px; margin-bottom: 8px;
-             display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-  .mk .msg { max-width: 80%; padding: 8px 12px; border-radius: 14px; background: var(--bg); margin-bottom: 6px; overflow-wrap: anywhere; }
-  .mk .msg.me { margin-left: auto; background: var(--acc); color: #fff; }
+
+  /* Read-only tables, cohort heat table, settings rows */
+  table.ro tbody tr { cursor: default; } table.ro tbody tr:hover { background: none; }
+  .cohort th, .cohort td { text-align: center; padding: 7px 6px; font-size: 12px; }
+  .cohort th:first-child, .cohort td:first-child { text-align: left; white-space: nowrap; padding-left: 12px; }
+  .cohort td.hm { font-weight: 600; border: 2px solid var(--surf); border-radius: 8px; }
+  label.set { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0; padding: 11px 0;
+              border-bottom: 1px solid var(--line); font-weight: 500; cursor: pointer; }
+  label.set:last-child { border-bottom: 0; }
+  label.set > span { min-width: 0; } label.set b { display: block; font-weight: 600; font-size: 13.5px; }
+  label.set small { display: block; color: var(--mute); font-size: 12px; font-weight: 400; }
+  label.set input { width: 18px; height: 18px; margin: 0; flex: none; }
+  .bigwarn { border: 1px solid var(--bad); border-left-width: 4px; background: rgba(192,38,59,.10); color: var(--ink);
+             border-radius: 12px; padding: 12px 14px; font-weight: 700; }
+  .tchat .msg.me .meta { color: rgba(255,255,255,.82); }
+  /* Announcement preview */
+  .anprev { border-radius: 14px; padding: 12px 14px; background: linear-gradient(90deg, var(--acc), var(--acc2)); color: #fff; overflow-wrap: anywhere; }
+  .anprev b { display: block; font-size: 14.5px; } .anprev p { margin: 4px 0 0; font-size: 13px; white-space: pre-line; }
+  .anprev span { display: inline-block; margin-top: 8px; background: rgba(255,255,255,.22); border-radius: 20px; padding: 3px 12px; font-size: 12px; font-weight: 600; }
+  .anprev.notice { background: var(--bg); color: var(--ink); border: 1px solid var(--line); text-align: center; max-width: 340px; margin: 0 auto; }
+  .anprev.notice span { background: linear-gradient(90deg, var(--acc), var(--acc2)); color: #fff; }
+  /* Legal editor */
+  fieldset.bare { border: 0; padding: 0; margin: 0; min-width: 0; }
+  .lg-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); align-items: start; }
+  .lgsec { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-top: 10px; background: var(--bg); }
+  .lgsec label { margin-top: 8px; }
+  .legalprev { max-height: 75vh; overflow: auto; overflow-wrap: anywhere; margin-top: 10px; }
+  .legalprev h4 { font-size: 14.5px; margin: 16px 0 4px; }
+  .legalprev p { margin: 0; white-space: pre-line; font-size: 13.5px; }
 </style>
 </head>
 <body>
@@ -646,8 +637,6 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     <div class="row">
       <button type="button" class="pill hidden" id="botsPill"></button>
       <span class="pill" id="rolePill" title="Your role"></span>
-      <label class="preview-role" title="Only changes which sample pages are read-only. Your real permissions don’t change.">Preview as role
-        <select id="mkRole" aria-label="Preview as role (sample pages only)"></select></label>
       <span class="who" id="who"></span>
       <button type="button" class="iconbtn" data-theme-toggle>Dark mode</button>
       <button type="button" class="btn small" id="logout">Sign out</button>
@@ -665,49 +654,46 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     <button type="button" data-sec="subs">Revenue</button>
     <button type="button" data-sec="cfg">Content and config</button>
     <button type="button" data-sec="comm">Communication</button>
-    <button type="button" data-sec="sup">Support</button>
+    <button type="button" data-sec="sup">Support <span class="pill bad hidden" id="supBadge"></span></button>
     <button type="button" data-sec="grow">Growth</button>
     <button type="button" data-sec="sec">Admin and security</button>
     <button type="button" data-sec="tech">Technical</button>
     <button type="button" data-sec="legal">Legal</button>
   </nav>
-  <!-- Tabs with data-mock are sample pages (mock data, drawn by window.EverlaneMock); the rest are real. -->
   <div class="nav sb" data-subnav="dash" aria-label="Dashboard pages">
     <button type="button" class="tab" data-view="overview">Overview</button>
-    <button type="button" class="tab" data-view="dash-retention" data-mock>Retention</button>
+    <button type="button" class="tab" data-view="dash-retention">Retention</button>
     <button type="button" class="tab" data-view="dash-geo">Geo</button>
     <button type="button" class="tab" data-view="dash-reports">Reports</button>
   </div>
   <div class="nav sb" data-subnav="users" aria-label="Users pages">
     <button type="button" class="tab" data-view="leads">Directory</button>
-    <button type="button" class="tab" data-view="users-multi" data-mock>Multi-account</button>
-    <button type="button" class="tab" data-view="users-gdpr" data-mock>GDPR tools</button>
+    <button type="button" class="tab" data-view="users-multi">Multi-account</button>
+    <button type="button" class="tab" data-view="users-requests">Data requests</button>
   </div>
   <div class="nav sb" data-subnav="mod" aria-label="Moderation pages">
     <button type="button" class="tab" data-view="photos">Photos <span class="pill warn hidden" id="photoBadge"></span></button>
     <button type="button" class="tab" data-view="words">Text filter</button>
     <button type="button" class="tab" data-view="reports">Reports <span class="pill bad hidden" id="reportBadge"></span></button>
-    <button type="button" class="tab" data-view="mod-chat" data-mock>Chat monitor</button>
-    <button type="button" class="tab" data-view="mod-fake" data-mock>Fake and scams</button>
+    <button type="button" class="tab" data-view="mod-chat">Chat monitor</button>
+    <button type="button" class="tab" data-view="mod-fake">Fake and scams</button>
     <button type="button" class="tab" data-view="verify">Verification <span class="pill warn hidden" id="verifyBadge"></span></button>
-    <button type="button" class="tab" data-view="mod-bans" data-mock>Bans</button>
-    <button type="button" class="tab" data-view="mod-auto" data-mock>Auto-ban</button>
-    <button type="button" class="tab" data-view="mod-underage" data-mock>Underage</button>
+    <button type="button" class="tab" data-view="mod-bans">Bans</button>
+    <button type="button" class="tab" data-view="mod-auto">Auto-ban</button>
+    <button type="button" class="tab" data-view="mod-underage">Underage</button>
   </div>
   <div class="nav sb" data-subnav="match" aria-label="Matching pages">
-    <button type="button" class="tab" data-view="match-algorithm" data-mock>Algorithm</button>
-    <button type="button" class="tab" data-view="match-visibility" data-mock>Visibility</button>
-    <button type="button" class="tab" data-view="match-locations" data-mock>Locations</button>
+    <button type="button" class="tab" data-view="match-algorithm">Algorithm</button>
+    <button type="button" class="tab" data-view="match-visibility">Visibility</button>
+    <button type="button" class="tab" data-view="match-locations">Locations</button>
     <button type="button" class="tab" data-view="options">Options</button>
-    <button type="button" class="tab" data-view="match-ab" data-mock>A/B tests</button>
   </div>
   <div class="nav sb" data-subnav="bots" aria-label="Bots pages">
     <button type="button" class="tab" data-view="bots">Profiles</button>
     <button type="button" class="tab" data-view="gen">Create</button>
     <button type="button" class="tab" data-view="bots-chats">Chats <span class="pill bad hidden" id="botChatsBadge"></span></button>
-    <button type="button" class="tab" data-view="bots-behaviour" data-mock>Behaviour</button>
-    <button type="button" class="tab" data-view="bots-phase-out" data-mock>Phase-out</button>
-    <button type="button" class="tab" data-view="bots-activity" data-mock>Activity</button>
+    <button type="button" class="tab" data-view="bots-phase-out">Phase-out</button>
+    <button type="button" class="tab" data-view="bots-activity">Activity</button>
   </div>
   <div class="nav sb" data-subnav="train" aria-label="Bot training pages">
     <button type="button" class="tab" data-view="train-kb">Q&amp;A</button>
@@ -724,57 +710,41 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     <button type="button" class="tab" data-view="subs-plans">Plans</button>
     <button type="button" class="tab" data-view="subs-promos">Promos</button>
     <button type="button" class="tab" data-view="subs-transactions">Transactions</button>
-    <button type="button" class="tab" data-view="subs-store-sync" data-mock>Store sync</button>
     <button type="button" class="tab" data-view="subs-iap">In-app purchases</button>
     <button type="button" class="tab" data-view="subs-reports">Reports</button>
   </div>
   <div class="nav sb" data-subnav="cfg" aria-label="Content pages">
     <button type="button" class="tab" data-view="questions">Content</button>
-    <button type="button" class="tab" data-view="cfg-flags" data-mock>Feature flags</button>
-    <button type="button" class="tab" data-view="cfg-languages" data-mock>Languages</button>
-    <button type="button" class="tab" data-view="cfg-onboarding" data-mock>Onboarding</button>
-    <button type="button" class="tab" data-view="cfg-banners" data-mock>Banners</button>
-    <button type="button" class="tab" data-view="cfg-app-control" data-mock>App control</button>
+    <button type="button" class="tab" data-view="cfg-flags">Feature flags</button>
+    <button type="button" class="tab" data-view="cfg-onboarding">Onboarding</button>
+    <button type="button" class="tab" data-view="cfg-banners">Banners</button>
+    <button type="button" class="tab" data-view="cfg-app-control">App control</button>
   </div>
   <div class="nav sb" data-subnav="comm" aria-label="Communication pages">
-    <button type="button" class="tab" data-view="comm-push" data-mock>Push</button>
-    <button type="button" class="tab" data-view="comm-email" data-mock>Email and SMS</button>
-    <button type="button" class="tab" data-view="comm-broadcast" data-mock>Broadcast</button>
-    <button type="button" class="tab" data-view="comm-lifecycle" data-mock>Lifecycle</button>
+    <button type="button" class="tab" data-view="comm-broadcast">Broadcast</button>
   </div>
   <div class="nav sb" data-subnav="sup" aria-label="Support pages">
-    <button type="button" class="tab" data-view="sup-tickets" data-mock>Tickets</button>
-    <button type="button" class="tab" data-view="sup-live-chat" data-mock>Live chat</button>
-    <button type="button" class="tab" data-view="sup-help" data-mock>Help center</button>
-    <button type="button" class="tab" data-view="sup-appeals" data-mock>Appeals</button>
+    <button type="button" class="tab" data-view="sup-tickets">Tickets <span class="pill bad hidden" id="tixBadge"></span></button>
+    <button type="button" class="tab" data-view="sup-appeals">Appeals</button>
+    <button type="button" class="tab" data-view="sup-help">Help center</button>
   </div>
   <div class="nav sb" data-subnav="grow" aria-label="Growth pages">
-    <button type="button" class="tab" data-view="grow-referrals" data-mock>Referrals</button>
-    <button type="button" class="tab" data-view="grow-campaigns" data-mock>Campaigns</button>
-    <button type="button" class="tab" data-view="grow-events" data-mock>Events</button>
-    <button type="button" class="tab" data-view="grow-ambassadors" data-mock>Ambassadors</button>
-    <button type="button" class="tab" data-view="grow-waitlist" data-mock>Waitlist</button>
+    <button type="button" class="tab" data-view="grow-referrals">Referrals</button>
   </div>
   <div class="nav sb" data-subnav="sec" aria-label="Admin pages">
     <button type="button" class="tab" data-view="team">Roles</button>
-    <button type="button" class="tab" data-view="sec-access" data-mock>Access</button>
     <button type="button" class="tab" data-view="audit">Audit log</button>
-    <button type="button" class="tab" data-view="sec-api" data-mock>API and webhooks</button>
-    <button type="button" class="tab" data-view="sec-backups" data-mock>Backups</button>
   </div>
   <div class="nav sb" data-subnav="tech" aria-label="Technical pages">
-    <button type="button" class="tab" data-view="tech-logs" data-mock>Logs</button>
-    <button type="button" class="tab" data-view="tech-monitor" data-mock>API monitor</button>
-    <button type="button" class="tab" data-view="tech-integrations" data-mock>Integrations</button>
-    <button type="button" class="tab" data-view="tech-database" data-mock>Database</button>
-    <button type="button" class="tab" data-view="tech-queues" data-mock>Queues</button>
-    <button type="button" class="tab" data-view="tech-rate-limits" data-mock>Rate limits</button>
+    <button type="button" class="tab" data-view="tech-database">Database</button>
+    <button type="button" class="tab" data-view="tech-jobs">Jobs</button>
+    <button type="button" class="tab" data-view="tech-queues">Queues</button>
   </div>
   <div class="nav sb" data-subnav="legal" aria-label="Legal pages">
     <button type="button" class="tab" data-view="legal">Documents</button>
-    <button type="button" class="tab" data-view="legal-consent" data-mock>Consent</button>
-    <button type="button" class="tab" data-view="legal-age" data-mock>Age and regions</button>
-    <button type="button" class="tab" data-view="legal-data-requests" data-mock>Data requests</button>
+    <button type="button" class="tab" data-view="legal-consent">Consent</button>
+    <button type="button" class="tab" data-view="legal-age">Minimum age</button>
+    <button type="button" class="tab" data-view="legal-requests">Data requests</button>
   </div>
 
   <main>
@@ -1126,14 +1096,44 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 
     <div id="view-legal" class="hidden">
       <div class="head"><div><h2>Legal documents</h2>
-        <p class="sub">The public pages members are linked to from the app and stores.</p></div></div>
-      <div class="card pad" style="max-width:640px">
-        <h3>Documents</h3>
+        <p class="sub">The policies members see in the app and on the website. Saving publishes the new text straight away.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="card pad" style="margin-bottom:12px">
+        <h3>Public pages</h3>
         <div class="doclinks">
           <a href="/privacy.html" target="_blank" rel="noopener">Privacy Policy <span>/privacy.html · opens in a new tab</span></a>
-          <a href="/terms.html" target="_blank" rel="noopener">Terms of Service <span>/terms.html · opens in a new tab</span></a>
+          <a href="/terms.html" target="_blank" rel="noopener">Terms &amp; Conditions <span>/terms.html · opens in a new tab</span></a>
+          <a href="/guidelines.html" target="_blank" rel="noopener">Community Guidelines <span>/guidelines.html · opens in a new tab</span></a>
         </div>
         <p class="note">These are templates with placeholders. Have a lawyer review and complete them before launch.</p>
+      </div>
+      <p class="note hidden" id="lgErr"></p>
+      <div id="lgEditor">
+        <div class="chips" id="lgPick" role="group" aria-label="Document" style="margin-bottom:12px"></div>
+        <div class="grid lg-grid">
+          <form class="card pad" id="lgForm">
+            <fieldset id="lgFs" class="bare">
+              <div class="formgrid">
+                <div><label for="lgTitle">Title</label><input type="text" id="lgTitle" maxlength="80"></div>
+                <div><label for="lgVersion">Last updated <span class="sub" style="font-weight:500">(blank = today)</span></label><input type="text" id="lgVersion" maxlength="40" placeholder="e.g. 31 October 2026"></div>
+              </div>
+              <label class="tog" style="margin-top:12px"><input type="checkbox" id="lgPub"> Published (shown in the app and on the website)</label>
+              <h3 style="margin-top:16px">Sections</h3>
+              <p class="sub" style="font-size:12.5px">Start a line with “• ” for a bullet point.</p>
+              <div id="lgSections"></div>
+              <button type="button" class="btn small" id="lgAdd" style="margin-top:10px">Add section</button>
+              <div class="row" style="margin-top:14px"><button class="btn primary" id="lgSave">Save</button>
+                <span class="pill warn hidden" id="lgDirty">Unsaved changes</span><span class="muted" id="lgUpdated"></span></div>
+            </fieldset>
+          </form>
+          <div class="card pad"><h3>Preview</h3><p class="sub" style="font-size:12.5px">How it reads in the app.</p>
+            <div class="legalprev" id="lgPrev"></div></div>
+        </div>
+        <div class="card pad" style="margin-top:12px"><h3>History</h3>
+          <p class="sub" style="font-size:12.5px">Earlier versions of this document, newest first.</p>
+          <div class="scroll" style="margin-top:8px"><table class="ro">
+            <thead><tr><th>Saved</th><th>Last updated text</th><th>By</th><th></th></tr></thead>
+            <tbody id="lgHist"></tbody></table></div></div>
       </div>
     </div>
 
@@ -1414,238 +1414,374 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
       </div>
     </div>
 
-    <!-- Sample pages (mock data) are drawn here by window.EverlaneMock. -->
-    <div id="view-mock" class="mk hidden"></div>
+    <!-- Retention (permission 'stats'): admin_retention. -->
+    <div id="view-dash-retention" class="hidden">
+      <div class="head"><div><h2>Retention</h2>
+        <p class="sub">Weekly sign-up cohorts and the share of each that was active in the weeks after joining. Bots and test accounts are left out.</p></div>
+        <div class="row">
+          <div class="chips" id="retRange" role="group" aria-label="How many weeks">
+            <button type="button" class="chip" data-weeks="8">8 weeks</button>
+            <button type="button" class="chip" data-weeks="12">12 weeks</button>
+            <button type="button" class="chip" data-weeks="26">26 weeks</button>
+          </div>
+          <button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="stack">
+        <div class="grid g4" id="retKpis"></div>
+        <div class="card scroll"><table class="ro cohort" id="retTable"></table></div>
+        <p class="sub">Week 0 is the week they joined. Darker cells mean more of the cohort came back that week; the newest cohorts have fewer weeks so far.</p>
+      </div>
+    </div>
+
+    <!-- Multi-account (permission 'members'): admin_shared_ips. -->
+    <div id="view-users-multi" class="hidden">
+      <div class="head"><div><h2>Multi-account</h2>
+        <p class="sub">IP addresses that more than one account signed in from. Shared Wi-Fi, offices and mobile networks cause this too, so check before acting.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="toolbar"><input type="text" id="ipSearch" placeholder="Search IP, name or email…" aria-label="Search shared IPs"></div>
+      <div class="card scroll"><table class="ro">
+        <thead><tr><th>IP address</th><th>Accounts</th><th>Members</th><th>Last seen</th><th></th></tr></thead>
+        <tbody id="ipRows"></tbody></table></div>
+      <p class="muted" id="ipCount" style="margin-top:10px"></p>
+    </div>
+
+    <!-- Data requests (permission 'export'): admin_data_requests, admin_complete_data_request. Shown under Users and Legal. -->
+    <div id="view-data-requests" class="hidden">
+      <div class="head"><div><h2>Data requests</h2>
+        <p class="sub">Members asking for a copy of their data, deletion or a correction. Answer within 30 days.</p></div>
+        <div class="row">
+          <div class="chips" id="drFilter" role="group" aria-label="Which requests">
+            <button type="button" class="chip" data-status="open">Open</button>
+            <button type="button" class="chip" data-status="done">Done</button>
+            <button type="button" class="chip" data-status="rejected">Rejected</button>
+            <button type="button" class="chip" data-status="">All</button>
+          </div>
+          <button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="grid g4" id="drKpis" style="margin-bottom:12px"></div>
+      <div class="card scroll"><table class="ro">
+        <thead><tr><th>Member</th><th>Request</th><th>Details</th><th>Received</th><th>Due</th><th>Status</th><th></th></tr></thead>
+        <tbody id="drRows"></tbody></table></div>
+      <p class="sub" style="margin-top:10px">Export: download their data, send it to them, then mark the request done. Deletion: open the member and use “Delete account”. Correction: open the member and edit their profile.</p>
+    </div>
+
+    <!-- Moderation extras (permission 'moderate'). -->
+    <div id="view-mod-chat" class="hidden">
+      <div class="head"><div><h2>Chat monitor</h2>
+        <p class="sub">Messages the filters flagged: links, phone numbers, money requests and banned words. Members aren’t told their message was flagged.</p></div>
+        <div class="row">
+          <div class="chips" id="fmRange" role="group" aria-label="Date range">
+            <button type="button" class="chip" data-days="1">24 hours</button>
+            <button type="button" class="chip" data-days="7">7 days</button>
+            <button type="button" class="chip" data-days="30">30 days</button>
+          </div>
+          <button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="chips" id="fmWhy" role="group" aria-label="Why it was flagged" style="margin-bottom:12px"></div>
+      <div id="fmList"></div>
+    </div>
+
+    <div id="view-mod-fake" class="hidden">
+      <div class="head"><div><h2>Fake and scams</h2>
+        <p class="sub">Accounts with signals that often mean a fake profile or a scammer: reports, a burst of likes, flagged messages and shared IP addresses.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Member</th><th>City</th><th>Joined</th><th>Reports</th><th>Likes 24h</th><th>Flagged</th><th>Shared IP</th><th>Why</th><th>Status</th><th></th></tr></thead>
+        <tbody id="fakeRows"></tbody></table></div>
+    </div>
+
+    <div id="view-mod-bans" class="hidden">
+      <div class="head"><div><h2>Bans</h2>
+        <p class="sub">Emails, phone numbers, email domains and IP addresses that can’t sign up or sign in again.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <form class="card pad" id="banForm" style="margin-bottom:12px">
+        <h3>Add a ban</h3>
+        <div class="formgrid">
+          <div><label for="banKind">Type</label><select id="banKind">
+            <option value="email">Email</option><option value="phone">Phone</option><option value="domain">Email domain</option><option value="ip">IP address</option></select></div>
+          <div><label for="banValue">Value</label><input type="text" id="banValue" maxlength="200" placeholder="e.g. someone@example.com" autocomplete="off"></div>
+          <div><label for="banReason">Reason <span class="sub" style="font-weight:500">(only admins see this)</span></label><input type="text" id="banReason" maxlength="200" placeholder="e.g. Repeat scammer"></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn primary">Add ban</button></div>
+      </form>
+      <div class="card scroll"><table class="ro">
+        <thead><tr><th>Type</th><th>Value</th><th>Reason</th><th>Added</th><th></th></tr></thead>
+        <tbody id="banRows"></tbody></table></div>
+    </div>
+
+    <div id="view-mod-auto" class="hidden">
+      <div class="head"><div><h2>Auto-ban</h2>
+        <p class="sub">Suspend members automatically when several people report them in a short time.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <form class="card pad" id="autoForm" style="max-width:640px">
+        <label class="tog"><input type="checkbox" id="amOn"> Suspend automatically</label>
+        <div class="formgrid" style="margin-top:4px">
+          <div><label for="amReports">Reports from different members</label><input type="number" id="amReports" min="1" max="50" step="1"></div>
+          <div><label for="amWindow">Within (hours)</label><input type="number" id="amWindow" min="1" max="720" step="1"></div>
+          <div><label for="amDays">Suspend for (days)</label><input type="number" id="amDays" min="1" max="365" step="1"></div>
+        </div>
+        <label class="tog" style="margin-top:14px"><input type="checkbox" id="amLinks"> Automatically hide messages that contain links</label>
+        <p class="note info">This applies to new reports only; members already reported aren’t suspended retroactively. An automatic suspension can be lifted from the member like any other.</p>
+        <div class="row"><button class="btn primary">Save auto-ban</button><span class="muted" id="amUpdated"></span></div>
+      </form>
+    </div>
+
+    <div id="view-mod-underage" class="hidden">
+      <div class="head"><div><h2>Underage</h2>
+        <p class="sub">Accounts that may belong to someone under the minimum age: a birthday that makes them too young, or something they wrote.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Member</th><th>Age</th><th>Birthday</th><th>Signal</th><th>Status</th><th></th></tr></thead>
+        <tbody id="uaRows"></tbody></table></div>
+      <p class="sub" style="margin-top:10px">If someone is under age, block them. Ask for proof of age through Support if you’re unsure.</p>
+    </div>
+
+    <!-- Matching. -->
+    <div id="view-match-algorithm" class="hidden">
+      <div class="head"><div><h2>Matching algorithm</h2>
+        <p class="sub">How much each signal counts when Discover orders profiles.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <form class="card pad" id="algoForm" style="max-width:640px">
+        <div id="algoRows"></div>
+        <p class="note info">Discover shows boosted profiles first, then orders everyone else by these weights. Only the proportions matter: the percentages show each signal’s share.</p>
+        <div class="row"><button class="btn primary">Save weights</button><span class="muted" id="algoUpdated"></span></div>
+      </form>
+    </div>
+
+    <div id="view-match-visibility" class="hidden">
+      <div class="head"><div><h2>Visibility</h2>
+        <p class="sub">Members who aren’t shown normally in Discover: blocked, shadow-banned, suspended, boosted or not posted.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="chips" id="visFilter" role="group" aria-label="Which members" style="margin-bottom:12px"></div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Member</th><th>State</th><th>Until</th><th>Plan</th><th></th></tr></thead>
+        <tbody id="visRows"></tbody></table></div>
+    </div>
+
+    <div id="view-match-locations" class="hidden">
+      <div class="head"><div><h2>Locations</h2>
+        <p class="sub">Each city’s status: live cities show Discover, waitlist cities ask new members to wait, hidden cities aren’t offered.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="grid g4" id="locKpis" style="margin-bottom:12px"></div>
+      <div class="toolbar">
+        <input type="text" id="locSearch" placeholder="Search city or state…" aria-label="Search cities">
+        <select id="locStatus" aria-label="Status"><option value="">Any status</option><option value="live">Live</option><option value="waitlist">Waitlist</option><option value="hidden">Hidden</option></select>
+      </div>
+      <div class="card scroll"><table class="ro">
+        <thead><tr><th>City</th><th>State</th><th>Members</th><th>Bots</th><th>Live bots</th><th>Hangouts</th><th>Status</th></tr></thead>
+        <tbody id="locRows"></tbody></table></div>
+    </div>
+
+    <!-- Bots extras (permission 'bots'). -->
+    <div id="view-bots-phase-out" class="hidden">
+      <div class="head"><div><h2>Phase-out</h2>
+        <p class="sub">Pause a city’s bots once it has enough real members.</p></div>
+        <div class="row"><button class="btn" id="poRun">Run now</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <form class="card pad" id="poForm" style="margin-bottom:12px;max-width:640px">
+        <label class="tog"><input type="checkbox" id="poOn"> Phase out bots automatically</label>
+        <label for="poPer">Real members a city needs before its bots are paused</label>
+        <input type="number" id="poPer" min="1" max="100000" step="1" style="max-width:200px">
+        <div class="row" style="margin-top:12px"><button class="btn primary">Save phase-out</button><span class="muted" id="poUpdated"></span>
+          <button type="button" class="btn small" id="poTiming" data-goto="train-time">Reply timing →</button></div>
+      </form>
+      <div class="card scroll"><table class="ro">
+        <thead><tr><th>City</th><th>Members</th><th>Live bots</th><th style="width:34%">Towards the target</th><th></th></tr></thead>
+        <tbody id="poRows"></tbody></table></div>
+      <p class="sub" style="margin-top:10px">“Run now” pauses the live bots in every city at or above the target. Paused bots can be switched back on under Profiles.</p>
+    </div>
+
+    <div id="view-bots-activity" class="hidden">
+      <div class="head"><div><h2>Bot activity</h2>
+        <p class="sub">What each bot received and sent.</p></div>
+        <div class="row">
+          <div class="chips" id="baRange" role="group" aria-label="Date range">
+            <button type="button" class="chip" data-days="7">7 days</button>
+            <button type="button" class="chip" data-days="30">30 days</button>
+            <button type="button" class="chip" data-days="90">90 days</button>
+          </div>
+          <button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="grid g4" id="baKpis" style="margin-bottom:12px"></div>
+      <div class="toolbar"><input type="text" id="baSearch" placeholder="Search name or city…" aria-label="Search bots"></div>
+      <div class="card scroll"><table class="ro">
+        <thead><tr><th>Bot</th><th>City</th><th>Status</th><th>Likes got</th><th>Matches</th><th>Messages got</th><th>Replies sent</th><th>Last reply</th></tr></thead>
+        <tbody id="baRows"></tbody></table></div>
+    </div>
+
+    <!-- Content and config. -->
+    <div id="view-cfg-flags" class="hidden">
+      <div class="head"><div><h2>Feature flags</h2>
+        <p class="sub">Switch app features on or off for everyone. The app picks up changes the next time it opens.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <form class="card pad" id="flagForm" style="max-width:680px">
+        <div id="flagRows"></div>
+        <div class="row" style="margin-top:12px"><button class="btn primary">Save flags</button><span class="muted" id="flagUpdated"></span></div>
+      </form>
+    </div>
+
+    <div id="view-cfg-onboarding" class="hidden">
+      <div class="head"><div><h2>Onboarding</h2>
+        <p class="sub">What new members must fill in before they can use Discover.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="grid g3">
+        <form class="card pad" id="onbForm">
+          <h3>Required steps</h3>
+          <label class="tog" style="margin-top:12px"><input type="checkbox" id="obPhoto"> Require a photo</label>
+          <label for="obMin">Minimum photos</label><input type="number" id="obMin" min="0" max="9" step="1">
+          <label class="tog" style="margin-top:12px"><input type="checkbox" id="obCity"> Require a city</label><br>
+          <label class="tog" style="margin-top:8px"><input type="checkbox" id="obInterests"> Require interests</label><br>
+          <label class="tog" style="margin-top:8px"><input type="checkbox" id="obBio"> Require a bio</label>
+          <p class="sub" style="font-size:12.5px;margin-top:10px">Applies to new sign-ups and to members who haven’t finished their profile yet.</p>
+          <div class="row" style="margin-top:12px"><button class="btn primary">Save onboarding</button><span class="muted" id="obUpdated"></span></div>
+        </form>
+        <div class="card pad" data-age-card></div>
+      </div>
+    </div>
+
+    <!-- Announcements (permission 'content'): banners under Content, in-app notices under Communication. -->
+    <div id="view-announce" class="hidden">
+      <div class="head"><div><h2 id="anTitle">Banners</h2>
+        <p class="sub" id="anSub"></p></div>
+        <div class="row"><button class="btn primary" id="anNew">New</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Title</th><th>Audience</th><th>Runs</th><th>Status</th><th></th></tr></thead>
+        <tbody id="anRows"></tbody></table></div>
+    </div>
+
+    <div id="view-cfg-app-control" class="hidden">
+      <div class="head"><div><h2>App control</h2>
+        <p class="sub">Maintenance mode and the oldest app version allowed to sign in.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="bigwarn hidden" id="mtWarn" role="alert" style="margin-bottom:12px">Maintenance mode is ON. Members can’t use the app until you switch it off.</div>
+      <div class="grid g3">
+        <form class="card pad" id="mtForm">
+          <h3>Maintenance mode</h3>
+          <label class="tog" style="margin-top:12px"><input type="checkbox" id="mtOn"> Show the maintenance screen to every member</label>
+          <label for="mtMsg">Message</label><textarea id="mtMsg" rows="3" maxlength="300" placeholder="e.g. We’re upgrading Everlane. Back in 30 minutes."></textarea>
+          <div class="row" style="margin-top:12px"><button class="btn primary">Save maintenance</button><span class="muted" id="mtUpdated"></span></div>
+        </form>
+        <form class="card pad" id="mvForm">
+          <h3>Minimum app version</h3>
+          <div class="formgrid">
+            <div><label for="mvWeb">Web</label><input type="text" id="mvWeb" maxlength="20" placeholder="e.g. 0.3.7"></div>
+            <div><label for="mvAndroid">Android</label><input type="text" id="mvAndroid" maxlength="20" placeholder="e.g. 0.3.7"></div>
+            <div><label for="mvIos">iOS</label><input type="text" id="mvIos" maxlength="20" placeholder="e.g. 0.3.7"></div>
+          </div>
+          <label for="mvMsg">Message shown on older versions</label><input type="text" id="mvMsg" maxlength="200" placeholder="e.g. Please update Everlane to keep using it.">
+          <p class="sub" style="font-size:12.5px;margin-top:8px">Leave a platform blank to allow every version. Older versions are asked to update.</p>
+          <div class="row" style="margin-top:12px"><button class="btn primary">Save versions</button><span class="muted" id="mvUpdated"></span></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Support (permission 'members'; appeal decisions need 'moderate'). -->
+    <div id="view-sup-tickets" class="hidden">
+      <div class="head"><div><h2>Tickets</h2>
+        <p class="sub">Messages members send from Help in the app. Unread tickets are listed first.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="toolbar">
+        <div class="chips" id="tkStatus" role="group" aria-label="Status">
+          <button type="button" class="chip" data-status="open">Open</button>
+          <button type="button" class="chip" data-status="pending">Waiting on member</button>
+          <button type="button" class="chip" data-status="resolved">Resolved</button>
+          <button type="button" class="chip" data-status="">All</button>
+        </div>
+        <select id="tkCat" aria-label="Category"><option value="">Any category</option></select>
+      </div>
+      <div class="card scroll"><table>
+        <thead><tr><th>Subject</th><th>Member</th><th>Category</th><th>Status</th><th>Priority</th><th>Assigned</th><th>Updated</th></tr></thead>
+        <tbody id="tkRows"></tbody></table></div>
+      <p class="muted" id="tkCount" style="margin-top:10px"></p>
+    </div>
+
+    <div id="view-sup-appeals" class="hidden">
+      <div class="head"><div><h2>Appeals</h2>
+        <p class="sub">Members asking for a suspension or block to be lifted. Granting lifts it straight away.</p></div>
+        <div class="row">
+          <div class="chips" id="apStatus" role="group" aria-label="Which appeals">
+            <button type="button" class="chip" data-status="open">Open</button>
+            <button type="button" class="chip" data-status="">All</button>
+          </div>
+          <button class="btn" data-refresh>Refresh</button></div></div>
+      <div id="apList"></div>
+    </div>
+
+    <div id="view-sup-help" class="hidden">
+      <div class="head"><div><h2>Help center</h2>
+        <p class="sub">The questions and answers members see under Help in the app.</p></div>
+        <div class="row"><button class="btn primary" id="faqNew">New question</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <div id="faqList"></div>
+    </div>
+
+    <!-- Growth. -->
+    <div id="view-grow-referrals" class="hidden">
+      <div class="head"><div><h2>Referrals</h2>
+        <p class="sub">Members who invited friends with their code, and the reward for it.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="grid g4" id="refKpis" style="margin-bottom:12px"></div>
+      <form class="card pad" id="refForm" style="margin-bottom:12px">
+        <h3>Reward</h3>
+        <label class="tog" style="margin-top:12px"><input type="checkbox" id="rfOn"> Referrals on</label>
+        <div class="formgrid">
+          <div><label for="rfDays">Free days for the inviter, per friend who finishes their profile</label><input type="number" id="rfDays" min="0" max="365" step="1"></div>
+          <div><label for="rfPlan">Plan given</label><select id="rfPlan"><option value="plus">Plus</option><option value="gold">Gold</option><option value="platinum">Platinum</option></select></div>
+        </div>
+        <div class="row" style="margin-top:12px"><button class="btn primary">Save reward</button><span class="muted" id="rfUpdated"></span></div>
+      </form>
+      <div class="card scroll"><table>
+        <thead><tr><th>Member</th><th>Code</th><th>Joined with it</th><th>Finished profile</th><th>Last join</th></tr></thead>
+        <tbody id="refRows"></tbody></table></div>
+    </div>
+
+    <!-- Technical (permission 'team'): admin_tech. -->
+    <div id="view-tech-database" class="hidden">
+      <div class="head"><div><h2>Database</h2>
+        <p class="sub">Size of the database and its largest tables.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="grid g4" id="dbKpis" style="margin-bottom:12px"></div>
+      <div class="card scroll"><table class="ro">
+        <thead><tr><th>Table</th><th>Rows</th><th>Size</th></tr></thead>
+        <tbody id="dbRows"></tbody></table></div>
+    </div>
+
+    <div id="view-tech-jobs" class="hidden">
+      <div class="head"><div><h2>Scheduled jobs</h2>
+        <p class="sub">Background jobs (bot replies, clean-ups, phase-out…) and how their last runs went.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="card scroll" style="margin-bottom:12px"><table class="ro">
+        <thead><tr><th>Job</th><th>Schedule</th><th>Status</th><th>Last run</th><th>Runs 24h</th><th>Failures 24h</th></tr></thead>
+        <tbody id="jobRows"></tbody></table></div>
+      <div class="card pad"><h3>Recent failures</h3>
+        <div class="scroll" style="margin-top:8px"><table class="ro">
+          <thead><tr><th>When</th><th>Job</th><th>Error</th></tr></thead>
+          <tbody id="jobFails"></tbody></table></div></div>
+    </div>
+
+    <div id="view-tech-queues" class="hidden">
+      <div class="head"><div><h2>Queues</h2>
+        <p class="sub">Work waiting to be done, by people or by background jobs.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="attn" id="qRows" style="max-width:680px"></div>
+    </div>
+
+    <!-- Legal extras. -->
+    <div id="view-legal-consent" class="hidden">
+      <div class="head"><div><h2>Consent</h2>
+        <p class="sub">What members have agreed to. Bots and test accounts are left out.</p></div>
+        <div class="row"><button class="btn" data-goto="legal-requests">Data requests →</button><button class="btn" data-refresh>Refresh</button></div></div>
+      <div class="stack">
+        <div class="grid g4" id="csKpis"></div>
+        <div class="card pad"><h3>Terms version accepted</h3><div id="csVersions" style="margin-top:10px"></div></div>
+      </div>
+    </div>
+
+    <div id="view-legal-age" class="hidden">
+      <div class="head"><div><h2>Minimum age</h2>
+        <p class="sub">The youngest age allowed to sign up.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="card pad" data-age-card style="max-width:520px"></div>
+    </div>
   </main>
 </section>
 
 <div id="overlay"></div>
-<div class="md mk" id="mkMd"><div class="mb" id="mkMb" role="dialog" aria-modal="true" aria-label="Sample details"></div></div>
 
-<script>
-// ---------- Sample (preview) pages ----------
-// Ported from the Everlane super-admin prototype. Everything in here is mock data
-// kept inside this closure: nothing calls Supabase, and the only thing exposed is
-// window.EverlaneMock, which the real panel uses to draw these pages.
-(() => {
-'use strict';
-const BANNER = '<div class="note mkban" role="note">Sample data — this page is a preview and isn’t connected to the app yet. Numbers and actions here are not real.</div>';
-const $=s=>document.querySelector(s),H=[];const on=f=>{H.push(f);return `data-mh="${H.length-1}"`};const oi=f=>{H.push(f);return `data-mi="${H.length-1}"`};
-const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),P=a=>a[Math.floor(Math.random()*a.length)],esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])),fmt=n=>Math.round(n).toLocaleString('en-IN'),sum=a=>a.reduce((x,y)=>x+y,0);
-const ago=d=>new Date(Date.now()-d*864e5).toISOString().slice(0,10),now=()=>new Date().toLocaleString();
-function toast(s){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=s+' (sample only)';document.body.append(t);setTimeout(()=>t.remove(),2300)}
-const pill=(s,c)=>`<span class="pill ${c||({Active:'ok',Verified:'ok',Paid:'ok',Live:'ok',Approved:'ok',Resolved:'ok',Open:'warn',Pending:'warn',Suspended:'warn','Shadow-banned':'warn',Banned:'bad',Failed:'bad',Deleted:'bad',Rejected:'bad',High:'bad',Refunded:'warn',Planned:'',Waitlist:'warn',Medium:'warn'}[s]||'')}">${esc(s)}</span>`;
-// ---------- mock data ----------
-const CITY=['Bengaluru','Mumbai','Delhi','Hyderabad','Chennai','Pune','Kolkata','Gurugram','Ahmedabad','Jaipur','Kochi','Chandigarh'];
-const FN={F:'Ananya Divya Meera Kavya Priya Sneha Anjali Riya Neha Isha Pooja Aditi Diya Tanya Shreya Nisha'.split(' '),M:'Arjun Karthik Rohan Aarav Aditya Rahul Vikram Karan Nikhil Siddharth Varun Harsh Kabir Yash'.split(' '),N:'Kiran Noor Sasha Arya Ojas Mihir'.split(' ')};
-const LN='Sharma Rao Patel Singh Nair Reddy Mehta Gupta Iyer Das Joshi Kapoor Menon Shah Verma'.split(' ');
-const USERS=Array.from({length:300},(_,i)=>{const g=P('FFMMMN'.split('')),fn=P(FN[g]),ln=P(LN);return{id:'U-'+(10001+i),name:fn+' '+ln,email:(fn+'.'+ln+R(1,99)+'@mail.com').toLowerCase(),phone:'+91 9'+R(1000,9999)+' '+R(10000,99999),city:P(CITY),age:R(18,46),gender:g==='F'?'Woman':g==='M'?'Man':'Non-binary',status:P(['Active','Active','Active','Active','Active','Active','Active','Suspended','Banned','Shadow-banned','Deleted']),verified:Math.random()<.55,badges:Math.random()<.1?['Early adopter']:[],plan:P(['Free','Free','Free','Free','Gold','Premium']),joined:ago(R(1,400)),last:ago(R(0,30)),strikes:Math.random()<.85?0:R(1,3),device:'dev-'+R(100,420),ip:'49.'+R(30,250)+'.'+R(1,250)+'.'+R(1,250),src:P(['Organic','Instagram','Referral','Google Ads','Influencer']),bio:'Coffee, travel and long walks.',boosts:0,sl:0,pd:0}});
-for(let i=0;i<9;i++){const a=USERS[R(0,299)],b=USERS[R(0,299)],c=USERS[R(0,299)];b.device=a.device;if(i%2)c.device=a.device;if(i%3==0)b.ip=a.ip}
-const uById=id=>USERS.find(u=>u.id===id);
-const S={role:'Super Admin',sec:'dash',sub:0,range:30,imp:null,bots:true};const CH={};const TS={};let MODAL=null;
-const AUD=[['Super Admin','Updated algorithm weights','distance 28% → 30%'],['Moderator','Rejected photo','P-2210 (NSFW 0.91)'],['Finance','Refunded payment','TX-90412 ₹499'],['Support','Reset password','U-10044']].map((x,i)=>({t:new Date(Date.now()-i*36e5*5).toLocaleString(),u:x[0],a:x[1],d:x[2]}));
-const log=(a,d)=>AUD.unshift({t:now(),u:S.role,a,d:d||''});
-const REPORTS=Array.from({length:36},(_,i)=>({id:'RP-'+(5001+i),reporter:P(USERS).id,target:P(USERS).id,reason:P(['Fake profile','Harassment','Spam or scam','Inappropriate photo','Underage','Offensive bio']),prio:P(['High','Medium','Low','Low']),status:P(['Open','Open','Open','Resolved']),owner:'—',t:ago(R(0,12))}));
-const PHOTOS=Array.from({length:18},(_,i)=>({id:'P-'+(2200+i),user:P(USERS).id,nsfw:+(Math.random()**3).toFixed(2),face:Math.random()<.85,status:'Pending',c:P(['#7C3AED','#EC4899','#3B82F6','#14B8A6','#F59E0B'])}));
-const CHATS=[['Send me your UPI so I can send your prize','Scam'],['You will regret ignoring me','Harassment'],['Contact me on this link to verify your profile','Spam link'],['Send photos or I tell everyone','Harassment'],['I can double your money, DM me','Scam'],['Add me on Telegram for investment tips','Spam link']].map((x,i)=>({id:'CH-'+(300+i),from:P(USERS).id,to:P(USERS).id,text:x[0],why:x[1],status:'Open'}));
-const VER=Array.from({length:10},(_,i)=>({id:'V-'+(700+i),user:P(USERS).id,type:P(['Selfie','Selfie','ID document']),score:R(62,99),status:'Pending'}));
-const TIX=Array.from({length:22},(_,i)=>({id:'T-'+(8100+i),user:P(USERS).id,subj:P(['Cannot log in','Payment failed','Profile not visible','Photo rejected','Delete my data','Refund request','Fake profile report']),prio:P(['High','Medium','Low']),status:P(['Open','Open','Pending','Resolved']),owner:P(['—','Asha','Ravi','Meera']),thread:[]}));
-const BOTS=Array.from({length:30},(_,i)=>{const g=P('FFMMN'.split('')),fn=P(FN[g]);return{id:'BOT-'+String(i+1).padStart(5,'0'),name:fn+' '+P(LN),gender:g==='F'?'Woman':g==='M'?'Man':'Non-binary',city:P(CITY),age:R(21,36),status:'Active',likes:R(0,120),matches:R(0,30),msgs:R(0,200)}});
-const ADM=[['Neha Kapoor','Super Admin',true,'Today'],['Ravi Menon','Moderator',true,'Today'],['Asha Iyer','Support',true,'Yesterday'],['Karan Shah','Finance',false,'3 days ago'],['Diya Rao','Analyst',true,'Today']];
-// ---------- config ----------
-const C={algo:{distance:28,age:12,activity:22,interests:20,goal:12,response:6,decay:14},
-lim:{Free:{likes:8,sl:0,rew:0,boost:0},Gold:{likes:999,sl:5,rew:3,boost:1},Premium:{likes:999,sl:15,rew:99,boost:4}},loc:{min:1,max:100,def:25},
-cities:CITY.map((c,i)=>({n:c,s:i<7?'Live':i<10?'Waitlist':'Planned',w:i<7?0:R(120,2400),th:1500})),
-opts:{genders:['Woman','Man','Non-binary','Prefer to self-describe'],orient:['Straight','Gay','Lesbian','Bisexual','Pansexual','Asexual'],intent:['Long-term partner','Relationship','Friendship first','Something casual','Not sure yet']},
-ab:[{n:'Compatibility ranking v2',v:'A 50% / B 50%',st:'Running',lift:'+4.1%',p:'0.03'},{n:'Likes-you blur for Free',v:'A 70% / B 30%',st:'Running',lift:'+9.8% revenue',p:'0.01'},{n:'3-photo onboarding',v:'A 50% / B 50%',st:'Stopped',lift:'−1.2%',p:'0.41'}],
-vis:[{u:'U-10011',r:'Boost x2',e:'3 days'},{u:'U-10090',r:'Hidden',e:'Permanent'}],
-words:['whatsapp me','send money','crypto','telegram','escort','upi id','nude','only fans'],
-bans:{Device:['dev-199','dev-250'],IP:['49.101.22.7'],Phone:['+91 90000 11111']},
-auto:[{r:'3 verified reports in 24h',a:'Suspend',on:true},{r:'Link or UPI in first 3 messages',a:'Shadow-ban',on:true},{r:'Duplicate photo on 3+ accounts',a:'Ban',on:true},{r:'50+ likes in 1 minute',a:'Rate limit',on:true},{r:'Underage signal (face + DOB)',a:'Suspend + review',on:true},{r:'Banned device re-registers',a:'Ban',on:false}],
-strike:{s1:'Warning',s2:'7-day suspension',s3:'Permanent ban',decay:90},
-under:[{id:'U-10020',claim:19,sig:'ID DOB shows 16'},{id:'U-10155',claim:21,sig:'Face-age estimate 14'},{id:'U-10230',claim:18,sig:'Bio says “Class 10”'}],
-content:{interests:['Travel','Coffee','Music','Cooking','Fitness','Art','Books','Hiking'],prompts:['My ideal Sunday is','I’m happiest when','Ask me about'],ice:['What’s your ideal weekend?','Dinner or a film first?','Best trip you’ve taken?'],qs:['What are you looking for?','Do you want kids?']},
-flags:[['Likes you tab',1,100],['Hangouts',1,60],['Boost',1,100],['Super like',1,100],['Undo (rewind)',1,100],['Compatibility quiz',1,100],['Video intro',0,10],['Voice notes',0,0],['Incognito mode',1,20],['AI icebreakers',0,5],['Stories',0,0],['Gifts',1,30],['Referral program',1,100],['Selfie verification',1,100]].map(f=>({n:f[0],on:!!f[1],ro:f[2]})),
-lang:{sel:'Hindi',keys:{welcome:['Welcome','स्वागत है'],like:['Like','पसंद'],pass:['Pass','छोड़ें'],match:['It’s a match','यह एक मैच है'],messages:['Messages','संदेश'],profile:['My profile','मेरी प्रोफ़ाइल']}},
-onb:[{n:'First name',r:true},{n:'Email',r:true},{n:'Mobile',r:true},{n:'Birthday',r:true},{n:'Gender',r:true},{n:'City',r:true},{n:'Looking for',r:true},{n:'Photos',r:true},{n:'Interests',r:false},{n:'Bio',r:false}],
-banners:[{k:'Banner',t:'Boost weekend: 2x visibility',a:'All',on:true},{k:'Story',t:'Meet our verified members',a:'New users',on:true},{k:'Announcement',t:'Hangouts now live in Pune',a:'Pune',on:false}],
-ctl:{iosMin:'3.2.0',andMin:'3.1.4',hard:false,maint:false,msg:'We’ll be back shortly.'},
-life:[{n:'Welcome series',d:'Immediately',ch:'Push + Email',on:true},{n:'Complete your profile',d:'After 24h',ch:'Push',on:true},{n:'Abandoned sign-up',d:'After 2h',ch:'SMS',on:true},{n:'Win-back',d:'After 14 days',ch:'Push + Email',on:true},{n:'Premium expiring',d:'3 days before',ch:'Email',on:false}],
-camp:[{n:'Weekend boost promo',ch:'Push',aud:18420,st:'Sent',ctr:'6.2%'},{n:'Win-back May',ch:'Email',aud:9210,st:'Sent',ctr:'3.1%'}],
-faq:[{t:'How do I verify my profile?',c:'Safety'},{t:'How do refunds work?',c:'Billing'},{t:'How do I delete my account?',c:'Account'}],
-canned:['Thanks for reaching out. We’re looking into this now.','Your refund has been processed and will arrive in 5 to 7 days.','Please share a screenshot so we can investigate.'],
-appeals:[{id:'AP-61',u:'U-10033',why:'Banned for spam. I was hacked.',st:'Open'},{id:'AP-62',u:'U-10108',why:'Suspended by mistake.',st:'Open'}],
-ref:{rew:7,newrew:7,cap:20,fraud:true},codes:[{c:'FRIEND7',u:844,o:'Referral'},{c:'LAUNCH',u:210,o:'Campaign'}],
-utm:[['instagram','paid_social','diwali',12400,5100,148],['google','cpc','brand',8800,3900,210],['influencer','video','aanya',6100,2500,96],['organic','—','—',22000,9800,0]],
-events:[{n:'Speed dating night',city:'Bengaluru',d:'2026-11-14',cap:40,rsvp:36,st:'Open'},{n:'Coffee meetup',city:'Pune',d:'2026-11-20',cap:30,rsvp:12,st:'Open'}],
-amb:[{n:'Aanya (creator)',c:'AANYA10',s:410,pay:'₹20,500'},{n:'Rohan Vlogs',c:'ROHAN20',s:260,pay:'₹13,000'}],
-roles:{perms:['View users','Edit users','Moderate content','Manage billing','Edit config','Manage security'],m:{'Super Admin':[1,1,1,1,1,1],Moderator:[1,0,1,0,0,0],Support:[1,1,0,0,0,0],Finance:[0,0,0,1,0,0],Analyst:[1,0,0,0,0,0]}},
-acc:{tfa:true,tfaAll:true,ips:['103.21.44.0/24','49.205.10.12'],sess:30,pw:12},
-keys:[{n:'Mobile app',p:'ek_live_8f3a',sc:'read, write',t:'2026-01-12',l:'Today'},{n:'Analytics export',p:'ek_live_21c9',sc:'read',t:'2026-03-02',l:'Yesterday'}],
-hooks:[{u:'https://api.example.com/hooks/match',ev:'match.created',st:'Active'},{u:'https://crm.example.com/signup',ev:'user.signup',st:'Active'}],
-bk:{freq:'Daily 02:00',keep:30,logs:90,del:30},bks:['2026-10-30 02:00','2026-10-29 02:00','2026-10-28 02:00'],
-logs:Array.from({length:24},(_,i)=>({t:now(),lv:P(['ERROR','ERROR','WARN','WARN','INFO']),svc:P(['api','auth','payments','push','media']),m:P(['Timeout calling Stripe','Invalid token','Upload failed (S3)','FCM quota exceeded','Slow query on swipes','Null profile photo']),n:R(1,420),st:P(['Open','Open','Resolved'])})),
-ints:[{n:'Twilio (SMS and OTP)',on:true,k:'AC••••9f2'},{n:'Firebase (push and analytics)',on:true,k:'AIza••••Q3'},{n:'Stripe (payments)',on:true,k:'sk_live_••••7d'},{n:'AWS (storage and moderation)',on:true,k:'AKIA••••XY'},{n:'OneSignal (campaigns)',on:false,k:'—'}],
-q:[{n:'photo-moderation',w:42,a:5,f:0,on:true},{n:'push-notifications',w:310,a:20,f:3,on:true},{n:'email',w:12,a:2,f:1,on:true},{n:'match-scoring',w:0,a:8,f:0,on:true},{n:'data-exports',w:2,a:1,f:0,on:true}],
-rl:[{n:'Login',v:10,on:true},{n:'OTP requests',v:5,on:true},{n:'Swipes',v:120,on:true},{n:'Messages',v:40,on:true},{n:'Reports',v:10,on:true}],spam:{newcap:5,links:true,captcha:true,cth:60},
-docs:[{n:'Terms of Service',v:'4.2',d:'2026-09-01'},{n:'Privacy Policy',v:'3.7',d:'2026-09-01'},{n:'Community Guidelines',v:'2.1',d:'2026-06-10'},{n:'Cookie Policy',v:'1.4',d:'2026-03-15'}],
-cons:[{n:'Terms and Privacy',req:true,v:'4.2 / 3.7',pct:97},{n:'Location',req:true,v:'1.3',pct:94},{n:'Biometric (selfie verification)',req:false,v:'1.1',pct:58},{n:'Marketing messages',req:false,v:'2.0',pct:41}],
-age:{min:18,m:{India:'Selfie age estimate',EU:'Selfie age estimate + ID on doubt',USA:'Self-declare + selfie',UAE:'ID document'}},
-reg:[{n:'GDPR (EU/UK)',on:true},{n:'CCPA / CPRA (California)',on:true},{n:'DPDP Act 2023 (India)',on:true},{n:'UK Age Appropriate Design Code',on:false}],
-dsar:Array.from({length:7},(_,i)=>({id:'DS-'+(40+i),u:P(USERS).id,k:P(['Data export','Account deletion','Data export']),due:R(2,28),st:'Open'})),
-botc:{env:'Demo',label:true,autoLike:false,autoMatch:false,autoReply:false,ai:false,from:9,to:22,rot:true,share:15,thr:800,persona:'Friendly, short replies. Always disclose being an automated demo profile.'},
-tpl:['Hi! I’m an automated demo profile. Ask me about Everlane.','This is an automated message from Everlane.'],
-bcity:CITY.map(c=>({c,real:R(40,6000),bots:R(0,40)}))};
-// ---------- helpers ----------
-const WR={'Super Admin':'*',Moderator:['mod','users','sup'],Support:['sup','users'],Finance:['subs'],Analyst:[]},VR={'Super Admin':null,Moderator:['dash','users','mod','sup'],Support:['users','sup'],Finance:['dash','subs'],Analyst:['dash','grow','tech']};
-const can=()=>WR[S.role]==='*'||WR[S.role].includes(S.sec);
-const A=(a,d,fn)=>(el,e)=>{if(!can()){toast('Your role is read-only here');return}try{if(fn)fn(el,e)}catch(x){toast('Fill in the form first');return}log(a,typeof d==='function'?d():d);render();toast(a)};
-const btn=(l,f,c)=>`<button class="btn ${c||''}" ${on(f)}>${l}</button>`;
-const card=(t,h)=>`<div class="card">${t?`<h3>${t}</h3>`:''}${h}</div>`;
-const pg=(t,d,h)=>BANNER+`<h2>${t}</h2><p class="sub">${d}</p>${h}`;
-const kpis=a=>`<div class="grid g4" style="margin-bottom:12px">${a.map(k=>`<div class="kpi"><b>${k[1]}</b><span>${k[0]}</span>${k[2]?`<i>${k[2]}</i>`:''}</div>`).join('')}</div>`;
-const g3=(...a)=>`<div class="grid g3">${a.join('')}</div>`;
-const ser=(n,b,v)=>{let x=b;return Array.from({length:n},()=>x=Math.max(1,x+(Math.random()-.45)*v))};
-const line=(arrs,h=150)=>{const W=600,all=arrs.flat(),mx=Math.max(...all),mn=Math.min(...all)*.9,cols=['#7C3AED','#EC4899','#F5A524'];return `<svg viewBox="0 0 ${W} ${h}" class="ch">${arrs.map((a,k)=>`<polyline points="${a.map((v,i)=>`${(i*W/(a.length-1)).toFixed(1)},${(h-8-(v-mn)/(mx-mn||1)*(h-22)).toFixed(1)}`).join(' ')}" fill="none" stroke="${cols[k]}" stroke-width="2.5" stroke-linejoin="round"/>`).join('')}</svg>`};
-const bars=a=>{const m=Math.max(...a.map(i=>i[1]))||1;return a.map(([l,v])=>`<div class="bl"><span>${l}</span><div class="bar"><i style="width:${v/m*100}%"></i></div><b>${fmt(v)}</b></div>`).join('')};
-const strip=s=>String(s).replace(/<[^>]+>/g,'');
-function copy(t){try{navigator.clipboard.writeText(t).then(()=>toast('Copied to clipboard'),()=>fb(t))}catch(e){fb(t)}}
-function fb(t){openM(()=>m(`<h3>Copy this</h3><textarea class="fld" rows="9" id="mk-cpt">${esc(t)}</textarea><div class="row" style="margin-top:10px">${btn('Close',closeM,'s')}</div>`));const x=$('#mk-cpt');if(x)x.select()}
-const csv=(cols,L)=>cols.map(c=>`"${c}"`).join(',')+'\n'+L.map(r=>r.c.map(c=>`"${strip(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-function tbl(id,cols,rows,o={}){const s=TS[id]=TS[id]||{q:'',p:0,f:{}};let L=rows;(o.filters||[]).forEach(([n,i])=>{const v=s.f[n];if(v)L=L.filter(r=>strip(r.c[i])===v)});if(s.q)L=L.filter(r=>strip(r.c.join(' ')).toLowerCase().includes(s.q.toLowerCase()));
-const PG=o.page||12,pages=Math.max(1,Math.ceil(L.length/PG));s.p=Math.min(s.p,pages-1);const Rw=L.slice(s.p*PG,s.p*PG+PG);
-return `<div class="card"><div class="row" style="margin-bottom:8px">${o.search===false?'':`<input class="fld" style="flex:1;min-width:130px" placeholder="Search" aria-label="Search" value="${esc(s.q)}" ${oi(v=>{s.q=v;s.p=0;render()})}>`}${(o.filters||[]).map(([n,i,op])=>`<select class="fld" style="width:auto" aria-label="${n}" ${oi(v=>{s.f[n]=v;s.p=0;render()})}><option value="">${n}</option>${op.map(x=>`<option ${s.f[n]===x?'selected':''}>${x}</option>`).join('')}</select>`).join('')}<button class="btn s sm" ${on(()=>copy(csv(cols,L)))}>Export CSV</button></div><div class="scroll"><table><tr>${cols.map(c=>`<th>${c}</th>`).join('')}${o.acts?'<th></th>':''}</tr>${Rw.length?Rw.map(r=>`<tr class="${o.click?'r':''}" ${o.click?on(()=>o.click(r)):''}>${r.c.map(c=>`<td>${c}</td>`).join('')}${o.acts?`<td class="nw">${o.acts.map(([l,fn,cls,show])=>(show&&!show(r))?'':`<button class="btn sm ${cls||'s'}" ${on((t,e)=>{e.stopPropagation();fn(r)})}>${l}</button>`).join(' ')}</td>`:''}</tr>`).join(''):`<tr><td colspan="12" class="sub">Nothing here.</td></tr>`}</table></div><div class="row" style="justify-content:center;margin-top:8px"><button class="btn s sm" ${on(()=>{s.p--;render()})} ${s.p?'':'disabled'}>Prev</button><span class="sub">${s.p+1} / ${pages} · ${L.length} rows</span><button class="btn s sm" ${on(()=>{s.p++;render()})} ${s.p<pages-1?'':'disabled'}>Next</button></div></div>`}
-function fld(o,k,l,t,op){t=t||'text';const v=o[k];if(t==='toggle')return `<div class="set"><span>${l}${op&&op.h?`<small>${op.h}</small>`:''}</span><button class="sw ${v?'on':''}" role="switch" aria-checked="${!!v}" aria-label="${l}" ${op&&op.lock?'disabled':''} ${on(el=>{o[k]=!o[k];el.classList.toggle('on');el.setAttribute('aria-checked',!!o[k]);if(op&&op.cb)op.cb()})}></button></div>`;
-if(t==='select')return `<label class="l">${l}</label><select class="fld" ${oi(x=>{o[k]=x;if(op.cb)op.cb()})}>${op.o.map(x=>`<option ${x==v?'selected':''}>${x}</option>`).join('')}</select>`;
-if(t==='range')return `<label class="l">${l}: <b>${v}${op.u||''}</b></label><input type="range" min="${op.min}" max="${op.max}" value="${v}" ${oi((x,el)=>{o[k]=+x;el.previousElementSibling.querySelector('b').textContent=x+(op.u||'')})}>`;
-if(t==='area')return `<label class="l">${l}</label><textarea class="fld" ${oi(x=>o[k]=x)}>${esc(v)}</textarea>`;
-return `<label class="l">${l}</label><input class="fld" type="${t}" value="${esc(v)}" ${oi(x=>o[k]=t==='number'?+x:x)}>`}
-const saveB=(l)=>btn('Save changes',A('Saved',l),'');
-function listEd(arr,label,ph){return `<div class="chips">${arr.map((x,i)=>`<span class="chip on" style="cursor:default">${esc(x)} <b style="cursor:pointer;margin-left:5px" ${on(A('Removed '+label,x,()=>arr.splice(i,1)))}>×</b></span>`).join('')||'<span class="sub">Empty</span>'}</div><div class="row"><input class="fld" style="flex:1" id="mk-ni-${label}" placeholder="${ph||'Add new'}">${btn('Add',A('Added '+label,()=>$('#mk-ni-'+label).value,()=>{const v=$('#mk-ni-'+label).value.trim();if(v)arr.push(v)}),'s')}</div>`}
-function openM(fn){MODAL=fn;fn()}function closeM(){MODAL=null;$('#mkMd').className='md mk'}function m(h){$('#mkMb').innerHTML=h;$('#mkMd').className='md mk on'}
-// ---------- pages: dashboard ----------
-function pRetention(){const rows=Array.from({length:8},(_,i)=>{const b=100;return[`Week ${8-i}`,b,Math.round(R(48,62)),Math.round(R(30,42)),Math.round(R(22,32)),Math.round(R(15,24)),Math.round(R(9,17))]});const col=v=>`rgba(124,58,237,${(v/100*.9+.08).toFixed(2)})`;
-return pg('Retention and cohorts','Share of each signup cohort still active.',card('Cohort retention',`<div class="scroll"><table><tr><th>Cohort</th><th>Day 0</th><th>Day 1</th><th>Day 7</th><th>Day 14</th><th>Day 30</th><th>Day 60</th></tr>${rows.map(r=>`<tr><td>${r[0]}</td>${r.slice(1).map(v=>`<td><div class="hc" style="background:${col(v)}">${v}%</div></td>`).join('')}</tr>`).join('')}</table></div>`)+g3(card('Churn reasons (exit survey)',bars([['Not enough matches',38],['Found someone',24],['Too many fake profiles',14],['Privacy concerns',9],['Pricing',8]])),card('Activation',bars([['Matched in 24h',42],['Matched in 7 days',61],['Sent first message',44]]))))}
-// ---------- users ----------
-function userM(u){const hist=Array.from({length:4},(_,i)=>`<tr><td>${ago(i*2)}</td><td>${u.device}</td><td>${u.ip}</td><td>${i?'Mobile app':'Web'}</td></tr>`).join('');const dup=USERS.filter(x=>x!==u&&(x.device===u.device||x.ip===u.ip));
-const set=(s,l)=>btn(l||s,A(l||s,u.id+' → '+s,()=>{u.status=s}),s==='Banned'||s==='Deleted'?'d':'s');
-m(`<div class="row" style="justify-content:space-between"><h3 style="margin:0">${esc(u.name)} <span class="sub">${u.id}</span></h3>${btn('Close',closeM,'s')}</div><div class="row" style="margin:8px 0">${pill(u.status)} ${u.verified?pill('Verified'):''} ${u.badges.map(b=>pill(b)).join(' ')} ${pill(u.plan)}${u.strikes?pill(u.strikes+' strikes','warn'):''}</div>
-<h4>Profile</h4><div class="grid g2"><div>${fld(u,'name','Name')}</div><div>${fld(u,'age','Age','number')}</div><div>${fld(u,'city','City')}</div><div>${fld(u,'gender','Gender','select',{o:['Woman','Man','Non-binary']})}</div></div>${fld(u,'bio','Bio','area')}<div class="row" style="margin-top:8px">${btn('Save profile',A('Edited profile',u.id))}</div>
-<h4>Photos</h4><div class="grid g2">${[0,1,2,3].map(i=>`<div><div class="ph" style="background:linear-gradient(150deg,#7C3AED,#EC4899);opacity:${1-i*.15}">${esc(u.name[0])}</div><button class="btn s sm" style="margin-top:4px" ${on(A('Removed photo',u.id+' #'+(i+1)))}>Remove</button></div>`).join('')}</div>
-<h4>Account status</h4><div class="row">${set('Active','Restore')}${set('Suspended','Suspend')}${set('Shadow-banned','Shadow-ban')}${set('Banned','Ban')}${set('Deleted','Delete')}</div>
-<h4>Verification and badges</h4><div class="row">${btn(u.verified?'Unverify':'Verify',A(u.verified?'Unverified user':'Verified user',u.id,()=>{u.verified=!u.verified}),'s')}${['Early adopter','Ambassador','Top profile'].map(b=>btn((u.badges.includes(b)?'Remove ':'Grant ')+b,A('Badge '+b,u.id,()=>{u.badges.includes(b)?u.badges.splice(u.badges.indexOf(b),1):u.badges.push(b)}),'s')).join('')}</div>
-<h4>Security</h4><div class="row">${btn('Force logout',A('Forced logout',u.id),'s')}${btn('Reset password',A('Reset password',u.id),'s')}${btn('Change email',()=>{const v=prompt('New email',u.email);if(v)A('Changed email',u.id,()=>{u.email=v})()},'s')}${btn('Change phone',()=>{const v=prompt('New phone',u.phone);if(v)A('Changed phone',u.id,()=>{u.phone=v})()},'s')}</div>
-<h4>Manual grants</h4><div class="row">${btn('Add boost',A('Granted boost',u.id,()=>{u.boosts++}),'s')}${btn('Add 5 super likes',A('Granted 5 super likes',u.id,()=>{u.sl+=5}),'s')}${btn('Free premium +7 days',A('Free premium 7 days',u.id,()=>{u.pd+=7;u.plan='Premium'}),'s')}<span class="sub">Boosts ${u.boosts} · Super likes ${u.sl} · Premium days ${u.pd}</span></div>
-<h4>Devices and login history</h4><div class="scroll"><table><tr><th>Date</th><th>Device</th><th>IP</th><th>Client</th></tr>${hist}</table></div>${dup.length?`<div class="note">Possible multi-account: shares a device or IP with ${dup.map(d=>d.id).join(', ')}.</div>`:'<p class="sub">No linked accounts detected.</p>'}
-<h4>Privacy and support</h4><div class="row">${btn('Export user data (GDPR)',()=>copy(JSON.stringify(u,null,1)),'s')}${btn('Delete user data',A('GDPR deletion',u.id,()=>{u.status='Deleted'}),'d')}${btn('View as user',()=>{const w=prompt('Reason for impersonation (logged)');if(w){S.imp=u.id;log('Impersonation started',u.id+' · '+w);closeM();render()}},'s')}</div>`)}
-function pMulti(){const g={};USERS.forEach(u=>{(g[u.device]=g[u.device]||[]).push(u)});const cl=Object.entries(g).filter(([k,v])=>v.length>1);return pg('Multi-account detection','Accounts sharing a device or IP address.',tbl('multi',['Device','Accounts','Cities','Signal'],cl.map(([k,v])=>({k,v,c:[k,v.map(x=>x.id).join(', '),[...new Set(v.map(x=>x.city))].join(', '),pill(v.length>2?'High':'Medium')]})),{acts:[['Ban device',r=>A('Banned device',r.k,()=>{C.bans.Device.push(r.k)})(),'d'],['Review',r=>openM(()=>userM(r.v[0]))]]}))}
-function pDsar(){return pg('Data requests (GDPR / CCPA / DPDP)','Export and deletion requests with SLA timers.',tbl('dsar',['Request','User','Type','Days left','Status'],C.dsar.map(d=>({d,c:[d.id,d.u,d.k,d.due<7?pill(d.due+' days','bad'):d.due+' days',pill(d.st)]})),{acts:[['Fulfil',r=>A('Fulfilled '+r.d.k,r.d.u,()=>{r.d.st='Resolved'})(),'g',r=>r.d.st==='Open'],['Preview export',r=>copy(JSON.stringify(uById(r.d.u)||{},null,1))]]}))}
-// ---------- moderation ----------
-function pChat(){return pg('Chat monitoring','Conversations flagged by keywords, scam or harassment patterns.',tbl('chat',['ID','From','To','Message','Reason','Status'],CHATS.map(c=>({c0:c,c:[c.id,c.from,c.to,esc(c.text),pill(c.why,'warn'),pill(c.status)]})),{acts:[['Dismiss',x=>A('Dismissed flag',x.c0.id,()=>{x.c0.status='Resolved'})(),'s',x=>x.c0.status==='Open'],['Warn sender',x=>A('Warned sender',x.c0.from,()=>{x.c0.status='Resolved'})(),'s',x=>x.c0.status==='Open'],['Ban sender',x=>A('Banned sender',x.c0.from,()=>{const u=uById(x.c0.from);if(u)u.status='Banned';x.c0.status='Resolved'})(),'d',x=>x.c0.status==='Open']]}))}
-function pFake(){const cl=Array.from({length:6},(_,i)=>({id:'DUP-'+(i+1),n:R(3,9),u:[P(USERS).id,P(USERS).id,P(USERS).id]}));return pg('Fake and scam detection','Duplicate photos and spam patterns.',card('Duplicate photo clusters',tbl('dup',['Cluster','Accounts','Examples'],cl.map(c=>({c0:c,c:[c.id,c.n,c.u.join(', ')]})),{search:false,acts:[['Ban cluster',x=>A('Banned cluster',x.c0.id,()=>x.c0.u.forEach(i=>{const u=uById(i);if(u)u.status='Banned'}))(),'d']]}))+card('Spam patterns',bars([['Links in first message',212],['UPI or bank details',96],['Copy-pasted openers',340],['Mass-liking bots',58]])))}
-function pBans(){return pg('Block lists','Device, IP and phone number bans.',g3(...Object.keys(C.bans).map(k=>card(k+' bans',listEd(C.bans[k],k,'Add '+k.toLowerCase())))))}
-function pAuto(){return pg('Auto-ban rules and strikes','Automatic enforcement.',card('Rules',C.auto.map((r,i)=>fld(r,'on',`${r.r} → <b>${r.a}</b>`,'toggle')).join(''))+card('Strike system',`<div class="grid g3"><div>${fld(C.strike,'s1','Strike 1','select',{o:['Warning','Shadow-ban 3 days','7-day suspension']})}</div><div>${fld(C.strike,'s2','Strike 2','select',{o:['7-day suspension','30-day suspension','Permanent ban']})}</div><div>${fld(C.strike,'s3','Strike 3','select',{o:['Permanent ban','Device ban']})}</div></div>${fld(C.strike,'decay','Strikes expire after (days)','number')}<div style="margin-top:10px">${saveB('Strike system')}</div>`))}
-function pUnder(){return pg('Underage detection','Accounts showing signals of being under 18. Remove immediately.',tbl('under',['User','Claimed age','Signal','Action'],C.under.map(x=>({x,c:[x.id,x.claim,x.sig,'']})),{search:false,acts:[['Remove and notify',r=>A('Removed underage account',r.x.id,()=>{const u=uById(r.x.id);if(u)u.status='Deleted';C.under.splice(C.under.indexOf(r.x),1)})(),'d'],['Request ID',r=>A('Requested ID',r.x.id)(),'s'],['Dismiss',r=>A('Dismissed flag',r.x.id,()=>C.under.splice(C.under.indexOf(r.x),1))(),'s']]}))}
-// ---------- matching ----------
-function pAlgo(){const a=C.algo,keys=['distance','age','activity','interests','goal','response'],tot=sum(keys.map(k=>a[k])),sim=USERS.slice(0,5).map(u=>({n:u.name,s:keys.reduce((s,k)=>s+((u.age*7+k.length*13+u.name.length*3)%100)*a[k],0)/tot}));sim.sort((x,y)=>y.s-x.s);
-return pg('Algorithm weights','Tune how candidates are ranked in Discover.',g3(card('Weights',keys.map(k=>fld(a,k,k[0].toUpperCase()+k.slice(1),'range',{min:0,max:50,u:'%'})).join('')+fld(a,'decay','Activity decay half-life','range',{min:1,max:60,u:' days'})+`<p class="sub" style="margin-top:8px">Total ${tot}% (weights are normalised automatically)</p><div class="row">${btn('Preview ranking',()=>render(),'s')}${saveB('Algorithm weights')}</div>`),card('Preview: sample ranking',sim.map((s,i)=>`<div class="bl"><span>${i+1}. ${esc(s.n)}</span><div class="bar"><i style="width:${s.s}%"></i></div><b>${s.s.toFixed(0)}</b></div>`).join(''))))}
-function pVis(){const v=S.vf=S.vf||{u:'U-10001',r:'Boost x2',e:'3 days'};return pg('Visibility controls','Boost, hide or prioritise specific profiles.',g3(card('Add rule',fld(v,'u','User ID')+fld(v,'r','Rule','select',{o:['Boost x2','Boost x3','Hidden','Priority queue']})+fld(v,'e','Duration','select',{o:['1 day','3 days','7 days','Permanent']})+`<div style="margin-top:10px">${btn('Apply',A('Visibility rule',()=>v.u+' '+v.r,()=>C.vis.push({...v})))}</div>`))+tbl('vis',['User','Rule','Expires'],C.vis.map(x=>({x,c:[x.u,x.r,x.e]})),{search:false,acts:[['Remove',r=>A('Removed rule',r.x.u,()=>C.vis.splice(C.vis.indexOf(r.x),1))(),'d']]}))}
-function pLoc(){return pg('Location and city launch','Radius rules and city launch control.',card('Radius rules',`<div class="grid g3">${fld(C.loc,'min','Minimum radius (km)','number')}${fld(C.loc,'max','Maximum radius (km)','number')}${fld(C.loc,'def','Default radius (km)','number')}</div><div style="margin-top:10px">${saveB('Radius rules')}</div>`)+tbl('cities',['City','Status','Waitlist','Auto-launch at'],C.cities.map(c=>({c0:c,c:[c.n,pill(c.s),fmt(c.w),c.th]})),{search:false,acts:[['Launch',r=>A('Launched city',r.c0.n,()=>{r.c0.s='Live'})(),'g',r=>r.c0.s!=='Live'],['Move to waitlist',r=>A('City waitlisted',r.c0.n,()=>{r.c0.s='Waitlist'})(),'s',r=>r.c0.s==='Live']]}))}
-function pAB(){const n=S.nb=S.nb||{n:'New experiment',v:'A 50% / B 50%'};return pg('A/B tests','Experiments on algorithm and product variations.',tbl('ab',['Experiment','Split','Status','Lift','p-value'],C.ab.map(x=>({x,c:[x.n,x.v,pill(x.st,x.st==='Running'?'ok':''),x.lift,x.p]})),{search:false,acts:[['Stop',r=>A('Stopped experiment',r.x.n,()=>{r.x.st='Stopped'})(),'s',r=>r.x.st==='Running'],['Start',r=>A('Started experiment',r.x.n,()=>{r.x.st='Running'})(),'g',r=>r.x.st!=='Running']]})+card('New experiment',fld(n,'n','Name')+fld(n,'v','Traffic split')+`<div style="margin-top:10px">${btn('Create',A('Created experiment',()=>n.n,()=>C.ab.push({n:n.n,v:n.v,st:'Running',lift:'—',p:'—'})))}</div>`))}
-// ---------- bots (with disclosure guardrails) ----------
-const prod=()=>C.botc.env==='Production';
-function pBotBeh(){const b=C.botc,lk=prod();return pg('Behaviour and schedule','Automation for test accounts. Locked off in Production.',card('Environment',`<div class="chips">${['Demo','Staging','Production'].map(e=>`<button class="chip ${b.env===e?'on':''}" ${on(()=>{b.env=e;if(e==='Production'){b.label=true;b.autoLike=b.autoMatch=b.autoReply=b.ai=false}log('Bot environment',e);render()})}>${e}</button>`).join('')}</div>${lk?'<div class="note">Production: automated likes, matches and replies are disabled. Seed profiles may only appear with an “Automated profile” label.</div>':''}`)+card('Behaviour (internal test accounts only)',fld(b,'autoLike','Auto-like test accounts','toggle',{lock:lk})+fld(b,'autoMatch','Auto-match with test accounts','toggle',{lock:lk})+fld(b,'autoReply','Auto-reply with templates','toggle',{lock:lk})+fld(b,'ai','AI-driven replies (test accounts only)','toggle',{lock:lk})+`<div class="grid g3"><div>${fld(b,'from','Active from (hour)','number')}</div><div>${fld(b,'to','Active until (hour)','number')}</div></div>${fld(b,'persona','AI persona prompt','area')}${saveB('Bot behaviour')}`)+card('Conversation templates (each is sent with an “Automated message” tag)',listEd(C.tpl,'template','Add template')))}
-function pBotPh(){const b=C.botc;return pg('Gradual phase-out','Reduce bots as real users grow in each city.',card('Rules',fld(b,'rot','Auto-rotate seed profiles per city','toggle')+fld(b,'share','Maximum bot share of any feed','range',{min:0,max:50,u:'%'})+fld(b,'thr','Hide bots in a city once real active users exceed','number')+saveB('Phase-out rules'))+tbl('ph',['City','Real active users','Bots shown','Status'],C.bcity.map(c=>({c0:c,c:[c.c,fmt(c.real),c.real>b.thr?0:c.bots,c.real>b.thr?pill('Phased out','ok'):pill('Seeding','warn')]})),{search:false})+card('Projected bot share',line([ser(12,30,-3).map(v=>Math.max(2,v))])))}
-function pBotAct(){const top=[...BOTS].sort((a,b)=>b.matches-a.matches).slice(0,8);return pg('Bot activity and performance','Per-bot logs and stats.',kpis([['Active bots',BOTS.filter(b=>b.status==='Active').length],['Likes sent',fmt(sum(BOTS.map(b=>b.likes)))],['Matches',fmt(sum(BOTS.map(b=>b.matches)))],['Messages',fmt(sum(BOTS.map(b=>b.msgs)))]])+card('Top bots by matches',bars(top.map(b=>[b.name.split(' ')[0],b.matches])))+card('Activity log',tbl('bl',['Time','Bot','Event'],Array.from({length:12},(_,i)=>({c:[new Date(Date.now()-i*6e5).toLocaleTimeString(),P(BOTS).id,P(['Profile shown','Liked test account','Sent automated message','Paused by schedule'])]}))).replace('class="card"','class="x"')))}
-// ---------- revenue (Store sync only; the other Revenue pages are real) ----------
-function pSync(){return pg('Apple and Google subscription sync','Receipts and entitlement checks.',`<div class="grid g3">${['Apple App Store','Google Play'].map((s,i)=>card(s,`<p>${pill('Connected','ok')}</p><p class="sub">Last sync: ${now()}</p><p class="sub">Pending receipts: ${R(0,12)} · Mismatches: ${R(0,4)}</p>${btn('Sync now',A('Synced '+s,'',()=>{}),'')}`)).join('')}</div>`+tbl('mis',['User','Store says','App says','Fix'],Array.from({length:4},()=>({c:[P(USERS).id,'Premium','Free','']})),{search:false,acts:[['Grant entitlement',r=>A('Fixed entitlement',r.c[0],()=>{})(),'g']]}))}
-// ---------- content & config ----------
-function pFlags(){return pg('Feature flags and remote config','Toggle and roll out every feature.',card('',C.flags.map(f=>`<div class="set"><span>${f.n}<small>Rollout ${f.ro}%</small></span><span class="row" style="flex-wrap:nowrap"><input type="range" style="width:110px" min="0" max="100" value="${f.ro}" ${oi((v,el)=>{f.ro=+v;el.closest('.set').querySelector('small').textContent='Rollout '+v+'%'})}>${fld(f,'on','','toggle').replace('class="set"','class="x"')}</span></div>`).join('')+saveB('Feature flags')))}
-function pLang(){const L=C.lang,cols=['Hindi','Kannada','Tamil','Telugu','Bengali','Marathi'];return pg('Languages and translations','',card('Coverage',bars(cols.map(c=>[c,c==='Hindi'?100:R(40,92)])))+card('Edit strings',fld(L,'sel','Language','select',{o:cols,cb:()=>render()})+`<div class="scroll"><table><tr><th>Key</th><th>English</th><th>${L.sel}</th></tr>${Object.entries(L.keys).map(([k,v])=>`<tr><td>${k}</td><td>${v[0]}</td><td><input class="fld" value="${esc(v[1])}" ${oi(x=>v[1]=x)}></td></tr>`).join('')}</table></div><div class="row" style="margin-top:10px">${saveB('Translations')}${btn('Auto-translate missing',A('Auto-translated','missing strings'),'s')}</div>`))}
-function pOnb(){const mv=(i,d)=>{const a=C.onb;[a[i],a[i+d]]=[a[i+d],a[i]]};return pg('Onboarding flow editor','Order and requirement of sign-up questions.',card('',C.onb.map((s,i)=>`<div class="set"><span>${i+1}. ${esc(s.n)}</span><span class="row" style="flex-wrap:nowrap"><button class="btn s sm" ${on(A('Reordered onboarding',s.n,()=>mv(i,-1)))} ${i?'':'disabled'} aria-label="Move up">↑</button><button class="btn s sm" ${on(A('Reordered onboarding',s.n,()=>mv(i,1)))} ${i<C.onb.length-1?'':'disabled'} aria-label="Move down">↓</button>${fld(s,'r','','toggle').replace('class="set"','class="x"')}<span class="sub">${s.r?'Required':'Optional'}</span><button class="btn d sm" ${on(A('Removed step',s.n,()=>C.onb.splice(i,1)))}>×</button></span></div>`).join('')+`<div class="row" style="margin-top:10px"><input class="fld" style="flex:1" id="mk-nstep" placeholder="New step name">${btn('Add step',A('Added step',()=>$('#mk-nstep').value,()=>{const v=$('#mk-nstep').value.trim();if(v)C.onb.push({n:v,r:false})}),'s')}</div>`))}
-function pBan(){const n=S.bn=S.bn||{k:'Banner',t:'',a:'All'};return pg('Banners, stories and announcements','',tbl('ban',['Type','Title','Audience','Status'],C.banners.map(b=>({b,c:[b.k,esc(b.t),b.a,pill(b.on?'Live':'Off',b.on?'ok':'')]})),{search:false,acts:[['Toggle',r=>A('Toggled banner',r.b.t,()=>{r.b.on=!r.b.on})(),'s'],['Delete',r=>A('Deleted banner',r.b.t,()=>C.banners.splice(C.banners.indexOf(r.b),1))(),'d']]})+card('Create',fld(n,'k','Type','select',{o:['Banner','Story','Announcement']})+fld(n,'t','Title')+fld(n,'a','Audience','select',{o:['All','New users','Gold','Premium',...CITY]})+`<div style="margin-top:10px">${btn('Publish',A('Published '+n.k,()=>n.t,()=>{if(n.t)C.banners.push({...n,on:true})}))}</div>`))}
-function pCtl(){const c=C.ctl;return pg('App control','Force update and maintenance mode.',g3(card('Force update',fld(c,'iosMin','Minimum iOS version')+fld(c,'andMin','Minimum Android version')+fld(c,'hard','Block older versions (hard update)','toggle')+saveB('Force update')),card('Maintenance mode',fld(c,'maint','Maintenance mode','toggle',{cb:()=>log('Maintenance mode',C.ctl.maint?'ON':'OFF')})+fld(c,'msg','Message shown to users','area')+saveB('Maintenance'))))}
-// ---------- communication ----------
-function comp(ch){const k='cm'+ch,c=S[k]=S[k]||{title:'',body:'',city:'All',gender:'All',plan:'All',active:'Any',when:'Send now'};const est=USERS.filter(u=>(c.city==='All'||u.city===c.city)&&(c.gender==='All'||u.gender===c.gender)&&(c.plan==='All'||u.plan===c.plan)).length*61;
-return card('Compose '+ch,(ch==='push'||ch==='inapp'||ch==='email')?fld(c,'title',ch==='email'?'Subject':'Title'):'')+card('',fld(c,'body','Message','area')+`<div class="grid g3"><div>${fld(c,'city','City','select',{o:['All',...CITY],cb:()=>render()})}</div><div>${fld(c,'gender','Gender','select',{o:['All','Woman','Man','Non-binary'],cb:()=>render()})}</div><div>${fld(c,'plan','Plan','select',{o:['All','Free','Gold','Premium'],cb:()=>render()})}</div><div>${fld(c,'active','Last active','select',{o:['Any','Last 7 days','Last 30 days','Inactive 30+ days']})}</div><div>${fld(c,'when','Schedule','select',{o:['Send now','Tonight 8 pm','Tomorrow 9 am']})}</div></div><div class="sum" style="margin:12px 0">Estimated audience: <b>${fmt(est)}</b> users</div>${btn(c.when==='Send now'?'Send':'Schedule',A((c.when==='Send now'?'Sent ':'Scheduled ')+ch,()=>c.title+' → '+est+' users',()=>{if(!c.body.trim()&&!c.title.trim()){throw 0}C.camp.unshift({n:c.title||c.body.slice(0,28),ch:ch,aud:est,st:c.when==='Send now'?'Sent':'Scheduled',ctr:'—'})}))}`)}
-function pPush(){return pg('Push notifications','Segmented and scheduled.',comp('push')+tbl('camp',['Campaign','Channel','Audience','Status','CTR'],C.camp.map(c=>({c:[esc(c.n),c.ch,fmt(c.aud),pill(c.st),c.ctr]})),{search:false}))}
-function pMail(){const n=S.tp=S.tp||{ch:'Email'};return pg('Email and SMS','Campaigns and transactional templates.',fld(n,'ch','Channel','select',{o:['Email','SMS'],cb:()=>render()})+comp(n.ch.toLowerCase())+card('Transactional templates',['OTP code','Welcome','Receipt','Password reset','Match notification'].map(t=>`<div class="set"><span>${t}</span>${btn('Edit',()=>toast('Template editor opens here'),'s sm')}</div>`).join('')))}
-function pBroad(){return pg('In-app broadcast','Messages shown inside the app.',comp('inapp'))}
-function pLife(){return pg('Lifecycle automations','Triggered messages.',card('',C.life.map(l=>fld(l,'on',`${l.n}<small>${l.d} · ${l.ch}</small>`,'toggle').replace('<small>','<small>')).join('')+saveB('Lifecycle automations')))}
-// ---------- support ----------
-function pTix(){return pg('Tickets','Assign, reply and close.',tbl('tix',['ID','User','Subject','Priority','Status','Owner'],TIX.map(t=>({t,c:[t.id,t.user,t.subj,pill(t.prio),pill(t.status),t.owner]})),{filters:[['Status',4,['Open','Pending','Resolved']],['Priority',3,['High','Medium','Low']]],click:r=>openM(()=>tixM(r.t))}))}
-function tixM(t){const x=S.rp=S.rp||{r:'',c:C.canned[0]};m(`<div class="row" style="justify-content:space-between"><h3 style="margin:0">${t.id}: ${esc(t.subj)}</h3>${btn('Close',closeM,'s')}</div><p class="sub">${t.user} · ${pill(t.status)} · Owner: ${t.owner}</p><div style="margin:10px 0"><div class="msg">${esc(t.subj)}. Please help.</div>${t.thread.map(r=>`<div class="msg me">${esc(r)}</div>`).join('')}</div>${fld(x,'c','Canned reply','select',{o:C.canned})}<div class="row" style="margin:8px 0">${btn('Use canned reply',A('Replied to ticket',t.id,()=>{t.thread.push(x.c);t.status='Pending'}),'s')}</div>${fld(x,'r','Custom reply','area')}<div class="row" style="margin-top:8px">${btn('Send reply',A('Replied to ticket',t.id,()=>{if(x.r.trim()){t.thread.push(x.r);x.r='';t.status='Pending'}}))}${btn('Assign to me',A('Assigned ticket',t.id,()=>{t.owner=S.role}),'s')}${btn('Resolve',A('Resolved ticket',t.id,()=>{t.status='Resolved'}),'g')}</div>`)}
-function pLive(){const c=S.lc=S.lc||{msgs:[['u','Hi, my photo was rejected but it is my real photo.']],t:'',who:'U-10077'};return pg('Live chat','Chat with a user in real time.',card('Chat with '+c.who,`<div style="min-height:140px">${c.msgs.map(m=>`<div class="msg ${m[0]==='a'?'me':''}">${esc(m[1])}</div>`).join('')}</div><div class="row"><input class="fld" style="flex:1" id="mk-lct" placeholder="Type a reply" value="${esc(c.t)}" ${oi(v=>c.t=v)}>${btn('Send',()=>{if(!can()){toast('Read-only for your role');return}const v=c.t.trim();if(!v)return;c.msgs.push(['a',v]);c.t='';log('Live chat reply',c.who);render();setTimeout(()=>{c.msgs.push(['u',P(['Thank you!','Okay, I will upload again.','That worked, thanks.'])]);render()},900)})}</div>`))}
-function pFaq(){const n=S.fq=S.fq||{t:'',c:'General'};return pg('Help center','FAQ articles.',tbl('faq',['Article','Category'],C.faq.map(f=>({f,c:[esc(f.t),f.c]})),{search:false,acts:[['Delete',r=>A('Deleted FAQ',r.f.t,()=>C.faq.splice(C.faq.indexOf(r.f),1))(),'d']]})+card('New article',fld(n,'t','Title')+fld(n,'c','Category','select',{o:['General','Safety','Billing','Account']})+`<div style="margin-top:10px">${btn('Publish',A('Published FAQ',()=>n.t,()=>{if(n.t)C.faq.push({...n})}))}</div>`))}
-function pApp(){return pg('Appeals','Review ban and suspension appeals.',tbl('app',['ID','User','Reason','Status'],C.appeals.map(a=>({a,c:[a.id,a.u,esc(a.why),pill(a.st)]})),{search:false,acts:[['Approve and restore',r=>A('Appeal approved',r.a.u,()=>{r.a.st='Approved';const u=uById(r.a.u);if(u)u.status='Active'})(),'g',r=>r.a.st==='Open'],['Deny',r=>A('Appeal denied',r.a.u,()=>{r.a.st='Rejected'})(),'d',r=>r.a.st==='Open']]}))}
-// ---------- growth ----------
-function pRef(){const n=S.rc=S.rc||{c:'NEWCODE',o:'Referral'};return pg('Referral program','',card('Rules',`<div class="grid g3"><div>${fld(C.ref,'rew','Referrer reward (premium days)','number')}</div><div>${fld(C.ref,'newrew','New user reward (premium days)','number')}</div><div>${fld(C.ref,'cap','Max rewards per user','number')}</div></div>${fld(C.ref,'fraud','Block self-referral and device fraud','toggle')}${saveB('Referral program')}`)+tbl('codes',['Code','Uses','Type'],C.codes.map(c=>({c:[c.c,fmt(c.u),c.o]})),{search:false})+card('New invite code',fld(n,'c','Code')+`<div style="margin-top:10px">${btn('Create',A('Created invite code',()=>n.c,()=>C.codes.push({c:n.c.toUpperCase(),u:0,o:n.o})))}</div>`))}
-function pUtm(){const u=S.ut=S.ut||{url:'https://everlane.app',src:'instagram',med:'paid_social',cam:'diwali'},link=`${u.url}?utm_source=${u.src}&utm_medium=${u.med}&utm_campaign=${u.cam}`;return pg('Campaign and UTM tracking','',tbl('utm',['Source','Medium','Campaign','Installs','Signups','CAC (₹)'],C.utm.map(r=>({c:r})),{search:false})+card('UTM link builder',`<div class="grid g3"><div>${fld(u,'url','Landing URL')}</div><div>${fld(u,'src','Source')}</div><div>${fld(u,'med','Medium')}</div><div>${fld(u,'cam','Campaign')}</div></div><p class="sub" style="margin-top:8px;word-break:break-all">${esc(link)}</p>${btn('Copy link',()=>copy(link),'s')}`))}
-function pEvt(){const n=S.ev=S.ev||{n:'New event',city:'Bengaluru',d:'2026-12-01',cap:40};return pg('Events','Speed dating and city events.',tbl('ev',['Event','City','Date','RSVPs','Status'],C.events.map(e=>({e,c:[esc(e.n),e.city,e.d,e.rsvp+' / '+e.cap,pill(e.st,e.st==='Open'?'ok':'warn')]})),{search:false,acts:[['Cancel',r=>A('Cancelled event',r.e.n,()=>{r.e.st='Cancelled'})(),'d',r=>r.e.st==='Open']]})+card('Create event',`<div class="grid g3"><div>${fld(n,'n','Name')}</div><div>${fld(n,'city','City','select',{o:CITY})}</div><div>${fld(n,'d','Date','date')}</div><div>${fld(n,'cap','Capacity','number')}</div></div><div style="margin-top:10px">${btn('Create',A('Created event',()=>n.n,()=>C.events.push({...n,rsvp:0,st:'Open'})))}</div>`))}
-function pAmb(){const n=S.am=S.am||{n:'',c:''};return pg('Influencer and ambassador codes','',tbl('amb',['Name','Code','Signups','Payout due'],C.amb.map(a=>({c:[esc(a.n),a.c,a.s,a.pay]})),{search:false})+card('Add ambassador',fld(n,'n','Name')+fld(n,'c','Code')+`<div style="margin-top:10px">${btn('Add',A('Added ambassador',()=>n.n,()=>{if(n.n)C.amb.push({n:n.n,c:n.c.toUpperCase(),s:0,pay:'₹0'})}))}</div>`))}
-function pWait(){const n=S.wi=S.wi||{k:50};return pg('Waitlist management','Invite users from waitlisted cities.',card('Waitlist by city',bars(C.cities.filter(c=>c.s!=='Live').map(c=>[c.n,c.w])))+card('Invite',fld(n,'k','Invite next N users per waitlisted city','number')+`<div style="margin-top:10px">${btn('Send invites',A('Waitlist invites sent',()=>n.k+' per city',()=>C.cities.forEach(c=>{if(c.s!=='Live')c.w=Math.max(0,c.w-n.k)})))}</div>`))}
-// ---------- admin & security ----------
-function pAccess(){const a=C.acc;return pg('Access and 2FA','',g3(card('Authentication',fld(a,'tfa','Two-factor authentication enabled','toggle')+fld(a,'tfaAll','Require 2FA for all admins','toggle')+fld(a,'sess','Session timeout (minutes)','number')+fld(a,'pw','Minimum password length','number')+saveB('Access policy'),card('IP whitelist',listEd(a.ips,'ip','Add IP or range')))))}
-function pApi(){const k=S.ak=S.ak||{n:''},w=S.wh=S.wh||{u:'https://',ev:'match.created'};return pg('API keys and webhooks','',tbl('keys',['Name','Key','Scopes','Created','Last used'],C.keys.map(x=>({x,c:[esc(x.n),x.p+'••••••',x.sc,x.t,x.l]})),{search:false,acts:[['Revoke',r=>A('Revoked API key',r.x.n,()=>C.keys.splice(C.keys.indexOf(r.x),1))(),'d']]})+card('New key',fld(k,'n','Key name')+`<div style="margin-top:10px">${btn('Generate',A('Generated API key',()=>k.n,()=>{if(k.n)C.keys.push({n:k.n,p:'ek_live_'+Math.random().toString(16).slice(2,6),sc:'read',t:ago(0),l:'Never'})}))}</div>`)+tbl('hooks',['Endpoint','Event','Status'],C.hooks.map(h=>({h,c:[esc(h.u),h.ev,pill(h.st,h.st==='Active'?'ok':'warn')]})),{search:false,acts:[['Test',r=>A('Tested webhook',r.h.u)(),'s'],['Disable',r=>A('Disabled webhook',r.h.u,()=>{r.h.st='Disabled'})(),'d']]})+card('New webhook',fld(w,'u','Endpoint URL')+fld(w,'ev','Event','select',{o:['match.created','user.signup','user.banned','payment.succeeded','report.created']})+`<div style="margin-top:10px">${btn('Add',A('Added webhook',()=>w.u,()=>C.hooks.push({u:w.u,ev:w.ev,st:'Active'})))}</div>`))}
-function pBk(){const b=C.bk;return pg('Backups and data retention','',g3(card('Schedule',fld(b,'freq','Backup schedule','select',{o:['Daily 02:00','Every 12 hours','Weekly']})+fld(b,'keep','Keep backups (days)','number')+fld(b,'logs','Keep logs (days)','number')+fld(b,'del','Keep deleted-account data (days)','number')+`<div class="row" style="margin-top:10px">${saveB('Retention settings')}${btn('Backup now',A('Backup started','manual',()=>C.bks.unshift(now())),'s')}</div>`),card('Recent backups',C.bks.map(x=>`<div class="set"><span>${x}</span>${btn('Restore',()=>{if(confirm('Restore the database to '+x+'?'))A('Restore requested',x)()},'d sm')}</div>`).join(''))))}
-// ---------- technical ----------
-function pLogs(){return pg('Error and crash logs','',tbl('logs',['Time','Level','Service','Message','Count','Status'],C.logs.map(l=>({l,c:[l.t,pill(l.lv,l.lv==='ERROR'?'bad':l.lv==='WARN'?'warn':''),l.svc,l.m,l.n,pill(l.st)]})),{filters:[['Level',1,['ERROR','WARN','INFO']],['Service',2,['api','auth','payments','push','media']]],acts:[['Resolve',r=>A('Resolved log',r.l.m,()=>{r.l.st='Resolved'})(),'g',r=>r.l.st==='Open']]}))}
-function pMon(){const eps=[['POST /auth/login',R(40,90),R(150,300),'0.4%'],['GET /discover',R(80,140),R(300,520),'0.9%'],['POST /swipe',R(30,60),R(100,200),'0.2%'],['POST /messages',R(40,80),R(150,260),'0.5%'],['POST /photos',R(250,500),R(900,1800),'1.8%']];return pg('API monitoring','',kpis([['Uptime (30d)','99.96%'],['p50 latency',R(60,90)+' ms'],['p95 latency',R(240,380)+' ms'],['Error rate','0.6%']])+g3(card('Latency (ms)',line([ser(24,90,25)])),card('Error rate',line([ser(24,.6,.2)])))+tbl('eps',['Endpoint','p50 (ms)','p95 (ms)','Errors'],eps.map(r=>({c:r})),{search:false}))}
-function pInt(){return pg('Integrations','Twilio, Firebase, Stripe, AWS and OneSignal.',`<div class="grid g3">${C.ints.map(i=>card(i.n,`<p>${pill(i.on?'Connected':'Not connected',i.on?'ok':'warn')}</p><p class="sub">Key: ${i.k}</p><div class="row">${btn('Test connection',A('Tested '+i.n,'',()=>{}),'s sm')}${btn(i.on?'Disconnect':'Connect',A((i.on?'Disconnected ':'Connected ')+i.n,'',()=>{i.on=!i.on;i.k=i.on?'••••'+R(10,99):'—'}),i.on?'d sm':'sm')}</div>`)).join('')}</div>`)}
-function pDb(){return pg('Database tools','Read-only insight and safe maintenance jobs.',tbl('db',['Table','Rows','Size'],[['users','412,380','1.2 GB'],['photos','1,204,500','18.4 GB'],['messages','38,900,000','22.1 GB'],['swipes','212,000,000','31.8 GB'],['matches','2,810,000','2.4 GB']].map(r=>({c:r})),{search:false,acts:[['Analyze',r=>A('Analyzed table',r.c[0])(),'s'],['Vacuum',r=>A('Vacuumed table',r.c[0])(),'s']]})+card('Slow queries',bars([['swipes by user',812],['discover candidates',640],['messages by match',390]]))+`<p class="sub">Run migrations and raw SQL from your deployment pipeline, not from the admin panel.</p>`)}
-function pQ(){return pg('Jobs and queues','',tbl('q',['Queue','Waiting','Active','Failed','State'],C.q.map(q=>({q,c:[q.n,q.w,q.a,q.f?pill(q.f,'bad'):0,pill(q.on?'Running':'Paused',q.on?'ok':'warn')]})),{search:false,acts:[['Retry failed',r=>A('Retried failed jobs',r.q.n,()=>{r.q.f=0})(),'s',r=>r.q.f>0],['Pause / resume',r=>A('Toggled queue',r.q.n,()=>{r.q.on=!r.q.on})(),'s'],['Purge',r=>A('Purged queue',r.q.n,()=>{r.q.w=0})(),'d']]}))}
-function pRl(){return pg('Rate limits and anti-spam','',card('Rate limits (requests per minute)',C.rl.map(r=>`<div class="set"><span>${r.n}</span><span class="row" style="flex-wrap:nowrap"><input class="fld" style="width:90px" type="number" value="${r.v}" ${oi(v=>r.v=+v)}>${fld(r,'on','','toggle').replace('class="set"','class="x"')}</span></div>`).join(''))+card('Anti-spam',fld(C.spam,'newcap','Messages allowed for new accounts (first 24h)','number')+fld(C.spam,'links','Block links in first messages','toggle')+fld(C.spam,'captcha','Show CAPTCHA on suspicious activity','toggle')+fld(C.spam,'cth','CAPTCHA risk threshold','range',{min:0,max:100})+saveB('Rate limits')))}
-// ---------- legal ----------
-function pCons(){return pg('Consent versioning','Track which version each user accepted.',tbl('cons',['Consent','Required','Version','Users on latest'],C.cons.map(c=>({c:[c.n,c.req?'Yes':'No',c.v,`<div class="bar" style="width:120px;display:inline-block;vertical-align:middle"><i style="width:${c.pct}%"></i></div> ${c.pct}%`]})),{search:false}))}
-function pAge(){return pg('Age verification and regional compliance','',g3(card('Minimum age',fld(C.age,'min','Minimum age','number')+Object.keys(C.age.m).map(k=>fld(C.age.m,k,'Method: '+k,'select',{o:['Self-declare','Self-declare + selfie','Selfie age estimate','Selfie age estimate + ID on doubt','ID document']})).join('')+saveB('Age verification')),card('Regional compliance',C.reg.map(r=>fld(r,'on',r.n,'toggle')).join('')+saveB('Regional compliance')),card('Checklist',['Data protection officer named','Breach notification process (72 hours)','Records of processing kept','Data residency decided','Biometric consent flow reviewed'].map(x=>`<p>✓ ${x}</p>`).join(''))))}
-// ---------- navigation ----------
-// ---------- pages and rendering ----------
-const PAGES = {
-  'dash-retention': ['dash', pRetention],
-  'users-multi': ['users', pMulti], 'users-gdpr': ['users', pDsar],
-  'mod-chat': ['mod', pChat], 'mod-fake': ['mod', pFake], 'mod-bans': ['mod', pBans], 'mod-auto': ['mod', pAuto], 'mod-underage': ['mod', pUnder],
-  'match-algorithm': ['match', pAlgo], 'match-visibility': ['match', pVis], 'match-locations': ['match', pLoc], 'match-ab': ['match', pAB],
-  'bots-behaviour': ['bots', pBotBeh], 'bots-phase-out': ['bots', pBotPh], 'bots-activity': ['bots', pBotAct],
-  'subs-store-sync': ['subs', pSync],
-  'cfg-flags': ['cfg', pFlags], 'cfg-languages': ['cfg', pLang], 'cfg-onboarding': ['cfg', pOnb], 'cfg-banners': ['cfg', pBan], 'cfg-app-control': ['cfg', pCtl],
-  'comm-push': ['comm', pPush], 'comm-email': ['comm', pMail], 'comm-broadcast': ['comm', pBroad], 'comm-lifecycle': ['comm', pLife],
-  'sup-tickets': ['sup', pTix], 'sup-live-chat': ['sup', pLive], 'sup-help': ['sup', pFaq], 'sup-appeals': ['sup', pApp],
-  'grow-referrals': ['grow', pRef], 'grow-campaigns': ['grow', pUtm], 'grow-events': ['grow', pEvt], 'grow-ambassadors': ['grow', pAmb], 'grow-waitlist': ['grow', pWait],
-  'sec-access': ['sec', pAccess], 'sec-api': ['sec', pApi], 'sec-backups': ['sec', pBk],
-  'tech-logs': ['tech', pLogs], 'tech-monitor': ['tech', pMon], 'tech-integrations': ['tech', pInt], 'tech-database': ['tech', pDb], 'tech-queues': ['tech', pQ], 'tech-rate-limits': ['tech', pRl],
-  'legal-consent': ['legal', pCons], 'legal-age': ['legal', pAge], 'legal-data-requests': ['legal', pDsar]};
-let CUR = null;
-function render() {
-  const vw = $('#view-mock'); if (!CUR || !vw) return;
-  const y = window.scrollY, ae = document.activeElement; let idx = -1, pos = 0;
-  if (ae && ae.tagName === 'INPUT' && vw.contains(ae)) { idx = [...vw.querySelectorAll('input')].indexOf(ae); try { pos = ae.selectionStart } catch (e) {} }
-  H.length = 0;
-  const [sec, fn] = PAGES[CUR]; S.sec = sec;
-  try { vw.innerHTML = fn() } catch (e) { vw.innerHTML = BANNER + `<div class="card">Something went wrong: ${esc(e && e.message || 'Check your input')}</div>` }
-  const top = vw.querySelector('.mkban');
-  if (!can() && sec !== 'dash') top.insertAdjacentHTML('afterend', `<div class="note">Previewing as ${esc(S.role)}: this sample page is read-only for that role.</div>`);
-  if (S.imp) top.insertAdjacentHTML('afterend', `<div class="imp"><span>Viewing as <b>${esc(S.imp)}</b> (read-only, audited)</span><button class="btn s sm" ${on(() => { log('Impersonation ended', S.imp); S.imp = null; render() })}>Exit</button></div>`);
-  if (MODAL) MODAL();
-  if (idx >= 0) { const n = vw.querySelectorAll('input')[idx]; if (n) { n.focus(); try { n.setSelectionRange(pos, pos) } catch (e) {} } }
-  window.scrollTo(0, y);
-}
-document.addEventListener('click', e => { const t = e.target.closest('[data-mh]'); if (t) { const f = H[+t.dataset.mh]; if (f) f(t, e) } });
-document.addEventListener('input', e => { const t = e.target.closest('[data-mi]'); if (t) { const f = H[+t.dataset.mi]; if (f) f(t.type === 'checkbox' ? t.checked : t.value, t) } });
-$('#mkMd').addEventListener('click', e => { if (e.target === $('#mkMd')) closeM() });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && MODAL) closeM() });
-// "Preview as role" only changes which sample pages are read-only; it never touches real permissions.
-const roleSel = $('#mkRole');
-const paintRole = () => { roleSel.innerHTML = Object.keys(WR).map(r => `<option ${r === S.role ? 'selected' : ''}>${r}</option>`).join('') };
-roleSel.addEventListener('change', e => { S.role = e.target.value; log('Switched preview role', S.role); render(); toast('Sample pages now preview as ' + S.role) });
-paintRole();
-window.EverlaneMock = Object.freeze({
-  has: id => Object.prototype.hasOwnProperty.call(PAGES, id),
-  render(id) { if (!this.has(id)) return; if (CUR !== id) closeM(); CUR = id; render() },
-  close() { CUR = null; closeM() },
-  setRole(r) { if (r in WR) S.role = r; paintRole() }
-});
-})();
-</script>
 <script>
 const SUPABASE_URL = 'https://fqtcazstfcusheakyown.supabase.co';
 // Publishable key: safe in a browser; every table and function is guarded by
@@ -1677,11 +1813,16 @@ const VIEW_PERM = { overview: 'stats', 'dash-geo': 'members', 'dash-reports': 'm
   'train-kb': 'bots', 'train-style': 'bots', 'train-time': 'bots', 'train-chat': 'bots', 'train-test': 'bots',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team',
   'subs-plans': 'billing', 'subs-promos': 'billing', 'subs-transactions': 'billing', 'subs-iap': 'billing', 'subs-reports': 'billing',
-  legal: null };
-// Sample pages (tabs marked data-mock) use mock data only, so every admin can open them.
-const MOCK_VIEWS = new Set([...document.querySelectorAll('.nav.sb [data-mock]')].map(b => b.dataset.view)
-  .filter(v => window.EverlaneMock?.has(v)));
-MOCK_VIEWS.forEach(v => VIEW_PERM[v] = null);
+  'dash-retention': 'stats', 'users-multi': 'members', 'users-requests': 'export',
+  'mod-chat': 'moderate', 'mod-fake': 'moderate', 'mod-bans': 'moderate', 'mod-auto': 'moderate', 'mod-underage': 'moderate',
+  'match-algorithm': 'bots', 'match-visibility': 'moderate', 'match-locations': 'content',
+  'bots-phase-out': 'bots', 'bots-activity': 'bots',
+  'cfg-flags': 'content', 'cfg-onboarding': 'content', 'cfg-banners': 'content', 'cfg-app-control': 'team', 'comm-broadcast': 'content',
+  'sup-tickets': 'members', 'sup-appeals': 'members', 'sup-help': 'members', 'grow-referrals': 'content',
+  'tech-database': 'team', 'tech-jobs': 'team', 'tech-queues': 'team',
+  legal: null, 'legal-consent': 'export', 'legal-age': 'content', 'legal-requests': 'export' };
+// Pages that share one block of markup (#view-…), e.g. Data requests under Users and Legal.
+const VIEW_DIV = { 'users-requests': 'data-requests', 'legal-requests': 'data-requests', 'cfg-banners': 'announce', 'comm-broadcast': 'announce' };
 let perms = [];
 const can = p => perms.includes(p);
 // A view with no permission (Legal) is open to every admin.
@@ -1705,14 +1846,15 @@ async function start() {
   perms = st.permissions || [];
   $('#who').textContent = session.user.email || session.user.phone || '';
   $('#rolePill').textContent = ROLES[st.role] || st.role || 'Admin';
-  // The sample pages preview as the real role until someone picks another in "Preview as role".
-  window.EverlaneMock?.setRole(ROLES[st.role] || 'Analyst');
   // The header kill switch shows the real bots state.
   if (can('bots')) loadBots(); else paintBotsPill();
   // Hide sub-tabs the role can't open, and sections with none left.
   document.querySelectorAll('.nav.sb .tab').forEach(b => b.classList.toggle('hidden', !canView(b.dataset.view)));
   document.querySelectorAll('#nav [data-sec]').forEach(b =>
     b.classList.toggle('hidden', !SECTION_VIEWS(b.dataset.sec).some(canView)));
+  // Links to other pages only show when the role can open them.
+  document.querySelectorAll('main [data-goto]').forEach(b => b.classList.toggle('hidden', !canView(b.dataset.goto)));
+  if (can('members')) refreshSupportBadge();
   screen('app');
   const asked = decodeURIComponent(location.hash.slice(1));
   show(canView(asked) ? asked : Object.keys(VIEW_PERM).find(v => VIEW_PERM[v] && can(VIEW_PERM[v])) || 'legal');
@@ -1757,17 +1899,24 @@ function show(view) {
     b.classList.toggle('on', b.dataset.view === view);
     b.toggleAttribute('aria-current', b.dataset.view === view);
   });
-  for (const v of VIEWS) $('#view-' + v)?.classList.toggle('hidden', v !== view);
-  $('#view-mock').classList.toggle('hidden', !MOCK_VIEWS.has(view));
+  const div = 'view-' + (VIEW_DIV[view] || view);
+  document.querySelectorAll('main > [id^="view-"]').forEach(d => d.classList.toggle('hidden', d.id !== div));
   // Keep the active section visible in the scrolling row on small screens.
   const onBtn = $('#nav button.on');
   if (onBtn) { const nav = $('#nav'); nav.scrollLeft = Math.max(0, onBtn.offsetLeft - nav.offsetLeft - 16); }
   // The current page lives in the address, so a reload or shared link opens it again.
   try { history.replaceState(null, '', '#' + view); } catch (e) {}
-  if (MOCK_VIEWS.has(view)) return window.EverlaneMock.render(view);
-  window.EverlaneMock?.close();
   return ({ overview: loadOverview, 'dash-geo': loadGeo, 'dash-reports': loadSignupReport, leads: loadMembers, gen: loadGenerator, bots: loadBots, 'bots-chats': loadBotChats, hangouts: loadHangouts, 'hangouts-official': loadHangoutsOfficial, reports: loadReports, photos: loadPhotos, verify: loadVerifications, words: loadWords,
-     audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: () => {},
+     audit: loadAudit, questions: loadQuestions, options: loadOptions, team: loadTeam, legal: loadLegal,
+     'dash-retention': loadRetention, 'users-multi': loadSharedIps, 'users-requests': loadDataRequests, 'legal-requests': loadDataRequests,
+     'mod-chat': loadFlagged, 'mod-fake': loadSuspects, 'mod-bans': loadBans, 'mod-auto': loadAutoMod, 'mod-underage': loadUnderage,
+     'match-algorithm': loadAlgo, 'match-visibility': loadVisibility, 'match-locations': loadLocations,
+     'bots-phase-out': loadPhaseOut, 'bots-activity': loadBotActivity,
+     'cfg-flags': loadFlags, 'cfg-onboarding': loadOnboarding, 'cfg-banners': () => loadAnnouncements('banner'),
+     'cfg-app-control': loadAppControl, 'comm-broadcast': () => loadAnnouncements('notice'),
+     'sup-tickets': loadTickets, 'sup-appeals': loadAppeals, 'sup-help': loadFaq, 'grow-referrals': loadReferrals,
+     'tech-database': () => loadTech(renderDb), 'tech-jobs': () => loadTech(renderJobs), 'tech-queues': () => loadTech(renderQueues),
+     'legal-consent': loadConsent, 'legal-age': loadLegalAge,
      'subs-plans': loadPrices, 'subs-promos': loadPromos, 'subs-transactions': loadTransactions, 'subs-iap': loadProducts,
      'subs-reports': loadRevenue, 'train-kb': loadTrainKb, 'train-style': loadTrainStyle, 'train-time': loadTrainTime,
      'train-chat': loadTrainChat, 'train-test': loadTrainTest })[view]();
@@ -2256,14 +2405,7 @@ function openMember(id) {
       ${data.likes_received.map(x => `<div style="padding:6px 0">${person(x)} <span class="muted" style="font-size:12px">· ${fmtDate(x.created_at)}</span></div>`).join('') || '<p class="muted" style="font-size:12px">Nobody waiting.</p>'}`;
   };
 
-  $('[data-export]', ov).onclick = async () => {
-    const { data, error } = await sb.rpc('admin_export_member', { member: m.id });
-    if (error) return fail(error);
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
-    a.download = `everlane-member-${m.id.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.json`; a.click();
-    toast('Export downloaded');
-  };
+  $('[data-export]', ov).onclick = () => downloadExport(m.id);
   $('[data-delete]', ov)?.addEventListener('click', () => {
     const reason = prompt(`Delete ${m.name || 'this member'}’s account? They’re signed out and hidden; you can restore it later.\n\nReason (only admins see this):`, '');
     if (reason !== null) act('delete', { reason: reason.trim() }, 'Account deleted');
@@ -4824,6 +4966,1004 @@ function initBotChatEvents() {
     } finally {
       btn.disabled = false;
     }
+  });
+}
+
+// ---------- Shared helpers for the pages below ----------
+const emptyRow = (cols, msg) => `<tr><td colspan="${cols}" class="muted">${esc(msg)}</td></tr>`;
+const kpiHtml = list => list.map(([k, v, s]) => `<div class="kpi"><span>${esc(k)}</span><b>${esc(v)}</b>${s ? `<i>${esc(s)}</i>` : ''}</div>`).join('');
+const byId = (list, id) => list.find(x => String(x.id) === String(id));
+const memberCell = (id, name, email) => `${id ? `<a href="#" data-mem="${esc(id)}"><b>${esc(name || 'Unnamed')}</b></a>` : `<b>${esc(name || 'Unnamed')}</b>`}${email ? `<br><span class="code">${esc(email)}</span>` : ''}`;
+const fmtSize = v => typeof v === 'string' ? v : !num(v) ? '—'
+  : num(v) >= 1073741824 ? (num(v) / 1073741824).toFixed(1) + ' GB' : num(v) >= 1048576 ? (num(v) / 1048576).toFixed(1) + ' MB' : Math.ceil(num(v) / 1024) + ' kB';
+const plural = (n, w) => `${fmtN(n)} ${w}${num(n) === 1 ? '' : 's'}`;
+// Opens the member drawer from any page, loading the directory first when needed.
+async function openMemberById(id) {
+  if (!id) return;
+  if (!members.some(m => m.id === id)) {
+    const { data, error } = await sb.rpc('admin_members');
+    if (error) return fail(error);
+    members = data || [];
+  }
+  if (!members.some(m => m.id === id)) return toast('That member wasn’t found. They may have been deleted permanently.');
+  openMember(id);
+}
+document.querySelector('main').addEventListener('click', e => {
+  const m = e.target.closest('[data-mem]');
+  if (m) { e.preventDefault(); return openMemberById(m.dataset.mem); }
+  const g = e.target.closest('[data-goto]');
+  if (g && !g.disabled) { e.preventDefault(); show(g.dataset.goto); }
+});
+async function downloadExport(id) {
+  const { data, error } = await sb.rpc('admin_export_member', { member: id });
+  if (error) return fail(error);
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  a.download = `everlane-member-${String(id).slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.json`; a.click();
+  toast('Export downloaded');
+}
+// Quick moderation buttons (Chat monitor, Fake and scams, Underage, Visibility),
+// using the same admin_moderate / admin_set_blocked calls as the member drawer.
+const qa = (action, id, name, label, cls = '', extra = '') =>
+  `<button type="button" class="btn small ${cls}" data-qa="${action}" data-id="${esc(id)}" data-name="${esc(name || '')}" ${extra}>${label}</button>`;
+const QA_DONE = { unsuspend: 'Suspension lifted', unshadow_ban: 'Shadow-ban lifted', unboost: 'Boost ended', shadow_ban: 'Shadow-banned' };
+function wireQuickActions(root, reload) {
+  root.querySelectorAll('[data-qa]').forEach(b => b.onclick = async e => {
+    e.preventDefault(); e.stopPropagation();
+    const id = b.dataset.id, who = b.dataset.name || 'this member', action = b.dataset.qa;
+    let res;
+    if (action === 'warn') {
+      const reason = prompt(`Warning for ${who} (they see this in the app):`, '');
+      if (!reason?.trim()) return;
+      res = await sb.rpc('admin_moderate', { member: id, action, reason: reason.trim() });
+      if (!res.error) toast('Warning sent');
+    } else if (action === 'suspend') {
+      const days = +b.dataset.days || 7;
+      if (!confirm(`Suspend ${who} for ${days} days? They’re signed out and hidden until it ends.`)) return;
+      res = await sb.rpc('admin_moderate', { member: id, action, days, reason: b.dataset.reason || '' });
+      if (!res.error) toast('Member suspended');
+    } else if (action === 'block' || action === 'unblock') {
+      const block = action === 'block';
+      const reason = block ? prompt(`Block ${who}? They’ll be signed out and hidden from everyone.\n\nReason (only admins see this):`, b.dataset.reason || '') : '';
+      if (block && reason === null) return;
+      if (!block && !confirm(`Unblock ${who}?`)) return;
+      res = await sb.rpc('admin_set_blocked', { member: id, block, reason: (reason || '').trim() });
+      if (!res.error) toast(block ? 'Member blocked' : 'Member unblocked');
+    } else {
+      if (action === 'shadow_ban' && !confirm(`Shadow-ban ${who}? Nobody else will see them, and they won’t be told.`)) return;
+      res = await sb.rpc('admin_moderate', { member: id, action });
+      if (!res.error) toast(QA_DONE[action] || 'Saved');
+    }
+    if (res.error) return fail(res.error);
+    reload();
+  });
+}
+const memberStatePills = r => [r.blocked ? '<span class="pill bad">Blocked</span>' : '',
+  r.shadow_banned ? '<span class="pill bad">Shadow-banned</span>' : '',
+  r.suspended_until && new Date(r.suspended_until) > new Date() ? `<span class="pill warn">Suspended to ${fmtDate(r.suspended_until)}</span>` : '',
+  r.verified ? '<span class="pill ok">Verified</span>' : ''].filter(Boolean).join(' ') || '<span class="pill muted">Active</span>';
+// Moderation buttons for one member row, skipping what's already in place.
+const modButtons = (r, { reason = '' } = {}) => {
+  const out = [];
+  if (r.blocked) return can('moderate') ? qa('unblock', r.id, r.name, 'Unblock') : '';
+  if (can('edit')) out.push(qa('warn', r.id, r.name, 'Warn'));
+  if (can('moderate')) {
+    if (!r.shadow_banned) out.push(qa('shadow_ban', r.id, r.name, 'Shadow-ban', 'danger'));
+    if (!(r.suspended_until && new Date(r.suspended_until) > new Date())) out.push(qa('suspend', r.id, r.name, 'Suspend 7 days', 'danger', `data-days="7" data-reason="${esc(reason)}"`));
+    out.push(qa('block', r.id, r.name, 'Block', 'danger', `data-reason="${esc(reason)}"`));
+  }
+  return out.join(' ');
+};
+
+// ---------- App config (admin_config / admin_set_config) ----------
+let cfg = {};
+async function loadConfig() {
+  const { data, error } = await sb.rpc('admin_config');
+  if (error) { fail(error); return false; }
+  cfg = data || {};
+  return true;
+}
+const cfgOf = k => cfg?.[k] || {};
+const cfgUpdated = k => cfgOf(k)._updated_at ? 'Updated ' + fmtWhen(cfgOf(k)._updated_at) : '';
+async function saveConfig(key, value, btn, msg = 'Saved') {
+  if (btn) btn.disabled = true;
+  const { error } = await sb.rpc('admin_set_config', { p_key: key, p_value: value });
+  if (btn) btn.disabled = false;
+  if (error) { fail(error); return false; }
+  toast(msg);
+  show(current);
+  return true;
+}
+const intIn = (sel, lo, hi, what) => {
+  const v = +$(sel).value;
+  if (!(Number.isInteger(v) && v >= lo && v <= hi)) { toast(`${what} is a whole number from ${lo} to ${hi}`); return null; }
+  return v;
+};
+
+// ---------- Retention ----------
+let retWeeks = 12;
+document.querySelectorAll('#retRange [data-weeks]').forEach(b => b.onclick = () => { retWeeks = +b.dataset.weeks; loadRetention(); });
+async function loadRetention() {
+  document.querySelectorAll('#retRange [data-weeks]').forEach(b => {
+    b.classList.toggle('on', +b.dataset.weeks === retWeeks); b.setAttribute('aria-pressed', +b.dataset.weeks === retWeeks); });
+  const { data, error } = await sb.rpc('admin_retention', { weeks: retWeeks });
+  if (error) return fail(error);
+  const rows = (Array.isArray(data) ? data : []).slice().sort((a, b) => String(b.cohort).localeCompare(String(a.cohort)));
+  const maxWeek = Math.max(0, ...rows.flatMap(r => (r.weeks || []).map(w => num(w.week))));
+  const active = (r, w) => (r.weeks || []).find(x => num(x.week) === w);
+  // Weighted by cohort size, over the cohorts old enough to have that week.
+  const avg = w => { let a = 0, s = 0;
+    for (const r of rows) { const x = active(r, w); if (x && num(r.size)) { a += num(x.active); s += num(r.size); } }
+    return s ? Math.round(100 * a / s) + '%' : '—'; };
+  $('#retKpis').innerHTML = kpiHtml([['Cohorts', fmtN(rows.length)], ['Members in them', fmtN(rows.reduce((s, r) => s + num(r.size), 0))],
+    ['Week 1 retention', avg(1), 'Active the week after joining'], ['Week 4 retention', avg(4), 'Active a month in']]);
+  if (!rows.length) { $('#retTable').innerHTML = `<tbody>${emptyRow(2, 'No sign-ups in this range yet.')}</tbody>`; return; }
+  const weeks = [...Array(maxWeek + 1).keys()];
+  $('#retTable').innerHTML = `<thead><tr><th>Cohort (week of)</th><th>Size</th>${weeks.map(w => `<th>W${w}</th>`).join('')}</tr></thead><tbody>`
+    + rows.map(r => `<tr><td>${esc(shortDay(String(r.cohort).slice(0, 10)))}</td><td>${fmtN(r.size)}</td>${weeks.map(w => {
+      const x = active(r, w);
+      if (!x || !num(r.size)) return '<td></td>';
+      const p = num(x.active) / num(r.size);
+      return `<td class="hm" style="background:rgba(124,58,237,${(.06 + .84 * p).toFixed(2)});color:${p >= .45 ? '#fff' : 'var(--ink)'}" title="${fmtN(x.active)} of ${fmtN(r.size)} active">${Math.round(100 * p)}%</td>`;
+    }).join('')}</tr>`).join('') + '</tbody>';
+}
+
+// ---------- Multi-account ----------
+let sharedIps = [];
+async function loadSharedIps() {
+  const { data, error } = await sb.rpc('admin_shared_ips');
+  if (error) return fail(error);
+  sharedIps = data || [];
+  renderSharedIps();
+}
+function renderSharedIps() {
+  const q = $('#ipSearch').value.trim().toLowerCase();
+  const list = sharedIps.filter(r => !q || [r.ip, ...(r.members || []).flatMap(m => [m.name, m.email])].some(v => String(v || '').toLowerCase().includes(q)))
+    .sort((a, b) => num(b.accounts) - num(a.accounts));
+  $('#ipRows').innerHTML = list.map(r => { const open = (r.members || []).filter(m => !m.blocked);
+    return `<tr><td><b>${esc(r.ip)}</b></td><td>${fmtN(r.accounts)}</td>
+    <td>${(r.members || []).map(m => `<div style="padding:2px 0"><a href="#" data-mem="${esc(m.id)}">${esc(m.name || 'Unnamed')}</a> <span class="code">${esc(m.email || '')}</span>${m.blocked ? ' <span class="pill bad">Blocked</span>' : ''}</div>`).join('')}</td>
+    <td style="white-space:nowrap">${r.last_seen ? esc(fmtWhen(r.last_seen)) : '—'}</td>
+    <td style="white-space:nowrap">${can('moderate') ? `${open.length ? `<button class="btn small danger" data-ipblock="${esc(r.ip)}">Block ${open.length}</button> ` : ''}<button class="btn small" data-ipban="${esc(r.ip)}">Ban IP</button>` : ''}</td></tr>`; }).join('')
+    || emptyRow(5, sharedIps.length ? 'No matches.' : 'No shared IP addresses. 🎉');
+  $('#ipCount').textContent = sharedIps.length ? `${plural(list.length, 'IP address')} shown of ${fmtN(sharedIps.length)}` : '';
+  document.querySelectorAll('#ipRows [data-ipblock]').forEach(b => b.onclick = async () => {
+    const r = sharedIps.find(x => x.ip === b.dataset.ipblock), open = (r.members || []).filter(m => !m.blocked);
+    if (!confirm(`Block all ${open.length} unblocked accounts from ${r.ip}? They’re signed out and hidden from everyone.`)) return;
+    b.disabled = true;
+    for (const m of open) {
+      const { error } = await sb.rpc('admin_set_blocked', { member: m.id, block: true, reason: `Multiple accounts from ${r.ip}` });
+      if (error) { b.disabled = false; return fail(error); }
+    }
+    toast(`Blocked ${plural(open.length, 'account')}`); loadSharedIps();
+  });
+  document.querySelectorAll('#ipRows [data-ipban]').forEach(b => b.onclick = async () => {
+    const reason = prompt(`Ban ${b.dataset.ipban}? New sign-ups and sign-ins from it are refused.\n\nReason (only admins see this):`, 'Multiple accounts');
+    if (reason === null) return;
+    const { error } = await sb.rpc('admin_ban_identity', { p_kind: 'ip', p_value: b.dataset.ipban, p_reason: reason.trim() });
+    if (error) return fail(error);
+    toast('IP address banned');
+  });
+}
+$('#ipSearch').oninput = renderSharedIps;
+
+// ---------- Data requests (Users and Legal) ----------
+const DR_KINDS = { export: 'Copy of their data', deletion: 'Deletion', correction: 'Correction' };
+const DR_STATUS = { open: ['warn', 'Open'], done: ['ok', 'Done'], rejected: ['muted', 'Rejected'] };
+let drStatus = 'open', dataRequests = [];
+document.querySelectorAll('#drFilter [data-status]').forEach(b => b.onclick = () => { drStatus = b.dataset.status; loadDataRequests(); });
+async function loadDataRequests() {
+  document.querySelectorAll('#drFilter [data-status]').forEach(b => {
+    b.classList.toggle('on', b.dataset.status === drStatus); b.setAttribute('aria-pressed', b.dataset.status === drStatus); });
+  const { data, error } = await sb.rpc('admin_data_requests', { p_status: drStatus || null });
+  if (error) return fail(error);
+  dataRequests = data || [];
+  const now = Date.now(), overdue = r => r.status === 'open' && r.due_at && new Date(r.due_at) < now;
+  $('#drKpis').innerHTML = kpiHtml([['Shown', fmtN(dataRequests.length)], ['Overdue', fmtN(dataRequests.filter(overdue).length), 'Past the 30-day deadline'],
+    ['Exports', fmtN(dataRequests.filter(r => r.kind === 'export').length)], ['Deletions', fmtN(dataRequests.filter(r => r.kind === 'deletion').length)]]);
+  $('#drRows').innerHTML = dataRequests.map(r => { const [tone, label] = DR_STATUS[r.status] || ['muted', r.status];
+    const tools = r.status !== 'open' ? '' : [
+      r.kind === 'export' && r.user_id && can('export') ? `<button class="btn small" data-drx="${esc(r.user_id)}">Download export</button>` : '',
+      r.kind !== 'export' && r.user_id ? `<button class="btn small" data-mem="${esc(r.user_id)}">${r.kind === 'deletion' ? 'Open to delete' : 'Open member'}</button>` : '',
+      `<button class="btn small primary" data-drdone="${esc(r.id)}">Mark done</button>`,
+      `<button class="btn small" data-drreject="${esc(r.id)}">Reject</button>`].filter(Boolean).join(' ');
+    return `<tr><td>${memberCell(r.user_id, r.member_name, r.email)}</td><td>${esc(DR_KINDS[r.kind] || r.kind)}</td>
+      <td class="clip">${esc(r.details || '—')}${r.note ? `<br><i>Note: ${esc(r.note)}</i>` : ''}</td>
+      <td style="white-space:nowrap">${fmtDate(r.created_at)}</td>
+      <td style="white-space:nowrap">${r.status === 'open' ? (r.due_at ? fmtDate(r.due_at) + (overdue(r) ? ' <span class="pill bad">Overdue</span>' : '') : '—') : (r.completed_at ? 'Closed ' + fmtDate(r.completed_at) : '—')}</td>
+      <td><span class="pill ${tone}">${esc(label)}</span></td><td style="white-space:nowrap">${tools}</td></tr>`; }).join('')
+    || emptyRow(7, drStatus === 'open' ? 'No open requests. 🎉' : 'No requests here.');
+  document.querySelectorAll('#drRows [data-drx]').forEach(b => b.onclick = () => downloadExport(b.dataset.drx));
+  const complete = async (id, status) => {
+    const r = byId(dataRequests, id);
+    const note = prompt(status === 'done' ? 'Mark done. Note (optional, only admins see this), e.g. “Export emailed on 5 Nov”:'
+      : 'Why is it rejected? (only admins see this)', '');
+    if (note === null) return;
+    const { error } = await sb.rpc('admin_complete_data_request', { p_id: r.id, p_status: status, p_note: note.trim() });
+    if (error) return fail(error);
+    toast(status === 'done' ? 'Request marked done' : 'Request rejected'); loadDataRequests();
+  };
+  document.querySelectorAll('#drRows [data-drdone]').forEach(b => b.onclick = () => complete(b.dataset.drdone, 'done'));
+  document.querySelectorAll('#drRows [data-drreject]').forEach(b => b.onclick = () => complete(b.dataset.drreject, 'rejected'));
+}
+
+// ---------- Chat monitor ----------
+let fmDays = 7, fmWhy = '', flagged = [];
+document.querySelectorAll('#fmRange [data-days]').forEach(b => b.onclick = () => { fmDays = +b.dataset.days; loadFlagged(); });
+async function loadFlagged() {
+  paintChips('#fmRange', fmDays);
+  const { data, error } = await sb.rpc('admin_flagged_messages', { days: fmDays });
+  if (error) return fail(error);
+  flagged = data || [];
+  renderFlagged();
+}
+function renderFlagged() {
+  const counts = {};
+  flagged.forEach(m => counts[m.why || 'Other'] = (counts[m.why || 'Other'] || 0) + 1);
+  if (fmWhy && !counts[fmWhy]) fmWhy = '';
+  $('#fmWhy').innerHTML = [['', `All (${flagged.length})`], ...Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([k, n]) => [k, `${k} (${n})`])]
+    .map(([k, label]) => `<button type="button" class="chip ${fmWhy === k ? 'on' : ''}" data-why="${esc(k)}" aria-pressed="${fmWhy === k}">${esc(label)}</button>`).join('');
+  document.querySelectorAll('#fmWhy [data-why]').forEach(b => b.onclick = () => { fmWhy = b.dataset.why; renderFlagged(); });
+  const list = flagged.filter(m => !fmWhy || (m.why || 'Other') === fmWhy).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  $('#fmList').innerHTML = list.map(m => `<div class="card report">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div class="muted" style="font-size:12.5px"><a href="#" data-mem="${esc(m.sender)}"><b>${esc(m.sender_name || 'A member')}</b></a> to
+        <a href="#" data-mem="${esc(m.receiver)}">${esc(m.receiver_name || 'a member')}</a> · ${esc(fmtWhen(m.created_at))}
+        ${num(m.sender_reports) ? ` · <span class="pill bad">${plural(m.sender_reports, 'report')} against the sender</span>` : ''}</div>
+      <span class="pill warn" style="align-self:flex-start">${esc(m.why || 'Flagged')}</span></div>
+    <div class="msgs"><div class="msg reported">${esc(m.body)}</div></div>
+    <div class="actionbar">${modButtons({ id: m.sender, name: m.sender_name }, { reason: `Flagged message: ${m.why || ''}`.trim() })}
+      <button class="btn small" data-mem="${esc(m.sender)}">Open sender</button></div></div>`).join('')
+    || `<p class="muted">${flagged.length ? 'Nothing for this reason.' : 'No flagged messages in this range. 🎉'}</p>`;
+  wireQuickActions($('#fmList'), loadFlagged);
+}
+
+// ---------- Fake and scams ----------
+async function loadSuspects() {
+  const { data, error } = await sb.rpc('admin_suspects');
+  if (error) return fail(error);
+  const list = data || [];
+  $('#fakeRows').innerHTML = list.map(r => `<tr data-mem="${esc(r.id)}">
+    <td><b>${esc(r.name || 'Unnamed')}</b><br><span class="code">${esc(r.email || '')}</span></td><td>${esc(r.city || '—')}</td>
+    <td style="white-space:nowrap">${fmtDate(r.created_at)}</td><td>${fmtN(r.reports)}</td><td>${fmtN(r.likes_24h)}</td>
+    <td>${fmtN(r.flagged_msgs)}</td><td>${fmtN(r.shared_ip_accounts)}</td>
+    <td>${(r.reasons || []).map(x => `<span class="pill warn" style="margin:1px">${esc(x)}</span>`).join(' ')}</td>
+    <td>${memberStatePills(r)}</td><td style="white-space:nowrap">${modButtons(r, { reason: (r.reasons || []).join(', ') })}</td></tr>`).join('')
+    || emptyRow(10, 'No suspicious accounts right now. 🎉');
+  wireQuickActions($('#fakeRows'), loadSuspects);
+}
+
+// ---------- Bans ----------
+const BAN_KINDS = { email: 'Email', phone: 'Phone', domain: 'Email domain', ip: 'IP address' };
+const BAN_HINT = { email: 'e.g. someone@example.com', phone: 'e.g. +919876543210', domain: 'e.g. tempmail.com', ip: 'e.g. 203.0.113.7' };
+let bans = [];
+async function loadBans() {
+  const { data, error } = await sb.rpc('admin_bans');
+  if (error) return fail(error);
+  bans = data || [];
+  $('#banRows').innerHTML = bans.map(b => `<tr><td>${esc(BAN_KINDS[b.kind] || b.kind)}</td><td><b>${esc(b.value)}</b></td>
+    <td class="clip">${esc(b.reason || '—')}</td><td style="white-space:nowrap">${fmtDate(b.created_at)}</td>
+    <td><button class="btn small" data-unban="${esc(b.id)}">Lift ban</button></td></tr>`).join('') || emptyRow(5, 'No bans yet.');
+  document.querySelectorAll('#banRows [data-unban]').forEach(x => x.onclick = async () => {
+    const b = byId(bans, x.dataset.unban);
+    if (!confirm(`Lift the ban on ${b.value}?`)) return;
+    const { error } = await sb.rpc('admin_unban_identity', { p_id: b.id });
+    if (error) return fail(error);
+    toast('Ban lifted'); loadBans();
+  });
+}
+$('#banKind').onchange = () => $('#banValue').placeholder = BAN_HINT[$('#banKind').value];
+$('#banForm').onsubmit = async e => {
+  e.preventDefault();
+  const kind = $('#banKind').value, value = $('#banValue').value.trim().toLowerCase(), reason = $('#banReason').value.trim();
+  if (!value) return toast('Enter what to ban');
+  if (kind === 'email' && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) return toast('That doesn’t look like an email address');
+  if (kind === 'domain' && !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(value.replace(/^@/, ''))) return toast('Enter a domain like tempmail.com');
+  const btn = $('#banForm button.primary'); btn.disabled = true;
+  const { error } = await sb.rpc('admin_ban_identity', { p_kind: kind, p_value: kind === 'domain' ? value.replace(/^@/, '') : value, p_reason: reason });
+  btn.disabled = false;
+  if (error) return fail(error);
+  $('#banValue').value = $('#banReason').value = '';
+  toast(`${BAN_KINDS[kind]} banned`); loadBans();
+};
+
+// ---------- Auto-ban ----------
+async function loadAutoMod() {
+  if (!await loadConfig()) return;
+  const c = cfgOf('auto_mod');
+  $('#amOn').checked = !!c.enabled; $('#amLinks').checked = !!c.auto_hide_links;
+  $('#amReports').value = c.reports_to_suspend ?? 3; $('#amWindow').value = c.window_hours ?? 24; $('#amDays').value = c.suspend_days ?? 7;
+  $('#amUpdated').textContent = cfgUpdated('auto_mod');
+}
+$('#autoForm').onsubmit = e => {
+  e.preventDefault();
+  const reports = intIn('#amReports', 1, 50, 'Reports'); if (reports === null) return;
+  const hours = intIn('#amWindow', 1, 720, 'Hours'); if (hours === null) return;
+  const days = intIn('#amDays', 1, 365, 'Days'); if (days === null) return;
+  saveConfig('auto_mod', { enabled: $('#amOn').checked, reports_to_suspend: reports, window_hours: hours, suspend_days: days,
+    auto_hide_links: $('#amLinks').checked }, $('#autoForm button.primary'), 'Auto-ban saved');
+};
+
+// ---------- Underage ----------
+async function loadUnderage() {
+  const { data, error } = await sb.rpc('admin_underage');
+  if (error) return fail(error);
+  const list = data || [];
+  $('#uaRows').innerHTML = list.map(r => `<tr data-mem="${esc(r.id)}">
+    <td><b>${esc(r.name || 'Unnamed')}</b><br><span class="code">${esc(r.email || '')}</span></td>
+    <td>${r.age ?? '—'}</td><td style="white-space:nowrap">${r.birthday ? fmtDate(r.birthday) : '—'}</td>
+    <td class="clip">${esc(r.signal || '—')}</td><td>${memberStatePills(r)}</td>
+    <td style="white-space:nowrap">${modButtons({ ...r, shadow_banned: true }, { reason: 'Possibly under age' })}</td></tr>`).join('')
+    || emptyRow(6, 'No possible under-age accounts. 🎉');
+  wireQuickActions($('#uaRows'), loadUnderage);
+}
+
+// ---------- Matching algorithm ----------
+const ALGO = [['distance', 'Distance', 'People nearby first'], ['recent', 'Recently active', 'People who used the app lately'],
+  ['verified', 'Verified', 'Profiles with a verified selfie'], ['shared_interests', 'Shared interests', 'More interests in common'],
+  ['complete_profile', 'Complete profile', 'Photos, bio and prompts filled in']];
+function paintAlgo() {
+  const vals = ALGO.map(([k]) => +$('#al-' + k).value), total = vals.reduce((s, v) => s + v, 0);
+  ALGO.forEach(([k], i) => $('#alv-' + k).textContent = `(${vals[i]} · ${total ? Math.round(100 * vals[i] / total) : 0}%)`);
+}
+async function loadAlgo() {
+  if (!await loadConfig()) return;
+  const c = cfgOf('algo');
+  $('#algoRows').innerHTML = ALGO.map(([k, label, hint]) => `<label for="al-${k}">${label} <span class="muted" style="font-weight:500" id="alv-${k}"></span></label>
+    <input type="range" id="al-${k}" min="0" max="100" step="1" value="${esc(Math.min(100, Math.max(0, num(c[k]))))}">
+    <p class="sub" style="font-size:12.5px;margin:0">${hint}</p>`).join('');
+  ALGO.forEach(([k]) => $('#al-' + k).oninput = paintAlgo);
+  paintAlgo();
+  $('#algoUpdated').textContent = cfgUpdated('algo');
+}
+$('#algoForm').onsubmit = e => {
+  e.preventDefault();
+  const value = Object.fromEntries(ALGO.map(([k]) => [k, +$('#al-' + k).value]));
+  if (!Object.values(value).some(v => v > 0)) return toast('Give at least one signal some weight');
+  saveConfig('algo', value, $('#algoForm button.primary'), 'Weights saved');
+};
+
+// ---------- Visibility ----------
+const VIS_STATES = { Blocked: 'bad', 'Shadow-banned': 'bad', Suspended: 'warn', Boosted: 'ok', 'Not posted': 'muted' };
+let visibility = [], visState = '';
+async function loadVisibility() {
+  const { data, error } = await sb.rpc('admin_visibility');
+  if (error) return fail(error);
+  visibility = data || [];
+  renderVisibility();
+}
+function renderVisibility() {
+  const counts = {}; visibility.forEach(r => counts[r.state] = (counts[r.state] || 0) + 1);
+  if (visState && !counts[visState]) visState = '';
+  $('#visFilter').innerHTML = [['', `All (${visibility.length})`], ...Object.keys(VIS_STATES).filter(s => counts[s]).map(s => [s, `${s} (${counts[s]})`])]
+    .map(([k, label]) => `<button type="button" class="chip ${visState === k ? 'on' : ''}" data-vis="${esc(k)}" aria-pressed="${visState === k}">${esc(label)}</button>`).join('');
+  document.querySelectorAll('#visFilter [data-vis]').forEach(b => b.onclick = () => { visState = b.dataset.vis; renderVisibility(); });
+  const undo = { Blocked: ['unblock', 'Unblock', 'moderate'], 'Shadow-banned': ['unshadow_ban', 'Lift shadow-ban', 'moderate'],
+    Suspended: ['unsuspend', 'Lift suspension', 'moderate'], Boosted: ['unboost', 'End boost', 'billing'] };
+  $('#visRows').innerHTML = visibility.filter(r => !visState || r.state === visState).map(r => { const u = undo[r.state];
+    return `<tr data-mem="${esc(r.id)}"><td><b>${esc(r.name || 'Unnamed')}</b><br><span class="code">${esc(r.email || '')}</span></td>
+    <td><span class="pill ${VIS_STATES[r.state] || 'muted'}">${esc(r.state)}</span></td>
+    <td style="white-space:nowrap">${r.until ? fmtDate(r.until) : '—'}</td><td>${esc(PLAN_NAMES[r.plan] || r.plan || 'Free')}</td>
+    <td style="white-space:nowrap">${u && can(u[2]) ? qa(u[0], r.id, r.name, u[1]) : ''}</td></tr>`; }).join('')
+    || emptyRow(5, 'Everyone is shown normally.');
+  wireQuickActions($('#visRows'), loadVisibility);
+}
+
+// ---------- Locations ----------
+const CITY_STATUS = { live: ['ok', 'Live'], waitlist: ['warn', 'Waitlist'], hidden: ['muted', 'Hidden'] };
+let cities = [];
+async function loadCities() {
+  const { data, error } = await sb.rpc('admin_cities');
+  if (error) { fail(error); return false; }
+  cities = data || [];
+  return true;
+}
+async function loadLocations() { if (await loadCities()) renderLocations(); }
+function renderLocations() {
+  const by = s => cities.filter(c => c.status === s).length;
+  $('#locKpis').innerHTML = kpiHtml([['Cities', fmtN(cities.length)], ['Live', fmtN(by('live'))], ['Waitlist', fmtN(by('waitlist'))], ['Hidden', fmtN(by('hidden'))]]);
+  const q = $('#locSearch').value.trim().toLowerCase(), st = $('#locStatus').value;
+  const list = cities.filter(c => (!st || c.status === st) && (!q || [c.name, c.state].some(v => String(v || '').toLowerCase().includes(q))))
+    .sort((a, b) => num(b.members) - num(a.members) || String(a.name).localeCompare(String(b.name)));
+  $('#locRows').innerHTML = list.map(c => `<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.state || '—')}</td><td>${fmtN(c.members)}</td>
+    <td>${fmtN(c.bots)}</td><td>${fmtN(c.live_bots)}</td><td>${fmtN(c.hangouts)}</td>
+    <td><select data-city="${esc(c.name)}" style="width:auto;padding:5px 8px" aria-label="Status of ${esc(c.name)}">${Object.entries(CITY_STATUS)
+      .map(([k, [, label]]) => `<option value="${k}" ${c.status === k ? 'selected' : ''}>${label}</option>`).join('')}</select></td></tr>`).join('')
+    || emptyRow(7, cities.length ? 'No matches.' : 'No cities yet.');
+  document.querySelectorAll('#locRows [data-city]').forEach(s => s.onchange = async () => {
+    const c = cities.find(x => x.name === s.dataset.city);
+    if (s.value === 'hidden' && !confirm(`Hide ${c.name}? New members can’t pick it.`)) { s.value = c.status; return; }
+    s.disabled = true;
+    const { error } = await sb.rpc('admin_set_city_status', { p_name: c.name, p_status: s.value });
+    s.disabled = false;
+    if (error) { s.value = c.status; return fail(error); }
+    c.status = s.value; toast(`${c.name} is now ${CITY_STATUS[c.status][1].toLowerCase()}`); renderLocations();
+  });
+}
+$('#locSearch').oninput = renderLocations;
+$('#locStatus').onchange = renderLocations;
+
+// ---------- Bot phase-out ----------
+async function loadPhaseOut() {
+  const [okCfg, okCities] = await Promise.all([loadConfig(), loadCities()]);
+  if (!okCfg || !okCities) return;
+  const c = cfgOf('phase_out'), target = Math.max(1, num(c.real_members_per_city) || 1);
+  $('#poOn').checked = !!c.enabled; $('#poPer').value = c.real_members_per_city ?? 50;
+  $('#poUpdated').textContent = cfgUpdated('phase_out');
+  $('#poTiming').classList.toggle('hidden', !canView('train-time'));
+  const list = cities.filter(x => num(x.bots) > 0 || num(x.members) > 0).sort((a, b) => num(b.members) / target - num(a.members) / target || num(b.live_bots) - num(a.live_bots));
+  $('#poRows').innerHTML = list.map(x => { const m = num(x.members), p = Math.min(1, m / target);
+    const state = m >= target ? (num(x.live_bots) ? '<span class="pill warn">Ready to pause</span>' : '<span class="pill ok">Bots paused</span>')
+      : `<span class="pill muted">${fmtN(target - m)} more needed</span>`;
+    return `<tr><td><b>${esc(x.name)}</b></td><td>${fmtN(m)}</td><td>${fmtN(x.live_bots)} of ${fmtN(x.bots)}</td>
+      <td><div class="bar" role="img" aria-label="${Math.round(100 * p)}% of the target"><i style="width:${(100 * p).toFixed(1)}%"></i></div>
+        <span class="sub" style="font-size:11.5px">${Math.round(100 * p)}% of ${fmtN(target)}</span></td><td>${state}</td></tr>`; }).join('')
+    || emptyRow(5, 'No cities yet.');
+}
+$('#poForm').onsubmit = e => {
+  e.preventDefault();
+  const per = intIn('#poPer', 1, 100000, 'Members per city'); if (per === null) return;
+  saveConfig('phase_out', { enabled: $('#poOn').checked, real_members_per_city: per }, $('#poForm button.primary'), 'Phase-out saved');
+};
+$('#poRun').onclick = async () => {
+  if (!confirm('Pause the live bots in every city that has reached the target now?')) return;
+  $('#poRun').disabled = true;
+  const { data, error } = await sb.rpc('admin_run_bot_phase_out');
+  $('#poRun').disabled = false;
+  if (error) return fail(error);
+  toast(num(data) ? `Paused ${plural(data, 'bot')}` : 'No bots needed pausing');
+  loadPhaseOut(); loadBots();
+};
+
+// ---------- Bot activity ----------
+let baDays = 7, botActivity = [];
+document.querySelectorAll('#baRange [data-days]').forEach(b => b.onclick = () => { baDays = +b.dataset.days; loadBotActivity(); });
+async function loadBotActivity() {
+  paintChips('#baRange', baDays);
+  const { data, error } = await sb.rpc('admin_bot_activity', { days: baDays });
+  if (error) return fail(error);
+  botActivity = data || [];
+  renderBotActivity();
+}
+function renderBotActivity() {
+  const sum = k => botActivity.reduce((s, b) => s + num(b[k]), 0);
+  $('#baKpis').innerHTML = kpiHtml([['Bots', fmtN(botActivity.length), `${fmtN(botActivity.filter(b => b.live).length)} live`],
+    ['Likes received', fmtN(sum('likes_received'))], ['Matches', fmtN(sum('matches'))],
+    ['Messages received', fmtN(sum('messages_received')), `${fmtN(sum('replies_sent'))} replies sent`]]);
+  const q = $('#baSearch').value.trim().toLowerCase();
+  const list = botActivity.filter(b => !q || [b.name, b.city].some(v => String(v || '').toLowerCase().includes(q)))
+    .sort((a, b) => num(b.messages_received) - num(a.messages_received) || num(b.likes_received) - num(a.likes_received));
+  $('#baRows').innerHTML = list.map(b => `<tr><td><b>${esc(b.name || 'Unnamed')}</b>${b.verified ? ' <span class="pill ok">Verified</span>' : ''}</td>
+    <td>${esc(b.city || '—')}</td><td>${b.live ? '<span class="pill ok">Live</span>' : '<span class="pill muted">Paused</span>'}</td>
+    <td>${fmtN(b.likes_received)}</td><td>${fmtN(b.matches)}</td><td>${fmtN(b.messages_received)}</td><td>${fmtN(b.replies_sent)}</td>
+    <td style="white-space:nowrap">${b.last_reply ? esc(fmtWhen(b.last_reply)) : '—'}</td></tr>`).join('')
+    || emptyRow(8, botActivity.length ? 'No matches.' : 'No bots yet.');
+}
+$('#baSearch').oninput = renderBotActivity;
+
+// ---------- Feature flags ----------
+const FLAGS = { hangouts: ['Hangouts', 'Members can host and join plans'], likes_you: ['Likes you', 'See who liked you'],
+  boost: ['Boost', 'Members can boost their profile'], sparks: ['Sparks', 'Super-likes with a message'], rewind: ['Rewind', 'Undo the last pass'],
+  quiz: ['Compatibility quiz', 'The quiz and Chemistry scores'], voice_prompts: ['Voice prompts', 'Voice notes on profiles'],
+  crossed_paths: ['Crossed paths', 'People you were near recently'], introductions: ['Introductions', 'Daily suggested introductions'],
+  selfie_verification: ['Selfie verification', 'Members can verify with a live selfie'], referrals: ['Referrals', 'Invite friends with a code'] };
+async function loadFlags() {
+  if (!await loadConfig()) return;
+  const f = cfgOf('flags');
+  const keys = [...Object.keys(FLAGS), ...Object.keys(f).filter(k => !(k in FLAGS) && !k.startsWith('_'))];
+  $('#flagRows').innerHTML = keys.map(k => { const [label, hint] = FLAGS[k] || [k.replace(/_/g, ' '), ''];
+    return `<label class="set"><span><b>${esc(label)}</b>${hint ? `<small>${esc(hint)}</small>` : ''}</span><input type="checkbox" data-flag="${esc(k)}" ${f[k] ? 'checked' : ''}></label>`; }).join('');
+  $('#flagUpdated').textContent = cfgUpdated('flags');
+}
+$('#flagForm').onsubmit = e => {
+  e.preventDefault();
+  const value = Object.fromEntries([...document.querySelectorAll('#flagRows [data-flag]')].map(c => [c.dataset.flag, c.checked]));
+  saveConfig('flags', value, $('#flagForm button.primary'), 'Feature flags saved');
+};
+
+// ---------- Onboarding and minimum age ----------
+function renderAgeCards() {
+  document.querySelectorAll('[data-age-card]').forEach((box, i) => {
+    const id = 'ageMin' + i;
+    box.innerHTML = `<h3>Minimum age</h3><form>
+      <label for="${id}">Members must be at least</label>
+      <input type="number" id="${id}" min="18" max="99" step="1" value="${esc(Math.max(18, num(cfgOf('age').min_age) || 18))}">
+      <p class="sub" style="font-size:12.5px;margin-top:8px">Never below 18. Sign-ups with a birthday under this age are refused; possible under-age accounts show under Moderation → Underage.</p>
+      <div class="row" style="margin-top:12px"><button class="btn primary">Save minimum age</button><span class="muted">${esc(cfgUpdated('age'))}</span></div></form>`;
+    $('form', box).onsubmit = e => {
+      e.preventDefault();
+      const v = intIn('#' + id, 18, 99, 'The minimum age'); if (v === null) return;
+      saveConfig('age', { min_age: v }, $('button', box), 'Minimum age saved');
+    };
+  });
+}
+async function loadOnboarding() {
+  if (!await loadConfig()) return;
+  const o = cfgOf('onboarding');
+  $('#obPhoto').checked = !!o.require_photo; $('#obMin').value = o.min_photos ?? 1;
+  $('#obCity').checked = !!o.require_city; $('#obInterests').checked = !!o.require_interests; $('#obBio').checked = !!o.require_bio;
+  $('#obUpdated').textContent = cfgUpdated('onboarding');
+  renderAgeCards();
+}
+$('#onbForm').onsubmit = e => {
+  e.preventDefault();
+  const min = intIn('#obMin', 0, 9, 'Minimum photos'); if (min === null) return;
+  if ($('#obPhoto').checked && min < 1) return toast('Set at least 1 photo when a photo is required');
+  saveConfig('onboarding', { require_photo: $('#obPhoto').checked, min_photos: min, require_city: $('#obCity').checked,
+    require_interests: $('#obInterests').checked, require_bio: $('#obBio').checked }, $('#onbForm button.primary'), 'Onboarding saved');
+};
+async function loadLegalAge() { if (await loadConfig()) renderAgeCards(); }
+
+// ---------- Announcements: banners (Content) and in-app notices (Communication) ----------
+const AUDIENCE = { all: 'Everyone', free: 'Free members', premium: 'Paid members', new: 'New members', city: 'One city' };
+const AN_TEXT = {
+  banner: ['Banners', 'A strip across the top of the app’s home screen, for the members you pick.', 'New banner'],
+  notice: ['Broadcast', 'An in-app notice members see once, the next time they open the app. No push, email or SMS is sent.', 'New notice'] };
+let anKind = 'banner', announcements = [];
+const dtLocal = d => { if (!d) return ''; const x = new Date(d); return `${dateInput(x)}T${pad2(x.getHours())}:${pad2(x.getMinutes())}`; };
+function anState(a) {
+  if (!a.active) return '<span class="pill muted">Off</span>';
+  if (a.ends_at && new Date(a.ends_at) < Date.now()) return '<span class="pill muted">Ended</span>';
+  if (a.starts_at && new Date(a.starts_at) > Date.now()) return '<span class="pill warn">Scheduled</span>';
+  return '<span class="pill ok">Live</span>';
+}
+async function loadAnnouncements(kind) {
+  anKind = kind;
+  const [title, sub, add] = AN_TEXT[kind];
+  $('#anTitle').textContent = title; $('#anSub').textContent = sub; $('#anNew').textContent = add;
+  const { data, error } = await sb.rpc('admin_announcements');
+  if (error) return fail(error);
+  announcements = (data || []).filter(a => a.kind === kind).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  $('#anRows').innerHTML = announcements.map(a => `<tr data-an="${esc(a.id)}">
+    <td><b>${esc(a.title)}</b>${a.body ? `<br><span class="code">${esc(a.body.length > 90 ? a.body.slice(0, 90) + '…' : a.body)}</span>` : ''}</td>
+    <td>${esc(AUDIENCE[a.audience] || a.audience)}${a.audience === 'city' && a.city ? ': ' + esc(a.city) : ''}</td>
+    <td style="white-space:nowrap">${a.starts_at ? esc(fmtWhen(a.starts_at)) : 'Now'} → ${a.ends_at ? esc(fmtWhen(a.ends_at)) : 'no end'}</td>
+    <td>${anState(a)}</td><td><button class="btn small danger" data-an-del="${esc(a.id)}">Delete</button></td></tr>`).join('')
+    || emptyRow(5, kind === 'banner' ? 'No banners yet.' : 'No notices yet.');
+  document.querySelectorAll('#anRows [data-an]').forEach(tr => tr.onclick = () => editAnnouncement(byId(announcements, tr.dataset.an)));
+  document.querySelectorAll('#anRows [data-an-del]').forEach(b => b.onclick = async e => {
+    e.stopPropagation();
+    const a = byId(announcements, b.dataset.anDel);
+    if (!confirm(`Delete “${a.title}”? Members stop seeing it straight away.`)) return;
+    const { error } = await sb.rpc('admin_delete_announcement', { p_id: a.id });
+    if (error) return fail(error);
+    toast('Deleted'); loadAnnouncements(anKind);
+  });
+}
+$('#anNew').onclick = () => editAnnouncement({ kind: anKind, title: '', body: '', cta_label: '', cta_url: '', audience: 'all', city: '', active: true, starts_at: null, ends_at: null }, true);
+function editAnnouncement(a, isNew = false) {
+  const ov = $('#overlay'), noun = a.kind === 'notice' ? 'notice' : 'banner';
+  ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="anForm">
+    <h2>${isNew ? 'New ' + noun : 'Edit ' + noun}</h2>
+    <label for="anT">Title</label><input type="text" id="anT" maxlength="80" required value="${esc(a.title)}">
+    <label for="anB">Text</label><textarea id="anB" rows="3" maxlength="400">${esc(a.body || '')}</textarea>
+    <div class="row2">
+      <div><label for="anCl">Button label <span class="sub" style="font-weight:500">(optional)</span></label><input type="text" id="anCl" maxlength="30" value="${esc(a.cta_label || '')}" placeholder="e.g. See plans"></div>
+      <div><label for="anCu">Button link</label><input type="text" id="anCu" maxlength="300" value="${esc(a.cta_url || '')}" placeholder="https://… or /membership"></div>
+    </div>
+    <div class="row2">
+      <div><label for="anAud">Audience</label><select id="anAud">${Object.entries(AUDIENCE).map(([k, v]) => `<option value="${k}" ${a.audience === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+      <div id="anCityWrap"><label for="anCity">City</label><input type="text" id="anCity" maxlength="60" value="${esc(a.city || '')}" placeholder="e.g. Bengaluru"></div>
+    </div>
+    <div class="row2">
+      <div><label for="anS">Starts <span class="sub" style="font-weight:500">(blank = now)</span></label><input type="datetime-local" id="anS" class="fld" value="${dtLocal(a.starts_at)}"></div>
+      <div><label for="anE">Ends <span class="sub" style="font-weight:500">(blank = no end)</span></label><input type="datetime-local" id="anE" class="fld" value="${dtLocal(a.ends_at)}"></div>
+    </div>
+    <label class="tog" style="margin-top:14px"><input type="checkbox" id="anOn" ${a.active ? 'checked' : ''}> Active</label>
+    <label>Preview</label><div id="anPrev"></div>
+    <div class="err" id="anErr"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+      <button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save ${noun}</button></div>
+  </form></div>`;
+  const paint = () => {
+    $('#anCityWrap', ov).classList.toggle('hidden', $('#anAud', ov).value !== 'city');
+    const cl = $('#anCl', ov).value.trim();
+    $('#anPrev', ov).innerHTML = `<div class="anprev ${noun}"><b>${esc($('#anT', ov).value.trim() || 'Title')}</b>
+      ${$('#anB', ov).value.trim() ? `<p>${esc($('#anB', ov).value.trim())}</p>` : ''}${cl ? `<span>${esc(cl)}</span>` : ''}</div>`;
+  };
+  ov.querySelectorAll('input, textarea, select').forEach(el => el.addEventListener('input', paint));
+  paint();
+  const close = () => ov.innerHTML = '';
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  $('#anForm', ov).onsubmit = async e => {
+    e.preventDefault();
+    const err = msg => $('#anErr', ov).textContent = msg;
+    const title = $('#anT', ov).value.trim(), cta_label = $('#anCl', ov).value.trim(), cta_url = $('#anCu', ov).value.trim();
+    const audience = $('#anAud', ov).value, city = $('#anCity', ov).value.trim();
+    const s = $('#anS', ov).value, en = $('#anE', ov).value;
+    if (!title) return err('Enter a title.');
+    if (cta_label && !cta_url) return err('Add the link for the button, or clear its label.');
+    if (cta_url && !/^(https:\/\/|\/)/.test(cta_url)) return err('The link must start with https:// or / (a page in the app).');
+    if (audience === 'city' && !city) return err('Enter the city.');
+    if (s && en && new Date(en) <= new Date(s)) return err('The end must be after the start.');
+    const item = { ...(isNew ? {} : { id: a.id }), kind: a.kind, title, body: $('#anB', ov).value.trim(), cta_label: cta_label || null, cta_url: cta_url || null,
+      audience, city: audience === 'city' ? city : null, active: $('#anOn', ov).checked,
+      starts_at: s ? new Date(s).toISOString() : null, ends_at: en ? new Date(en).toISOString() : null };
+    $('button.primary', ov).disabled = true;
+    const { error } = await sb.rpc('admin_save_announcement', { item });
+    if (error) { $('button.primary', ov).disabled = false; return err(error.message || 'Couldn’t save.'); }
+    close(); toast(isNew ? `${noun[0].toUpperCase() + noun.slice(1)} created` : 'Saved'); loadAnnouncements(anKind);
+  };
+}
+
+// ---------- App control ----------
+async function loadAppControl() {
+  if (!await loadConfig()) return;
+  const m = cfgOf('maintenance'), v = cfgOf('min_version');
+  $('#mtOn').checked = !!m.on; $('#mtMsg').value = m.message || '';
+  $('#mtWarn').classList.toggle('hidden', !m.on);
+  $('#mtUpdated').textContent = cfgUpdated('maintenance');
+  $('#mvWeb').value = v.web || ''; $('#mvAndroid').value = v.android || ''; $('#mvIos').value = v.ios || ''; $('#mvMsg').value = v.message || '';
+  $('#mvUpdated').textContent = cfgUpdated('min_version');
+}
+$('#mtForm').onsubmit = e => {
+  e.preventDefault();
+  const on = $('#mtOn').checked, message = $('#mtMsg').value.trim();
+  if (on && !message) return toast('Write the message members will see');
+  if (on && !cfgOf('maintenance').on && !confirm('Turn maintenance mode on? Every member is locked out of the app until you switch it off.')) return;
+  saveConfig('maintenance', { on, message }, $('#mtForm button.primary'), on ? 'Maintenance mode is on' : 'Maintenance saved');
+};
+$('#mvForm').onsubmit = e => {
+  e.preventDefault();
+  const v = { web: $('#mvWeb').value.trim(), android: $('#mvAndroid').value.trim(), ios: $('#mvIos').value.trim() };
+  const bad = Object.entries(v).find(([, x]) => x && !/^\d+(\.\d+){0,3}$/.test(x));
+  if (bad) return toast(`Use a version like 0.3.7 for ${bad[0] === 'ios' ? 'iOS' : bad[0][0].toUpperCase() + bad[0].slice(1)}`);
+  saveConfig('min_version', { ...v, message: $('#mvMsg').value.trim() }, $('#mvForm button.primary'), 'Minimum versions saved');
+};
+
+// ---------- Support: tickets, appeals and the help center ----------
+const TK_CATS = { general: 'General', account: 'Account', billing: 'Billing', safety: 'Safety', bug: 'Bug', appeal: 'Appeal', other: 'Other' };
+const TK_STATUS = { open: ['bad', 'Open'], pending: ['warn', 'Waiting on member'], resolved: ['ok', 'Resolved'] };
+const TK_PRIO = { low: ['muted', 'Low'], normal: ['', 'Normal'], high: ['bad', 'High'] };
+const tkPill = s => { const [tone, label] = TK_STATUS[s] || ['muted', s || '—']; return `<span class="pill ${tone}">${esc(label)}</span>`; };
+const prioPill = p => { const [tone, label] = TK_PRIO[p] || ['muted', p || 'Normal']; return `<span class="pill ${tone}">${esc(label)}</span>`; };
+$('#tkCat').innerHTML += Object.entries(TK_CATS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('');
+let tkStatus = 'open', tickets = [];
+document.querySelectorAll('#tkStatus [data-status]').forEach(b => b.onclick = () => { tkStatus = b.dataset.status; loadTickets(); });
+$('#tkCat').onchange = () => loadTickets();
+async function refreshSupportBadge(open) {
+  if (!open) {
+    const { data, error } = await sb.rpc('admin_tickets', { p_status: 'open', p_category: null });
+    if (error) return;
+    open = data || [];
+  }
+  badge('#tixBadge', open.length); badge('#supBadge', open.length);
+}
+async function loadTickets() {
+  document.querySelectorAll('#tkStatus [data-status]').forEach(b => {
+    b.classList.toggle('on', b.dataset.status === tkStatus); b.setAttribute('aria-pressed', b.dataset.status === tkStatus); });
+  const cat = $('#tkCat').value || null;
+  const { data, error } = await sb.rpc('admin_tickets', { p_status: tkStatus || null, p_category: cat });
+  if (error) return fail(error);
+  tickets = (data || []).slice().sort((a, b) => (num(b.unread) > 0) - (num(a.unread) > 0) || new Date(b.updated_at) - new Date(a.updated_at));
+  if (tkStatus === 'open' && !cat) refreshSupportBadge(tickets);
+  $('#tkRows').innerHTML = tickets.map(t => `<tr data-tk="${esc(t.id)}">
+    <td><b>${esc(t.subject || 'No subject')}</b>${num(t.unread) ? ` <span class="pill bad">${num(t.unread) > 1 ? fmtN(t.unread) + ' new' : 'New'}</span>` : ''}
+      ${t.last_body ? `<br><span class="code">${t.last_from_admin ? 'You: ' : ''}${esc(t.last_body.length > 80 ? t.last_body.slice(0, 80) + '…' : t.last_body)}</span>` : ''}</td>
+    <td>${esc(t.member_name || 'Unnamed')}<br><span class="code">${esc(t.member_email || '')}</span></td>
+    <td>${esc(TK_CATS[t.category] || t.category || '—')}</td><td>${tkPill(t.status)}</td><td>${prioPill(t.priority)}</td>
+    <td>${esc(t.assignee_email || '—')}</td><td style="white-space:nowrap">${esc(fmtWhen(t.updated_at || t.created_at))}</td></tr>`).join('')
+    || emptyRow(7, tkStatus === 'open' ? 'No open tickets. 🎉' : 'No tickets here.');
+  $('#tkCount').textContent = tickets.length ? `${plural(tickets.length, 'ticket')} · ${fmtN(tickets.filter(t => num(t.unread)).length)} unread` : '';
+  document.querySelectorAll('#tkRows [data-tk]').forEach(tr => tr.onclick = () => openTicket(byId(tickets, tr.dataset.tk), loadTickets));
+}
+// One ticket: the conversation, a reply box, and status, priority and assignee.
+function openTicket(t, reload) {
+  const ov = $('#overlay');
+  const suspended = t.member_suspended_until && new Date(t.member_suspended_until) > new Date();
+  const appeal = t.category === 'appeal' && t.status !== 'resolved' && can('moderate');
+  ov.innerHTML = `<div class="backdrop"></div><div class="modal"><div class="box">
+    <h2>${esc(t.subject || 'No subject')}</h2>
+    <p class="sub">${t.user_id ? `<a href="#" data-tk-member>${esc(t.member_name || 'Unnamed')}</a>` : esc(t.member_name || 'Unnamed')}
+      ${t.member_email ? ' · ' + esc(t.member_email) : ''} · ${esc(TK_CATS[t.category] || t.category || '—')} · opened ${esc(fmtWhen(t.created_at))}
+      ${t.member_blocked ? ' <span class="pill bad">Blocked</span>' : ''}${suspended ? ` <span class="pill warn">Suspended to ${fmtDate(t.member_suspended_until)}</span>` : ''}</p>
+    <div class="formgrid">
+      <div><label for="tkSt">Status</label><select id="tkSt">${Object.entries(TK_STATUS).map(([k, [, l]]) => `<option value="${k}" ${t.status === k ? 'selected' : ''}>${l}</option>`).join('')}</select></div>
+      <div><label for="tkPr">Priority</label><select id="tkPr">${[...new Set([...Object.keys(TK_PRIO), t.priority].filter(Boolean))].map(k => `<option value="${esc(k)}" ${(t.priority || 'normal') === k ? 'selected' : ''}>${esc(TK_PRIO[k]?.[1] || k)}</option>`).join('')}</select></div>
+      <div><label>Assigned to</label><div class="row"><span class="muted" id="tkWho">${esc(t.assignee_email || 'Nobody')}</span><button type="button" class="btn small" id="tkMine">Assign to me</button></div></div>
+    </div>
+    <div class="tchat" id="tkThread" aria-live="polite"><span class="muted">Loading…</span></div>
+    ${appeal ? `<div class="card pad" style="margin-bottom:12px;border-color:var(--warn)"><h3>Appeal decision</h3>
+      <label for="tkNote">Note to the member</label><input type="text" id="tkNote" maxlength="400" placeholder="e.g. Thanks for explaining. Your account is active again.">
+      <div class="actionbar"><button type="button" class="btn small primary" data-decide="1">Grant and lift</button><button type="button" class="btn small danger" data-decide="0">Deny</button></div></div>` : ''}
+    <form id="tkReply"><label for="tkBody">Reply to the member</label><textarea id="tkBody" rows="3" maxlength="4000" placeholder="Type your reply…"></textarea>
+      <div class="row" style="margin-top:10px;justify-content:flex-end">
+        <button type="button" class="btn" data-close>Close</button>
+        <button class="btn" data-st="pending">Send</button><button class="btn primary" data-st="resolved">Send and resolve</button></div></form>
+  </div></div>`;
+  let changed = false;
+  const close = () => { ov.innerHTML = ''; if (changed) { reload(); refreshSupportBadge(); } };
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  $('[data-tk-member]', ov)?.addEventListener('click', e => { e.preventDefault(); openMemberById(t.user_id); });
+  const thread = async () => {
+    const { data, error } = await sb.rpc('admin_ticket_thread', { p_ticket: t.id });
+    const box = $('#tkThread', ov); if (!box) return;
+    if (error) return box.innerHTML = `<span class="muted">${esc(error.message)}</span>`;
+    box.innerHTML = (data || []).map(m => `<div class="msg ${m.from_admin ? 'me' : ''}">${esc(m.body)}
+      <div class="meta">${m.from_admin ? esc(m.sender_email || 'Everlane team') : esc(t.member_name || 'Member')} · ${esc(fmtWhen(m.created_at))}</div></div>`).join('')
+      || '<span class="muted">No messages yet.</span>';
+    box.scrollTop = box.scrollHeight;
+    if (num(t.unread)) changed = true;
+  };
+  thread();
+  const update = async (assign = false) => {
+    const { error } = await sb.rpc('admin_update_ticket', { p_ticket: t.id, p_status: $('#tkSt', ov).value, p_priority: $('#tkPr', ov).value, p_assign_me: assign });
+    if (error) return fail(error);
+    changed = true; t.status = $('#tkSt', ov).value; t.priority = $('#tkPr', ov).value;
+    if (assign) $('#tkWho', ov).textContent = $('#who').textContent || 'You';
+    toast(assign ? 'Assigned to you' : 'Ticket updated');
+  };
+  $('#tkSt', ov).onchange = () => update(); $('#tkPr', ov).onchange = () => update();
+  $('#tkMine', ov).onclick = () => update(true);
+  $('#tkReply', ov).onsubmit = async e => {
+    e.preventDefault();
+    const body = $('#tkBody', ov).value.trim(), status = e.submitter?.dataset.st || 'pending';
+    if (!body) return toast('Write your reply first');
+    ov.querySelectorAll('#tkReply button').forEach(b => b.disabled = true);
+    const { error } = await sb.rpc('admin_reply_ticket', { p_ticket: t.id, p_body: body, p_status: status });
+    ov.querySelectorAll('#tkReply button').forEach(b => b.disabled = false);
+    if (error) return fail(error);
+    changed = true; t.status = status; $('#tkSt', ov).value = status; $('#tkBody', ov).value = '';
+    toast(status === 'resolved' ? 'Reply sent and ticket resolved' : 'Reply sent'); thread();
+  };
+  ov.querySelectorAll('[data-decide]').forEach(b => b.onclick = async () => {
+    changed = (await decideAppeal(t, b.dataset.decide === '1', $('#tkNote', ov).value.trim())) || changed;
+    if (changed) close();
+  });
+}
+async function decideAppeal(t, grant, note) {
+  if (!confirm(grant ? `Grant ${t.member_name || 'this member'}’s appeal? Their suspension or block is lifted now.` : `Deny ${t.member_name || 'this member'}’s appeal?`)) return false;
+  const { error } = await sb.rpc('admin_decide_appeal', { p_ticket: t.id, p_grant: grant, p_note: note || '' });
+  if (error) { fail(error); return false; }
+  toast(grant ? 'Appeal granted' : 'Appeal denied');
+  return true;
+}
+let apStatus = 'open', appeals = [];
+document.querySelectorAll('#apStatus [data-status]').forEach(b => b.onclick = () => { apStatus = b.dataset.status; loadAppeals(); });
+async function loadAppeals() {
+  document.querySelectorAll('#apStatus [data-status]').forEach(b => {
+    b.classList.toggle('on', b.dataset.status === apStatus); b.setAttribute('aria-pressed', b.dataset.status === apStatus); });
+  const { data, error } = await sb.rpc('admin_tickets', { p_status: apStatus || null, p_category: 'appeal' });
+  if (error) return fail(error);
+  appeals = (data || []).slice().sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
+  $('#apList').innerHTML = appeals.map(t => { const suspended = t.member_suspended_until && new Date(t.member_suspended_until) > new Date();
+    return `<div class="card report">
+    <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div><h3>${esc(t.subject || 'Appeal')}</h3>
+        <div class="muted" style="font-size:12px">${t.user_id ? `<a href="#" data-mem="${esc(t.user_id)}">${esc(t.member_name || 'Unnamed')}</a>` : esc(t.member_name || 'Unnamed')}
+          · ${esc(fmtWhen(t.created_at))}${t.member_blocked ? ' · <span class="pill bad">Blocked</span>' : ''}${suspended ? ` · <span class="pill warn">Suspended to ${fmtDate(t.member_suspended_until)}</span>` : ''}
+          ${!t.member_blocked && !suspended ? ' · <span class="pill ok">Not restricted now</span>' : ''}</div></div>
+      ${tkPill(t.status)}</div>
+    ${t.last_body ? `<p>${t.last_from_admin ? '<b>You:</b> ' : ''}${esc(t.last_body)}</p>` : ''}
+    <div class="actionbar">${t.status !== 'resolved' && can('moderate') ? `<input type="text" data-ap-note="${esc(t.id)}" placeholder="Note to the member (optional)" style="max-width:280px">
+      <button class="btn small primary" data-ap-grant="${esc(t.id)}">Grant</button><button class="btn small danger" data-ap-deny="${esc(t.id)}">Deny</button>` : ''}
+      <button class="btn small" data-ap-open="${esc(t.id)}">Open conversation${num(t.messages) ? ` (${fmtN(t.messages)})` : ''}</button></div></div>`; }).join('')
+    || `<p class="muted">${apStatus === 'open' ? 'No open appeals. 🎉' : 'No appeals yet.'}</p>`;
+  const decide = async (id, grant) => { const t = byId(appeals, id);
+    if (await decideAppeal(t, grant, $(`[data-ap-note="${CSS.escape(String(id))}"]`)?.value.trim())) { loadAppeals(); refreshSupportBadge(); } };
+  document.querySelectorAll('#apList [data-ap-grant]').forEach(b => b.onclick = () => decide(b.dataset.apGrant, true));
+  document.querySelectorAll('#apList [data-ap-deny]').forEach(b => b.onclick = () => decide(b.dataset.apDeny, false));
+  document.querySelectorAll('#apList [data-ap-open]').forEach(b => b.onclick = () => openTicket(byId(appeals, b.dataset.apOpen), loadAppeals));
+}
+let faqs = [];
+async function loadFaq() {
+  const { data, error } = await sb.rpc('admin_faq');
+  if (error) return fail(error);
+  faqs = (data || []).slice().sort((a, b) => String(a.category || '').localeCompare(String(b.category || '')) || num(a.position) - num(b.position));
+  const groups = {};
+  faqs.forEach(f => (groups[f.category || 'General'] ||= []).push(f));
+  $('#faqList').innerHTML = Object.entries(groups).map(([cat, list]) => `<div class="card" style="margin-bottom:12px">
+    <div class="pad" style="border-bottom:1px solid var(--line)"><h3>${esc(cat)} <span class="sub" style="font-weight:500">· ${plural(list.length, 'question')}</span></h3></div>
+    ${list.map(f => `<div class="q" style="${f.active ? '' : 'opacity:.5'}"><div class="n">${esc(f.position ?? '')}</div>
+      <div class="body"><div class="prompt">${esc(f.question)}</div><div class="muted" style="font-size:13px;margin-top:4px;white-space:pre-line">${esc(f.answer)}</div>
+        <div class="muted" style="font-size:11.5px;margin-top:4px">${f.active ? '' : 'Hidden · '}Updated ${fmtDate(f.updated_at)}</div></div>
+      <div class="actions"><button class="btn small" data-faq-edit="${esc(f.id)}">Edit</button><button class="btn small danger" data-faq-del="${esc(f.id)}">Delete</button></div></div>`).join('')}</div>`).join('')
+    || '<p class="muted">No questions yet. Add the first one.</p>';
+  document.querySelectorAll('[data-faq-edit]').forEach(b => b.onclick = () => editFaq(byId(faqs, b.dataset.faqEdit)));
+  document.querySelectorAll('[data-faq-del]').forEach(b => b.onclick = async () => {
+    const f = byId(faqs, b.dataset.faqDel);
+    if (!confirm(`Delete “${f.question}”?`)) return;
+    const { error } = await sb.rpc('admin_delete_faq', { p_id: f.id });
+    if (error) return fail(error);
+    toast('Deleted'); loadFaq();
+  });
+}
+$('#faqNew').onclick = () => editFaq({ category: '', question: '', answer: '', position: Math.max(0, ...faqs.map(f => num(f.position))) + 1, active: true }, true);
+function editFaq(f, isNew = false) {
+  const ov = $('#overlay'), cats = [...new Set(['General', 'Account', 'Safety', 'Billing', ...faqs.map(x => x.category).filter(Boolean)])];
+  ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="faqForm">
+    <h2>${isNew ? 'New question' : 'Edit question'}</h2>
+    <div class="row2">
+      <div><label for="fqCat">Category</label><input type="text" id="fqCat" list="fqCats" maxlength="40" value="${esc(f.category || '')}" placeholder="e.g. Account">
+        <datalist id="fqCats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>
+      <div><label for="fqPos">Order</label><input type="number" id="fqPos" min="0" step="1" value="${esc(f.position ?? 0)}"></div>
+    </div>
+    <label for="fqQ">Question</label><input type="text" id="fqQ" maxlength="200" required value="${esc(f.question)}">
+    <label for="fqA">Answer</label><textarea id="fqA" rows="6" maxlength="4000" required>${esc(f.answer)}</textarea>
+    <label class="tog" style="margin-top:14px"><input type="checkbox" id="fqOn" ${f.active ? 'checked' : ''}> Show in the app</label>
+    <div class="err" id="fqErr"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+      <button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Save question</button></div>
+  </form></div>`;
+  const close = () => ov.innerHTML = '';
+  $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  $('#faqForm', ov).onsubmit = async e => {
+    e.preventDefault();
+    const item = { ...(isNew ? {} : { id: f.id }), category: $('#fqCat', ov).value.trim() || 'General', question: $('#fqQ', ov).value.trim(),
+      answer: $('#fqA', ov).value.trim(), position: Math.max(0, Math.round(+$('#fqPos', ov).value || 0)), active: $('#fqOn', ov).checked };
+    if (!item.question || !item.answer) return $('#fqErr', ov).textContent = 'Write the question and the answer.';
+    $('button.primary', ov).disabled = true;
+    const { error } = await sb.rpc('admin_save_faq', { item });
+    if (error) { $('button.primary', ov).disabled = false; return $('#fqErr', ov).textContent = error.message || 'Couldn’t save.'; }
+    close(); toast('Question saved'); loadFaq();
+  };
+}
+
+// ---------- Referrals ----------
+async function loadReferrals() {
+  const [okCfg, res] = await Promise.all([loadConfig(), sb.rpc('admin_referrals')]);
+  if (!okCfg) return;
+  if (res.error) return fail(res.error);
+  const r = cfgOf('referral'), list = (res.data || []).slice().sort((a, b) => num(b.joined) - num(a.joined) || num(b.onboarded) - num(a.onboarded));
+  $('#rfOn').checked = !!r.enabled; $('#rfDays').value = r.reward_days ?? 7; $('#rfPlan').value = PLANS.includes(r.reward_plan) ? r.reward_plan : 'plus';
+  $('#rfUpdated').textContent = cfgUpdated('referral');
+  const joined = list.reduce((s, x) => s + num(x.joined), 0), done = list.reduce((s, x) => s + num(x.onboarded), 0);
+  $('#refKpis').innerHTML = kpiHtml([['Members with a code', fmtN(list.length)], ['Inviters', fmtN(list.filter(x => num(x.joined)).length)],
+    ['Friends joined', fmtN(joined)], ['Finished profile', fmtN(done), joined ? pct(done, joined) + ' of friends' : '']]);
+  $('#refRows').innerHTML = list.map(x => `<tr data-mem="${esc(x.id)}"><td><b>${esc(x.name || 'Unnamed')}</b><br><span class="code">${esc(x.email || '')}</span></td>
+    <td><b>${esc(x.code || '—')}</b></td><td>${fmtN(x.joined)}</td><td>${fmtN(x.onboarded)}</td>
+    <td style="white-space:nowrap">${x.last_join ? fmtDate(x.last_join) : '—'}</td></tr>`).join('') || emptyRow(5, 'No referral codes yet.');
+}
+$('#refForm').onsubmit = e => {
+  e.preventDefault();
+  const days = intIn('#rfDays', 0, 365, 'Free days'); if (days === null) return;
+  saveConfig('referral', { enabled: $('#rfOn').checked, reward_days: days, reward_plan: $('#rfPlan').value }, $('#refForm button.primary'), 'Referral reward saved');
+};
+
+// ---------- Technical (admin_tech) ----------
+let tech = {};
+async function loadTech(render) {
+  const { data, error } = await sb.rpc('admin_tech');
+  if (error) return fail(error);
+  tech = data || {};
+  render();
+}
+function renderDb() {
+  const tables = (tech.tables || []).slice().sort((a, b) => num(b.rows) - num(a.rows));
+  $('#dbKpis').innerHTML = kpiHtml([['Database size', fmtSize(tech.database_size)], ['Tables', fmtN(tables.length)],
+    ['Sign-ins (24h)', fmtN(tech.sign_ins_24h)], ['Messages (24h)', fmtN(tech.messages_24h)]]);
+  $('#dbRows').innerHTML = tables.map(t => `<tr><td><b>${esc(t.table)}</b></td><td>${fmtN(t.rows)}</td><td>${esc(fmtSize(t.size))}</td></tr>`).join('') || emptyRow(3, 'No tables reported.');
+}
+function renderJobs() {
+  $('#jobRows').innerHTML = (tech.jobs || []).map(j => `<tr><td><b>${esc(j.job)}</b></td><td><span class="code">${esc(j.schedule || '—')}</span></td>
+    <td>${!j.active ? '<span class="pill muted">Paused</span>' : num(j.failures_24h) ? '<span class="pill bad">Failing</span>' : '<span class="pill ok">Running</span>'}</td>
+    <td style="white-space:nowrap">${j.last_run ? esc(fmtWhen(j.last_run)) : 'Never'}</td><td>${fmtN(j.runs_24h)}</td>
+    <td>${num(j.failures_24h) ? `<b style="color:var(--bad)">${fmtN(j.failures_24h)}</b>` : '0'}</td></tr>`).join('') || emptyRow(6, 'No scheduled jobs.');
+  $('#jobFails').innerHTML = (tech.recent_failures || []).map(f => `<tr><td style="white-space:nowrap">${esc(fmtWhen(f.at))}</td><td>${esc(f.job)}</td>
+    <td class="clip" style="max-width:420px">${esc(f.message || '—')}</td></tr>`).join('') || emptyRow(3, 'No recent failures. 🎉');
+}
+const QUEUES = [['bot_replies_waiting', 'Bot replies waiting', 'bots-chats', 'warn'], ['bot_replies_overdue', 'Bot replies overdue', 'train-time', 'bad'],
+  ['bot_matches_waiting', 'Bot matches waiting', 'bots-activity', 'warn'], ['photos_to_review', 'Photos to review', 'photos', 'warn'],
+  ['selfies_to_review', 'Selfies to verify', 'verify', 'warn'], ['open_reports', 'Open reports', 'reports', 'bad'],
+  ['open_tickets', 'Open support tickets', 'sup-tickets', 'bad'], ['open_data_requests', 'Open data requests', 'legal-requests', 'bad']];
+function renderQueues() {
+  const q = tech.queues || {};
+  $('#qRows').innerHTML = QUEUES.map(([k, label, view, tone]) => { const n = num(q[k]), go = canView(view);
+    return `<button type="button" ${go ? `data-goto="${view}"` : 'disabled title="Your role can’t open this page"'}>
+      <span>${label}</span><span class="row" style="flex-wrap:nowrap">${n ? `<span class="pill ${tone}">${go ? 'Open' : 'Waiting'}</span>` : '<span class="pill ok">Clear</span>'}<b>${fmtN(n)}</b></span></button>`; }).join('');
+}
+
+// ---------- Consent ----------
+async function loadConsent() {
+  const { data, error } = await sb.rpc('admin_consent');
+  if (error) return fail(error);
+  const c = data || {}, m = num(c.members);
+  $('#csKpis').innerHTML = kpiHtml([['Members', fmtN(m)], ['Accepted the terms', pct(c.terms, m), fmtN(c.terms)],
+    ['Marketing', pct(c.marketing, m), `${fmtN(c.marketing)} opted in`], ['Location', pct(c.location, m), fmtN(c.location)],
+    ['Selfie verification', pct(c.verification, m), `${fmtN(c.verification)} consented`]]);
+  $('#csVersions').innerHTML = barList(c.versions, { empty: 'Nobody has accepted a terms version yet.' });
+}
+
+// ---------- Legal documents (admin_legal_docs; saving needs 'content') ----------
+const LEGAL_DOCS = { privacy: 'Privacy Policy', terms: 'Terms & Conditions', guidelines: 'Community Guidelines' };
+let legal = { docs: [], history: [] }, lgSlug = 'privacy', lgDraft = null, lgIsDirty = false;
+const setLgDirty = v => { lgIsDirty = v; $('#lgDirty').classList.toggle('hidden', !v); };
+window.addEventListener('beforeunload', e => { if (lgIsDirty && current === 'legal') { e.preventDefault(); e.returnValue = ''; } });
+function legalHtml(d) {
+  return `<h3>${esc(d.title || 'Untitled')}</h3><p class="sub" style="font-size:12.5px">Last updated ${esc(d.version || 'today')}</p>`
+    + ((d.sections || []).map(s => `${s.heading ? `<h4>${esc(s.heading)}</h4>` : ''}${s.body ? `<p>${esc(s.body)}</p>` : ''}`).join('')
+      || '<p class="muted">No sections yet.</p>');
+}
+async function loadLegal() {
+  const { data, error } = await sb.rpc('admin_legal_docs');
+  $('#lgErr').classList.toggle('hidden', !error);
+  $('#lgEditor').classList.toggle('hidden', !!error);
+  if (error) return $('#lgErr').textContent = `The editor couldn’t load: ${error.message || 'unknown error'}`;
+  legal = { docs: data?.docs || [], history: data?.history || [] };
+  $('#lgFs').disabled = !can('content');
+  pickLegal(lgSlug, true);
+}
+function paintLegalPick() {
+  $('#lgPick').innerHTML = Object.entries(LEGAL_DOCS).map(([k, v]) => { const d = legal.docs.find(x => x.slug === k);
+    return `<button type="button" class="chip ${k === lgSlug ? 'on' : ''}" data-lg="${k}" aria-pressed="${k === lgSlug}">${esc(v)}${d && !d.published ? ' · draft' : ''}</button>`; }).join('');
+  document.querySelectorAll('#lgPick [data-lg]').forEach(b => b.onclick = () => pickLegal(b.dataset.lg));
+}
+function pickLegal(slug, force = false) {
+  if (!force && slug !== lgSlug && lgIsDirty && !confirm('You have unsaved changes to this document. Discard them?')) return;
+  lgSlug = slug;
+  const d = legal.docs.find(x => x.slug === slug) || {};
+  lgDraft = { title: d.title || LEGAL_DOCS[slug], version: d.version || '', published: !!d.published,
+    sections: (d.sections || []).map(s => ({ heading: s.heading || '', body: s.body || '' })) };
+  $('#lgTitle').value = lgDraft.title; $('#lgVersion').value = lgDraft.version; $('#lgPub').checked = lgDraft.published;
+  $('#lgUpdated').textContent = d.updated_at ? `Saved ${fmtWhen(d.updated_at)}${d.updated_by ? ' by ' + d.updated_by : ''}` : 'Not saved yet';
+  setLgDirty(false); paintLegalPick(); renderLegalSections(); renderLegalHistory();
+}
+const paintLegalPreview = () => $('#lgPrev').innerHTML = legalHtml(lgDraft);
+function renderLegalSections() {
+  const n = lgDraft.sections.length;
+  $('#lgSections').innerHTML = lgDraft.sections.map((s, i) => `<div class="lgsec">
+    <div class="row" style="justify-content:space-between"><b class="muted" style="font-size:12px">Section ${i + 1}</b>
+      <span class="row" style="gap:4px"><button type="button" class="btn small" data-lgup="${i}" ${i ? '' : 'disabled'} aria-label="Move section ${i + 1} up">↑</button>
+        <button type="button" class="btn small" data-lgdown="${i}" ${i < n - 1 ? '' : 'disabled'} aria-label="Move section ${i + 1} down">↓</button>
+        <button type="button" class="btn small danger" data-lgdel="${i}" aria-label="Delete section ${i + 1}">Delete</button></span></div>
+    <label for="lgH${i}">Heading</label><input type="text" id="lgH${i}" data-lgh="${i}" maxlength="120" value="${esc(s.heading)}">
+    <label for="lgB${i}">Text</label><textarea id="lgB${i}" data-lgb="${i}" rows="5" maxlength="20000">${esc(s.body)}</textarea></div>`).join('')
+    || '<p class="muted" style="margin-top:10px">No sections yet. Add the first one.</p>';
+  const move = (i, j) => { [lgDraft.sections[i], lgDraft.sections[j]] = [lgDraft.sections[j], lgDraft.sections[i]]; setLgDirty(true); renderLegalSections(); };
+  document.querySelectorAll('[data-lgh]').forEach(el => el.oninput = () => { lgDraft.sections[+el.dataset.lgh].heading = el.value; setLgDirty(true); paintLegalPreview(); });
+  document.querySelectorAll('[data-lgb]').forEach(el => el.oninput = () => { lgDraft.sections[+el.dataset.lgb].body = el.value; setLgDirty(true); paintLegalPreview(); });
+  document.querySelectorAll('[data-lgup]').forEach(b => b.onclick = () => move(+b.dataset.lgup, +b.dataset.lgup - 1));
+  document.querySelectorAll('[data-lgdown]').forEach(b => b.onclick = () => move(+b.dataset.lgdown, +b.dataset.lgdown + 1));
+  document.querySelectorAll('[data-lgdel]').forEach(b => b.onclick = () => {
+    const s = lgDraft.sections[+b.dataset.lgdel];
+    if ((s.heading || s.body) && !confirm(`Delete the section “${s.heading || 'Untitled'}”?`)) return;
+    lgDraft.sections.splice(+b.dataset.lgdel, 1); setLgDirty(true); renderLegalSections();
+  });
+  paintLegalPreview();
+}
+$('#lgTitle').oninput = () => { lgDraft.title = $('#lgTitle').value; setLgDirty(true); paintLegalPreview(); };
+$('#lgVersion').oninput = () => { lgDraft.version = $('#lgVersion').value; setLgDirty(true); paintLegalPreview(); };
+$('#lgPub').onchange = () => { lgDraft.published = $('#lgPub').checked; setLgDirty(true); };
+$('#lgAdd').onclick = () => { lgDraft.sections.push({ heading: '', body: '' }); setLgDirty(true); renderLegalSections(); $('#lgH' + (lgDraft.sections.length - 1))?.focus(); };
+$('#lgForm').onsubmit = async e => {
+  e.preventDefault();
+  if (!can('content')) return;
+  const title = lgDraft.title.trim();
+  const sections = lgDraft.sections.map(s => ({ heading: s.heading.trim(), body: s.body.trim() })).filter(s => s.heading || s.body);
+  if (!title) return toast('Enter the title');
+  if (!sections.length) return toast('Add at least one section');
+  if (!confirm(`Save ${LEGAL_DOCS[lgSlug]}? This updates the app and website for everyone.`)) return;
+  $('#lgSave').disabled = true;
+  const { error } = await sb.rpc('admin_save_legal_doc', { p_slug: lgSlug, p_title: title, p_sections: sections,
+    p_version: lgDraft.version.trim() || null, p_published: lgDraft.published });
+  $('#lgSave').disabled = false;
+  if (error) return fail(error);
+  setLgDirty(false); toast(`${LEGAL_DOCS[lgSlug]} saved`); loadLegal();
+};
+function renderLegalHistory() {
+  const list = legal.history.filter(h => h.slug === lgSlug).sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
+  $('#lgHist').innerHTML = list.map(h => `<tr><td style="white-space:nowrap">${esc(fmtWhen(h.saved_at))}</td><td>${esc(h.version || '—')}</td>
+    <td>${esc(h.saved_by || '—')}</td><td style="white-space:nowrap"><button type="button" class="btn small" data-lgview="${esc(h.id)}">View</button>
+    ${can('content') ? `<button type="button" class="btn small" data-lgrestore="${esc(h.id)}">Restore</button>` : ''}</td></tr>`).join('')
+    || emptyRow(4, 'No earlier versions yet.');
+  document.querySelectorAll('#lgHist [data-lgview]').forEach(b => b.onclick = async () => {
+    const h = byId(legal.history, b.dataset.lgview);
+    const { data, error } = await sb.rpc('admin_legal_version', { p_history_id: h.id });
+    if (error) return fail(error);
+    const ov = $('#overlay');
+    ov.innerHTML = `<div class="backdrop"></div><div class="modal"><div class="box">
+      <p class="sub">Saved ${esc(fmtWhen(data?.saved_at || h.saved_at))}${data?.saved_by ? ' by ' + esc(data.saved_by) : ''}</p>
+      <div class="legalprev" style="max-height:none">${legalHtml(data || {})}</div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px"><button type="button" class="btn" data-close>Close</button></div></div></div>`;
+    const close = () => ov.innerHTML = '';
+    $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  });
+  document.querySelectorAll('#lgHist [data-lgrestore]').forEach(b => b.onclick = async () => {
+    const h = byId(legal.history, b.dataset.lgrestore);
+    if (!confirm(`Restore the version saved ${fmtWhen(h.saved_at)}? It replaces the current text in the app and website for everyone; the current text is kept in history.${lgIsDirty ? '\n\nYour unsaved changes will be lost.' : ''}`)) return;
+    const { error } = await sb.rpc('admin_restore_legal_doc', { p_history_id: h.id });
+    if (error) return fail(error);
+    setLgDirty(false); toast('Older version restored'); loadLegal();
   });
 }
 

@@ -179,13 +179,24 @@ class _AuthFlowState extends State<_AuthFlow> {
                                   fontSize: 11,
                                   color: EverlaneColors.lavender,
                                   decoration: TextDecoration.underline)))),
-                  const TextSpan(text: ' and '),
+                  const TextSpan(text: ', '),
                   WidgetSpan(
                       alignment: PlaceholderAlignment.baseline,
                       baseline: TextBaseline.alphabetic,
                       child: GestureDetector(
                           onTap: () => openPrivacyPolicy(context),
                           child: const Text('Privacy Policy',
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  color: EverlaneColors.lavender,
+                                  decoration: TextDecoration.underline)))),
+                  const TextSpan(text: ' and '),
+                  WidgetSpan(
+                      alignment: PlaceholderAlignment.baseline,
+                      baseline: TextBaseline.alphabetic,
+                      child: GestureDetector(
+                          onTap: () => openGuidelines(context),
+                          child: const Text('Community guidelines',
                               style: TextStyle(
                                   fontSize: 11,
                                   color: EverlaneColors.lavender,
