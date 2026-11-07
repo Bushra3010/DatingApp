@@ -1,5 +1,6 @@
 // Paying for a plan by UPI: the member pays the team's UPI ID from any UPI
-// app, then sends the reference (UTR) so an admin can verify it. The plan
+// app, then taps "I've paid" so an admin can verify it (the payment note
+// carries their name and code). The plan
 // only turns on once a payment is approved (see `submit_upi_payment()`).
 
 import 'package:flutter/foundation.dart';
@@ -69,7 +70,6 @@ class UpiPaySheet extends StatefulWidget {
 }
 
 class _UpiPaySheetState extends State<UpiPaySheet> {
-  final utr = TextEditingController();
   final note = TextEditingController();
   bool busy = false, copied = false;
   String? error;
@@ -83,7 +83,6 @@ class _UpiPaySheetState extends State<UpiPaySheet> {
 
   @override
   void dispose() {
-    utr.dispose();
     note.dispose();
     super.dispose();
   }
@@ -125,13 +124,13 @@ class _UpiPaySheetState extends State<UpiPaySheet> {
   }
 
   Future<void> submit() async {
-    if (!validUtr(utr.text) || busy) return;
+    if (busy) return;
     setState(() {
       busy = true;
       error = null;
     });
     try {
-      await widget.store.submitUpiPayment(plan, utr.text, note: note.text);
+      await widget.store.submitUpiPayment(plan, '', note: note.text);
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
@@ -146,7 +145,6 @@ class _UpiPaySheetState extends State<UpiPaySheet> {
   @override
   Widget build(BuildContext context) {
     final muted = TextStyle(color: EverlaneColors.muted, height: 1.5);
-    final typed = utr.text.trim();
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Text('Pay with UPI', style: Theme.of(context).textTheme.headlineMedium),
       const SizedBox(height: 6),
@@ -227,26 +225,8 @@ class _UpiPaySheetState extends State<UpiPaySheet> {
       Text('After paying', style: Theme.of(context).textTheme.titleMedium),
       const SizedBox(height: 6),
       Text(
-          'Enter the reference from your payment app. We check every payment and turn on ${plan.title} once it’s verified.',
+          'Tap below once you’ve paid. We match your payment by the note (your name and code) and turn on ${plan.title} once it’s verified.',
           style: muted.copyWith(fontSize: 13)),
-      const SizedBox(height: 12),
-      TextField(
-          controller: utr,
-          enabled: !busy,
-          textCapitalization: TextCapitalization.characters,
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]')),
-            LengthLimitingTextInputFormatter(35),
-          ],
-          onChanged: (_) => setState(() => error = null),
-          decoration: InputDecoration(
-              labelText: 'UPI reference (UTR)',
-              // Keeps the hint visible before the field is focused.
-              floatingLabelBehavior: FloatingLabelBehavior.always,
-              hintText: '12-digit number from your payment app',
-              errorText: typed.isEmpty || validUtr(typed)
-                  ? null
-                  : 'Use the 6–35 letters or digits shown in your payment app')),
       const SizedBox(height: 12),
       TextField(
           controller: note,
@@ -261,7 +241,7 @@ class _UpiPaySheetState extends State<UpiPaySheet> {
       ],
       const SizedBox(height: 16),
       FilledButton(
-          onPressed: busy || !validUtr(typed) ? null : submit,
+          onPressed: busy ? null : submit,
           child: Text(
               busy ? 'Submitting…' : 'I’ve paid — submit for verification')),
       const SizedBox(height: 8),
@@ -332,7 +312,7 @@ class _PaymentTile extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
               [
-                'UTR ${p.utr}',
+                if (p.utr.isNotEmpty) 'UTR ${p.utr}',
                 shortDate(p.createdAt),
               ].where((x) => x.isNotEmpty).join(' · '),
               style: TextStyle(fontSize: 12, color: EverlaneColors.muted)),

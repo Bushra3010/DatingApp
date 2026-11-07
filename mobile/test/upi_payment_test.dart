@@ -112,32 +112,16 @@ void main() {
     expect(store.plan, Plan.gold);
   });
 
-  testWidgets('The UTR field hints and checks the reference', (tester) async {
+  testWidgets('No UTR needed: "I’ve paid" is ready straight away', (tester) async {
     phone(tester);
     final store = _SignedInStore()..settings = _upiOn;
     await openMembershipScreen(tester, store);
     await tapChooseGold(tester);
-    expect(find.text('12-digit number from your payment app'), findsOneWidget);
-    FilledButton submit() => tester.widget<FilledButton>(find.ancestor(
+    expect(find.widgetWithText(TextField, 'UPI reference (UTR)'), findsNothing);
+    final submit = tester.widget<FilledButton>(find.ancestor(
         of: find.text('I’ve paid — submit for verification'),
         matching: find.byType(FilledButton)));
-    expect(submit().onPressed, isNull);
-
-    final field = find.widgetWithText(TextField, 'UPI reference (UTR)');
-    await tester.ensureVisible(field);
-    await tester.enterText(field, '1234');
-    await tester.pump();
-    expect(
-        find.text('Use the 6–35 letters or digits shown in your payment app'),
-        findsOneWidget);
-    expect(submit().onPressed, isNull);
-
-    await tester.enterText(field, '123456789012');
-    await tester.pump();
-    expect(
-        find.text('Use the 6–35 letters or digits shown in your payment app'),
-        findsNothing);
-    expect(submit().onPressed, isNotNull);
+    expect(submit.onPressed, isNotNull);
   });
 
   testWidgets('UPI payments are listed with their status', (tester) async {
