@@ -2413,7 +2413,9 @@ function openMember(id) {
   });
   $('[data-purge]', ov)?.addEventListener('click', async () => {
     const typed = prompt(`This permanently removes ${m.name || 'this member'}’s account and everything in it. It can’t be undone.\n\nType DELETE to confirm:`, '');
-    if (typed !== 'DELETE') return typed === null || toast('Not deleted');
+    if (typed === null) return;
+    // Phone keyboards capitalise and add spaces, so any case is fine.
+    if (typed.trim().toUpperCase() !== 'DELETE') return toast('Not deleted: type DELETE to confirm');
     const { data: files, error } = await sb.rpc('admin_purge_member', { member: m.id });
     if (error) return fail(error);
     await Promise.all([
