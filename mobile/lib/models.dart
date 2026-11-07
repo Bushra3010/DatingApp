@@ -1887,6 +1887,8 @@ class PreviewStore extends ChangeNotifier {
           await backend!.myMatches();
           // Waiting on a host? Check now and then whether they said yes.
           if (hangouts.any((h) => h.status == 'pending')) await loadHangouts();
+          // Likewise for a UPI payment waiting to be verified.
+          if (upiPayments.any((p) => p.pending)) await loadUpiPayments();
         }
       } catch (_) {}
     });
@@ -2329,25 +2331,7 @@ class PreviewStore extends ChangeNotifier {
     myVoiceSeconds = (row['voice_seconds'] as num?)?.toInt() ?? 0;
     myProfilePosted = row['posted'] as bool? ?? false;
     adminWarning = row['warning'] as String? ?? '';
-    // A plan set by an admin (support / troubleshooting) wins, until it ends.
-    final adminPlan = row['plan'] as String? ?? '';
-    final planUntil = DateTime.tryParse(row['plan_until'] as String? ?? '');
-    var adminSet = false;
-    if (planUntil == null || planUntil.isAfter(DateTime.now())) {
-      for (final p in Plan.values) {
-        if (p.name == adminPlan) {
-          plan = p;
-          adminSet = true;
-        }
-      }
-    }
-    // Otherwise the plan picked in the app, while payments aren't live.
-    if (!adminSet) {
-      final picked = row['preview_plan'] as String? ?? '';
-      for (final p in Plan.values) {
-        if (p.name == picked) plan = p;
-      }
-    }
+    _applyPlan(row);
     myVerified = row['verified'] as bool? ?? false;
     showOnline = row['show_online_status'] as bool? ?? true;
     if (!myVerified) _loadVerification(b).ignore();
@@ -2370,6 +2354,95 @@ class PreviewStore extends ChangeNotifier {
     onboarded = row['onboarded'] as bool? ?? false;
     notifyListeners();
     return onboarded;
+  }
+
+  /// Sets [plan] from a profiles row.
+  void _applyPlan(Map<String, dynamic> row) {
+    // A plan set by an admin (support, or a verified UPI payment) wins,
+    // until it ends.
+    final adminPlan = row['plan'] as String? ?? '';
+    final planUntil = DateTime.tryParse(row['plan_until'] as String? ?? '');
+    var adminSet = false;
+    if (planUntil == null || planUntil.isAfter(DateTime.now())) {
+      for (final p in Plan.values) {
+        if (p.name == adminPlan) {
+          plan = p;
+          adminSet = true;
+        }
+      }
+    }
+    // Otherwise the plan picked in the app, while payments aren't live.
+    if (!adminSet) {
+      final picked = row['preview_plan'] as String? ?? '';
+      for (final p in Plan.values) {
+        if (p.name == picked) plan = p;
+      }
+    }
+  }
+
+  /// Re-reads just the plan from the profile (after a payment is verified).
+  Future<void> refreshPlan() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    try {
+      final row = await b.loadProfile();
+      if (row == null) return;
+      _applyPlan(row);
+      notifyListeners();
+    } catch (_) {
+      // Picked up on the next load.
+    }
+  }
+
+  // ---- Paying by UPI ----
+
+  /// Paid plans go through the UPI sheet instead of switching locally.
+  bool get upiCheckout => signedIn && settings.upi.ready;
+
+  /// Newest first, as `my_upi_payments()` returns them.
+  final List<UpiPayment> upiPayments = [];
+  bool _upiLoaded = false;
+
+  /// "Your Gold plan is active", once, when a payment is verified; the app
+  /// shows it and clears it.
+  final ValueNotifier<String?> planActivated = ValueNotifier(null);
+
+  Future<void> loadUpiPayments() async {
+    final b = backend;
+    if (b == null || !b.signedIn) return;
+    try {
+      final list = [for (final r in await b.myUpiPayments()) UpiPayment.fromRow(r)];
+      final waiting = {
+        for (final p in upiPayments)
+          if (!p.approved) p.id
+      };
+      final verified = _upiLoaded
+          ? list.where((p) => p.approved && waiting.contains(p.id)).toList()
+          : const <UpiPayment>[];
+      upiPayments
+        ..clear()
+        ..addAll(list);
+      _upiLoaded = true;
+      notifyListeners();
+      if (verified.isNotEmpty) {
+        await refreshPlan();
+        planActivated.value = 'Your ${verified.first.planTitle} plan is active';
+      }
+    } catch (_) {
+      // Keep what we had.
+    }
+  }
+
+  /// Sends the UTR for [p] to be verified. Throws with the server's reason
+  /// if it's refused; the plan only changes once an admin approves it.
+  Future<void> submitUpiPayment(Plan p, String utr, {String note = ''}) async {
+    final b = backend;
+    if (b == null || !b.signedIn) {
+      throw StateError('Sign in to pay for a plan.');
+    }
+    if (!_upiLoaded) await loadUpiPayments();
+    await b.submitUpiPayment(plan: p.name, utr: utr.trim(), note: note.trim());
+    await loadUpiPayments();
   }
 
   Future<void> logOut() async {
@@ -2423,6 +2496,8 @@ class PreviewStore extends ChangeNotifier {
     announcements.clear();
     tickets.clear();
     dataRequests.clear();
+    upiPayments.clear();
+    _upiLoaded = false;
     referral = null;
   }
 

@@ -651,7 +651,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     <button type="button" data-sec="bots">Bots and seed</button>
     <button type="button" data-sec="train">Bot training</button>
     <button type="button" data-sec="hang">Hangouts</button>
-    <button type="button" data-sec="subs">Revenue</button>
+    <button type="button" data-sec="subs">Revenue <span class="pill bad hidden" id="subsBadge"></span></button>
     <button type="button" data-sec="cfg">Content and config</button>
     <button type="button" data-sec="comm">Communication</button>
     <button type="button" data-sec="sup">Support <span class="pill bad hidden" id="supBadge"></span></button>
@@ -707,6 +707,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     <button type="button" class="tab" data-view="hangouts-official">Everlane plans <span class="pill bad hidden" id="hgReqBadge"></span></button>
   </div>
   <div class="nav sb" data-subnav="subs" aria-label="Revenue pages">
+    <button type="button" class="tab" data-view="subs-upi">UPI payments <span class="pill bad hidden" id="upiBadge"></span></button>
     <button type="button" class="tab" data-view="subs-plans">Plans</button>
     <button type="button" class="tab" data-view="subs-promos">Promos</button>
     <button type="button" class="tab" data-view="subs-transactions">Transactions</button>
@@ -1274,6 +1275,40 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
     </div>
 
     <!-- Revenue (permission 'billing'; migration 025). -->
+    <div id="view-subs-upi" class="hidden">
+      <div class="head"><div><h2>UPI payments</h2>
+        <p class="sub">Members who paid by UPI and sent their reference. Verify each one to give them the plan.</p></div>
+        <button class="btn" data-refresh>Refresh</button></div>
+      <div class="bigwarn hidden" id="upiWarn" role="alert" style="margin-bottom:12px">UPI payments are on but there’s no UPI ID. Members can’t pay until you add one.</div>
+      <form class="card pad" id="upiForm" style="margin-bottom:12px">
+        <h3>UPI settings</h3>
+        <label class="tog" style="margin-top:4px"><input type="checkbox" id="upiOn"> Accept UPI payments</label>
+        <div class="formgrid">
+          <div><label for="upiVpa">UPI ID</label><input type="text" id="upiVpa" maxlength="321" placeholder="e.g. everlane@okaxis" autocapitalize="off" autocomplete="off" spellcheck="false"></div>
+          <div><label for="upiPayee">Payee name</label><input type="text" id="upiPayee" maxlength="80" placeholder="e.g. Everlane"></div>
+        </div>
+        <label for="upiNote">Note shown to members</label><textarea id="upiNote" rows="2" maxlength="200" placeholder="e.g. Pay the exact amount, then enter the 12-digit UTR from your UPI app."></textarea>
+        <p class="sub" style="font-size:12.5px;margin-top:8px" id="upiPreview"></p>
+        <div class="row" style="margin-top:10px"><button class="btn primary">Save UPI settings</button><span class="muted" id="upiUpdated"></span></div>
+      </form>
+      <div class="grid g4" id="upiKpis" style="margin-bottom:12px"></div>
+      <p class="note info">Check each UTR against your bank or UPI app before verifying. Verified payments appear in Transactions as store “UPI”.</p>
+      <div class="toolbar">
+        <div class="chips" id="upiFilter" role="group" aria-label="Which payments">
+          <button type="button" class="chip" data-upi="pending">Pending</button>
+          <button type="button" class="chip" data-upi="approved">Verified</button>
+          <button type="button" class="chip" data-upi="rejected">Rejected</button>
+          <button type="button" class="chip" data-upi="">All</button>
+        </div>
+        <input type="text" id="upiSearch" placeholder="Search name, email, phone or UTR…" aria-label="Search UPI payments">
+      </div>
+      <div class="card scroll"><table>
+        <thead><tr><th>When</th><th>Member</th><th>Plan</th><th>Amount</th><th>UTR</th><th>Note</th><th>Status</th><th></th></tr></thead>
+        <tbody id="upiRows"></tbody>
+      </table></div>
+      <p class="muted" id="upiCount" style="margin-top:10px"></p>
+    </div>
+
     <div id="view-subs-plans" class="hidden">
       <div class="head"><div><h2>Plans and pricing</h2>
         <p class="sub">The monthly price of each paid plan, per country.</p></div>
@@ -1813,7 +1848,7 @@ const ROLE_INFO = {
 const VIEW_PERM = { overview: 'stats', 'dash-geo': 'members', 'dash-reports': 'members', leads: 'members', gen: 'bots', bots: 'bots', 'bots-chats': 'bots', hangouts: 'bots', 'hangouts-official': 'bots', reports: 'moderate', photos: 'moderate',
   'train-kb': 'bots', 'train-style': 'bots', 'train-time': 'bots', 'train-chat': 'bots', 'train-test': 'bots',
   verify: 'moderate', words: 'moderate', audit: 'audit', questions: 'content', options: 'content', team: 'team',
-  'subs-plans': 'billing', 'subs-promos': 'billing', 'subs-transactions': 'billing', 'subs-iap': 'billing', 'subs-reports': 'billing',
+  'subs-upi': 'billing', 'subs-plans': 'billing', 'subs-promos': 'billing', 'subs-transactions': 'billing', 'subs-iap': 'billing', 'subs-reports': 'billing',
   'dash-retention': 'stats', 'users-multi': 'members', 'users-requests': 'export',
   'mod-chat': 'moderate', 'mod-fake': 'moderate', 'mod-bans': 'moderate', 'mod-auto': 'moderate', 'mod-underage': 'moderate',
   'match-algorithm': 'bots', 'match-visibility': 'moderate', 'match-locations': 'content',
@@ -1856,6 +1891,7 @@ async function start() {
   // Links to other pages only show when the role can open them.
   document.querySelectorAll('main [data-goto]').forEach(b => b.classList.toggle('hidden', !canView(b.dataset.goto)));
   if (can('members')) refreshSupportBadge();
+  if (can('billing')) refreshUpiBadge();
   screen('app');
   const asked = decodeURIComponent(location.hash.slice(1));
   show(canView(asked) ? asked : Object.keys(VIEW_PERM).find(v => VIEW_PERM[v] && can(VIEW_PERM[v])) || 'legal');
@@ -1918,7 +1954,7 @@ function show(view) {
      'sup-tickets': loadTickets, 'sup-appeals': loadAppeals, 'sup-help': loadFaq, 'grow-referrals': loadReferrals,
      'tech-database': () => loadTech(renderDb), 'tech-jobs': () => loadTech(renderJobs), 'tech-queues': () => loadTech(renderQueues),
      'legal-consent': loadConsent, 'legal-age': loadLegalAge,
-     'subs-plans': loadPrices, 'subs-promos': loadPromos, 'subs-transactions': loadTransactions, 'subs-iap': loadProducts,
+     'subs-upi': loadUpi, 'subs-plans': loadPrices, 'subs-promos': loadPromos, 'subs-transactions': loadTransactions, 'subs-iap': loadProducts,
      'subs-reports': loadRevenue, 'train-kb': loadTrainKb, 'train-style': loadTrainStyle, 'train-time': loadTrainTime,
      'train-chat': loadTrainChat, 'train-test': loadTrainTest })[view]();
 }
@@ -3648,7 +3684,7 @@ function renderOptions() {
 // (migration 025, permission 'billing'). Until a payment provider is
 // connected, the ledger only holds payments an admin records by hand.
 const PLANS = ['plus', 'gold', 'platinum'];
-const STORES = { razorpay: 'Razorpay', google: 'Google Play', apple: 'App Store', stripe: 'Stripe', manual: 'Manual' };
+const STORES = { razorpay: 'Razorpay', google: 'Google Play', apple: 'App Store', stripe: 'Stripe', upi: 'UPI', manual: 'Manual' };
 const TX_STATUS = { paid: ['ok', 'Paid'], pending: ['warn', 'Pending'], failed: ['bad', 'Failed'], refunded: ['warn', 'Refunded'] };
 const TX_KINDS = { subscription: 'Subscription', iap: 'In-app purchase' };
 document.querySelectorAll('.revnote').forEach(n => n.textContent = 'No payment provider is connected yet, so payments only appear here when recorded manually. Connect Razorpay / Google Play / App Store to record them automatically.');
@@ -3932,6 +3968,130 @@ $('#txCsv').onclick = () => {
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
   a.download = `everlane-transactions-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
 };
+
+// ----- UPI payments -----
+// Members pay the UPI ID from settings (admin_config 'upi') and send the UTR;
+// an admin checks it against the bank and verifies or rejects it
+// (admin_upi_payments / admin_review_upi). Verifying records a 'upi'
+// transaction and gives the member that plan for one month.
+const UPI_STATUS = { pending: ['warn', 'Pending'], approved: ['ok', 'Verified'], rejected: ['bad', 'Rejected'] };
+const UPI_VPA = /^[\w.\-]{2,256}@[a-zA-Z]{2,64}$/;
+const UPI_REJECT = 'We couldn’t find this payment. Check the UPI reference and try again.';
+const istDay = d => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+let upiPays = [], upiStatus = 'pending';
+document.querySelectorAll('#upiFilter [data-upi]').forEach(b => b.onclick = () => { upiStatus = b.dataset.upi; renderUpi(); });
+$('#upiSearch').addEventListener('input', () => renderUpi());
+async function refreshUpiBadge(list) {
+  if (!list) {
+    const { data, error } = await sb.rpc('admin_upi_payments', { p_status: 'pending' });
+    if (error) return;
+    list = data || [];
+  }
+  const n = list.filter(r => r.status === 'pending').length;
+  badge('#upiBadge', n); badge('#subsBadge', n);
+}
+async function loadUpi() {
+  const [okCfg, , res] = await Promise.all([loadConfig(), loadBilling(), sb.rpc('admin_upi_payments', { p_status: null })]);
+  if (okCfg) {
+    const u = cfgOf('upi');
+    $('#upiOn').checked = !!u.enabled; $('#upiVpa').value = u.vpa || '';
+    $('#upiPayee').value = u.payee_name || ''; $('#upiNote').value = u.note || '';
+    $('#upiUpdated').textContent = cfgUpdated('upi');
+    $('#upiWarn').classList.toggle('hidden', !(u.enabled && !String(u.vpa || '').trim()));
+    paintUpiPreview();
+  }
+  if (res.error) return fail(res.error);
+  upiPays = res.data || [];
+  refreshUpiBadge(upiPays);
+  renderUpi();
+}
+function paintUpiPreview() {
+  const vpa = $('#upiVpa').value.trim(), payee = $('#upiPayee').value.trim(), on = $('#upiOn').checked;
+  const gold = indiaPrice('gold');
+  const el = $('#upiPreview');
+  if (on && !vpa) { el.innerHTML = '<span style="color:var(--bad);font-weight:600">Add a UPI ID — UPI is switched on but members have nowhere to pay.</span>'; return; }
+  if (vpa && !UPI_VPA.test(vpa)) { el.innerHTML = '<span style="color:var(--bad);font-weight:600">That doesn’t look like a UPI ID. Use the form name@bank, e.g. everlane@okaxis.</span>'; return; }
+  if (!on) { el.textContent = 'UPI is off, so members don’t see this payment option.'; return; }
+  el.innerHTML = `Members see: <b style="color:var(--ink)">Pay ${gold ? esc(money(gold.price, gold.currency || 'INR')) : 'the plan price'} to ${esc(vpa)}</b>${payee ? ` (${esc(payee)})` : ''}${gold ? ' · Gold, India price' : ''}`;
+}
+['#upiOn', '#upiVpa', '#upiPayee'].forEach(sel => $(sel).addEventListener('input', paintUpiPreview));
+$('#upiForm').onsubmit = e => {
+  e.preventDefault();
+  const v = { enabled: $('#upiOn').checked, vpa: $('#upiVpa').value.trim(), payee_name: $('#upiPayee').value.trim(), note: $('#upiNote').value.trim() };
+  if (v.vpa && !UPI_VPA.test(v.vpa)) return toast('Use a UPI ID like name@bank');
+  if (v.enabled && !v.vpa) return toast('Add the UPI ID members should pay before switching UPI on');
+  if (v.note.length > 200) return toast('Keep the note to 200 characters');
+  saveConfig('upi', v, $('#upiForm button.primary'), v.enabled ? 'UPI payments are on' : 'UPI settings saved');
+};
+function filteredUpi() {
+  const q = $('#upiSearch').value.trim().toLowerCase();
+  return upiPays.filter(r => (!upiStatus || r.status === upiStatus)
+    && (!q || [r.member_name, r.member_email, r.member_phone, r.utr].some(v => String(v || '').toLowerCase().includes(q))));
+}
+function renderUpi() {
+  document.querySelectorAll('#upiFilter [data-upi]').forEach(b => {
+    b.classList.toggle('on', b.dataset.upi === upiStatus); b.setAttribute('aria-pressed', b.dataset.upi === upiStatus); });
+  const today = istDay(Date.now()), month = today.slice(0, 7);
+  const ok = upiPays.filter(r => r.status === 'approved' && r.reviewed_at);
+  const okMonth = ok.filter(r => istDay(r.reviewed_at).slice(0, 7) === month);
+  $('#upiKpis').innerHTML = kpiHtml([
+    ['Waiting', fmtN(upiPays.filter(r => r.status === 'pending').length), 'To check and verify'],
+    ['Verified today', fmtN(ok.filter(r => istDay(r.reviewed_at) === today).length), ''],
+    ['Verified this month', money(okMonth.reduce((s, r) => s + num(r.amount), 0)), `${fmtN(okMonth.length)} payment${okMonth.length === 1 ? '' : 's'}`],
+    ['Rejected', fmtN(upiPays.filter(r => r.status === 'rejected').length), 'All time']]);
+  const list = filteredUpi();
+  $('#upiRows').innerHTML = list.map(r => {
+    const [tone, label] = UPI_STATUS[r.status] || ['muted', r.status];
+    const who = esc(r.member_name || (r.user_id ? 'Unnamed member' : 'Deleted member'));
+    const contact = [r.member_email, r.member_phone].filter(Boolean).map(esc).join('<br>');
+    const now = r.member_plan ? `Now ${esc(PLAN_NAMES[r.member_plan] || r.member_plan)}${r.member_plan_until && r.member_plan !== 'free' ? ' until ' + esc(fmtTime(r.member_plan_until)) : ''}` : '';
+    const act = r.status === 'pending'
+      ? `<div class="row" style="flex-wrap:nowrap"><button class="btn small primary" data-upi-ok="${esc(r.id)}">Verify</button><button class="btn small danger" data-upi-no="${esc(r.id)}">Reject</button></div>`
+      : `<span class="code">${r.reviewer_email ? 'by ' + esc(r.reviewer_email) : ''}${r.reviewed_at ? '<br>' + esc(fmtTime(r.reviewed_at)) : ''}</span>`;
+    return `<tr style="cursor:default">
+    <td style="white-space:nowrap">${fmtTime(r.created_at)}</td>
+    <td>${r.user_id ? `<a href="#" data-upi-member="${esc(r.user_id)}"><b>${who}</b></a>` : `<b style="color:var(--text)">${who}</b>`}
+      <br><span class="code">${contact}</span></td>
+    <td>${esc(PLAN_NAMES[r.plan] || r.plan)}${now ? `<br><span class="code">${now}</span>` : ''}</td>
+    <td style="white-space:nowrap">${money(r.amount)}</td>
+    <td style="white-space:nowrap"><span style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px">${esc(r.utr || '—')}</span>
+      ${r.utr ? `<button class="btn small" data-upi-copy="${esc(r.utr)}" aria-label="Copy UTR ${esc(r.utr)}">Copy</button>` : ''}</td>
+    <td class="clip" style="min-width:140px">${esc(r.payer_note || '')}${r.status === 'rejected' && r.reason ? `${r.payer_note ? '<br>' : ''}<span style="color:var(--bad)">Rejected: ${esc(r.reason)}</span>` : ''}</td>
+    <td><span class="pill ${tone}">${esc(label)}</span></td>
+    <td>${act}</td></tr>`;
+  }).join('') || `<tr><td colspan="8" class="muted">${upiPays.length ? 'No UPI payments match.' : 'No UPI payments yet.'}</td></tr>`;
+  $('#upiCount').textContent = `${fmtN(list.length)} of ${fmtN(upiPays.length)} UPI payment${upiPays.length === 1 ? '' : 's'}`;
+  document.querySelectorAll('#upiRows [data-upi-member]').forEach(a => a.onclick = async e => {
+    e.preventDefault();
+    if (!members.length) { const { data } = await sb.rpc('admin_members'); members = data || []; }
+    openMember(a.dataset.upiMember);
+  });
+  document.querySelectorAll('#upiRows [data-upi-copy]').forEach(b => b.onclick = async () => {
+    try { await navigator.clipboard.writeText(b.dataset.upiCopy); toast('Copied UTR'); }
+    catch (e) { toast('Couldn’t copy — select the UTR instead'); }
+  });
+  document.querySelectorAll('#upiRows [data-upi-ok]').forEach(b => b.onclick = async () => {
+    const r = upiPays.find(x => String(x.id) === b.dataset.upiOk); if (!r) return;
+    const plan = PLAN_NAMES[r.plan] || r.plan;
+    if (!confirm(`Verify ${money(r.amount)} UPI payment ${r.utr || ''} from ${r.member_name || 'this member'}? This gives them ${plan} for one month.`)) return;
+    b.disabled = true;
+    const { error } = await sb.rpc('admin_review_upi', { p_id: r.id, p_approve: true, p_reason: null });
+    b.disabled = false;
+    if (error) return fail(error);
+    toast(`Verified — ${r.member_name || 'the member'} now has ${plan}`); loadUpi();
+  });
+  document.querySelectorAll('#upiRows [data-upi-no]').forEach(b => b.onclick = async () => {
+    const r = upiPays.find(x => String(x.id) === b.dataset.upiNo); if (!r) return;
+    const reason = prompt(`Reject ${money(r.amount)} UPI payment ${r.utr || ''} from ${r.member_name || 'this member'}?\n\nThe member sees this reason:`, UPI_REJECT);
+    if (reason === null) return;
+    if (!reason.trim()) return toast('Write a reason the member will see');
+    b.disabled = true;
+    const { error } = await sb.rpc('admin_review_upi', { p_id: r.id, p_approve: false, p_reason: reason.trim().slice(0, 500) });
+    b.disabled = false;
+    if (error) return fail(error);
+    toast('Payment rejected'); loadUpi();
+  });
+}
 
 // Record a manual payment.
 function paintPayPick() {
