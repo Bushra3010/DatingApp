@@ -5,7 +5,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// Comes with supabase_flutter; see pubspec.yaml.
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'admin.dart';
@@ -76,20 +76,30 @@ class _UpiPaySheetState extends State<UpiPaySheet> {
     if (mounted) setState(() => copied = true);
   }
 
+  /// On a phone (the app, or the website in a phone's browser) the
+  /// `upi://pay` link opens GPay, PhonePe, Paytm or any UPI app with the
+  /// amount filled in. On a computer, scan the QR code with your phone.
+  bool get onPhone =>
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
+
   Future<void> openUpiApp() async {
-    final mobile = !kIsWeb &&
-        (defaultTargetPlatform == TargetPlatform.android ||
-            defaultTargetPlatform == TargetPlatform.iOS);
     var opened = false;
-    if (mobile) {
+    if (onPhone) {
       try {
         opened = await launchUrl(upiPayUri(upi, plan),
-            mode: LaunchMode.externalApplication);
+            mode: LaunchMode.externalApplication,
+            // In a phone's browser, hand the link to the system so it can
+            // offer the installed UPI apps (a new tab would be blocked).
+            webOnlyWindowName: '_self');
       } catch (_) {}
     }
     if (!mounted) return;
-    setState(() =>
-        openHint = opened ? null : 'Open your UPI app and pay ${upi.vpa}');
+    setState(() => openHint = !onPhone
+        ? 'On a computer? Scan the QR code below with any UPI app on your phone.'
+        : opened && !kIsWeb
+            ? null
+            : 'If no UPI app opened, scan the QR code or pay ${upi.vpa} from your UPI app.');
   }
 
   Future<void> submit() async {
@@ -171,6 +181,22 @@ class _UpiPaySheetState extends State<UpiPaySheet> {
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 13, color: EverlaneColors.muted)),
       ],
+      const SizedBox(height: 16),
+      // Scan with any UPI app; the amount and note come pre-filled.
+      Center(
+          child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: Colors.white, borderRadius: BorderRadius.circular(16)),
+              child: QrImageView(
+                  data: upiPayUri(upi, plan).toString(),
+                  size: 180,
+                  backgroundColor: Colors.white,
+                  semanticsLabel: 'UPI QR code to pay $price'))),
+      const SizedBox(height: 6),
+      Center(
+          child: Text('Scan with any UPI app to pay $price',
+              style: muted.copyWith(fontSize: 12))),
       if (upi.note.isNotEmpty) ...[
         const SizedBox(height: 14),
         Text(upi.note, style: muted.copyWith(fontSize: 13)),

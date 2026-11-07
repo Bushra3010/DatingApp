@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Caveat+Brush&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <script>
 // Apply a saved light/dark choice before first paint; otherwise follow the system.
 try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
@@ -1289,6 +1290,14 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
         </div>
         <label for="upiNote">Note shown to members</label><textarea id="upiNote" rows="2" maxlength="200" placeholder="e.g. Pay the exact amount, then enter the 12-digit UTR from your UPI app."></textarea>
         <p class="sub" style="font-size:12.5px;margin-top:8px" id="upiPreview"></p>
+        <div id="upiQrWrap" class="hidden" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-top:12px">
+          <div id="upiQr" style="background:#fff;padding:10px;border-radius:14px;line-height:0" aria-label="UPI QR code"></div>
+          <div style="flex:1;min-width:180px">
+            <b style="color:var(--ink)">Your UPI QR code</b>
+            <p class="sub" style="font-size:12.5px;margin:4px 0 10px">Made from the UPI ID above. Anyone can scan it with GPay, PhonePe, Paytm or any UPI app to pay you. In the app, members also get a QR with their plan’s amount filled in.</p>
+            <a class="btn small" id="upiQrDownload" download="everlane-upi-qr.png">Download QR</a>
+          </div>
+        </div>
         <div class="row" style="margin-top:10px"><button class="btn primary">Save UPI settings</button><span class="muted" id="upiUpdated"></span></div>
       </form>
       <div class="grid g4" id="upiKpis" style="margin-bottom:12px"></div>
@@ -3998,7 +4007,7 @@ async function loadUpi() {
     $('#upiPayee').value = u.payee_name || ''; $('#upiNote').value = u.note || '';
     $('#upiUpdated').textContent = cfgUpdated('upi');
     $('#upiWarn').classList.toggle('hidden', !(u.enabled && !String(u.vpa || '').trim()));
-    paintUpiPreview();
+    paintUpiPreview(); paintUpiQr();
   }
   if (res.error) return fail(res.error);
   upiPays = res.data || [];
@@ -4014,7 +4023,24 @@ function paintUpiPreview() {
   if (!on) { el.textContent = 'UPI is off, so members don’t see this payment option.'; return; }
   el.innerHTML = `Members see: <b style="color:var(--ink)">Pay ${gold ? esc(money(gold.price, gold.currency || 'INR')) : 'the plan price'} to ${esc(vpa)}</b>${payee ? ` (${esc(payee)})` : ''}${gold ? ' · Gold, India price' : ''}`;
 }
-['#upiOn', '#upiVpa', '#upiPayee'].forEach(sel => $(sel).addEventListener('input', paintUpiPreview));
+// A QR for the UPI ID, redrawn as it's typed (no amount: the payer enters it).
+function paintUpiQr() {
+  const vpa = $('#upiVpa').value.trim(), payee = $('#upiPayee').value.trim();
+  const wrap = $('#upiQrWrap');
+  if (!window.qrcode || !UPI_VPA.test(vpa)) { wrap.classList.add('hidden'); return; }
+  const link = `upi://pay?pa=${encodeURIComponent(vpa).replace('%40', '@')}&pn=${encodeURIComponent(payee || 'Everlane')}&cu=INR`;
+  const qr = window.qrcode(0, 'M');
+  qr.addData(link); qr.make();
+  $('#upiQr').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 0, scalable: false });
+  // A PNG to download: draw the matrix on a canvas.
+  const n = qr.getModuleCount(), cell = 10, pad = 40, c = document.createElement('canvas');
+  c.width = c.height = n * cell + pad * 2;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#000';
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) x.fillRect(pad + k * cell, pad + r * cell, cell, cell);
+  $('#upiQrDownload').href = c.toDataURL('image/png');
+  wrap.classList.remove('hidden');
+}
+['#upiOn', '#upiVpa', '#upiPayee'].forEach(sel => $(sel).addEventListener('input', () => { paintUpiPreview(); paintUpiQr(); }));
 $('#upiForm').onsubmit = e => {
   e.preventDefault();
   const v = { enabled: $('#upiOn').checked, vpa: $('#upiVpa').value.trim(), payee_name: $('#upiPayee').value.trim(), note: $('#upiNote').value.trim() };
