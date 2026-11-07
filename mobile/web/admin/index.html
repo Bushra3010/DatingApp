@@ -1301,7 +1301,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
         <div class="row" style="margin-top:10px"><button class="btn primary">Save UPI settings</button><span class="muted" id="upiUpdated"></span></div>
       </form>
       <div class="grid g4" id="upiKpis" style="margin-bottom:12px"></div>
-      <p class="note info">Check each UTR against your bank or UPI app before verifying. The payment note shows who paid, e.g. “Everlane Gold - Pratik (9C0375)”: match the code to the member’s Code here. Verified payments appear in Transactions as store “UPI”.</p>
+      <p class="note info">Check each payment in your bank or UPI app before verifying: find the amount, and the note shows who paid, e.g. “Everlane Gold - Pratik (9C0375)”: match the code to the member’s Code here. Verified payments appear in Transactions as store “UPI”.</p>
       <div class="toolbar">
         <div class="chips" id="upiFilter" role="group" aria-label="Which payments">
           <button type="button" class="chip" data-upi="pending">Pending</button>
@@ -3985,7 +3985,7 @@ $('#txCsv').onclick = () => {
 // transaction and gives the member that plan for one month.
 const UPI_STATUS = { pending: ['warn', 'Pending'], approved: ['ok', 'Verified'], rejected: ['bad', 'Rejected'] };
 const UPI_VPA = /^[\w.\-]{2,256}@[a-zA-Z]{2,64}$/;
-const UPI_REJECT = 'We couldn’t find this payment. Check the UPI reference and try again.';
+const UPI_REJECT = 'We couldn’t find this payment. Pay the exact amount from your UPI app and tap “I’ve paid” again.';
 const istDay = d => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 let upiPays = [], upiStatus = 'pending';
 document.querySelectorAll('#upiFilter [data-upi]').forEach(b => b.onclick = () => { upiStatus = b.dataset.upi; renderUpi(); });
@@ -4102,7 +4102,7 @@ function renderUpi() {
   document.querySelectorAll('#upiRows [data-upi-ok]').forEach(b => b.onclick = async () => {
     const r = upiPays.find(x => String(x.id) === b.dataset.upiOk); if (!r) return;
     const plan = PLAN_NAMES[r.plan] || r.plan;
-    if (!confirm(`Verify ${money(r.amount)} UPI payment ${r.utr || ''} from ${r.member_name || 'this member'}? This gives them ${plan} for one month.`)) return;
+    if (!confirm(`Verify ${money(r.amount)} UPI payment from ${r.member_name || 'this member'}${r.user_id ? ` (code ${upiCode(r.user_id)})` : ''}${r.utr ? `, UTR ${r.utr}` : ''}?\n\nCheck your UPI app for a payment of ${money(r.amount)} with this name and code in the note. This gives them ${plan} for one month.`)) return;
     b.disabled = true;
     const { error } = await sb.rpc('admin_review_upi', { p_id: r.id, p_approve: true, p_reason: null });
     b.disabled = false;
@@ -4111,7 +4111,7 @@ function renderUpi() {
   });
   document.querySelectorAll('#upiRows [data-upi-no]').forEach(b => b.onclick = async () => {
     const r = upiPays.find(x => String(x.id) === b.dataset.upiNo); if (!r) return;
-    const reason = prompt(`Reject ${money(r.amount)} UPI payment ${r.utr || ''} from ${r.member_name || 'this member'}?\n\nThe member sees this reason:`, UPI_REJECT);
+    const reason = prompt(`Reject ${money(r.amount)} UPI payment from ${r.member_name || 'this member'}${r.user_id ? ` (code ${upiCode(r.user_id)})` : ''}?\n\nThe member sees this reason:`, UPI_REJECT);
     if (reason === null) return;
     if (!reason.trim()) return toast('Write a reason the member will see');
     b.disabled = true;
