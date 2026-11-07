@@ -18,6 +18,7 @@ import 'introductions.dart';
 import 'legal.dart';
 import 'onboarding.dart';
 import 'support.dart';
+import 'upi.dart';
 
 class DiscoverScreen extends StatelessWidget {
   const DiscoverScreen({super.key, required this.store});
@@ -3431,6 +3432,25 @@ class _MembershipScreenState extends State<MembershipScreen> {
   PreviewStore get store => widget.store;
 
   @override
+  void initState() {
+    super.initState();
+    store.loadUpiPayments();
+  }
+
+  /// Paid plans are paid for by UPI when it's set up; otherwise (and for
+  /// Free) the plan switches here, as in the preview.
+  void choose(BuildContext context, Plan plan) {
+    if (plan != Plan.free && store.upiCheckout) {
+      payWithUpi(context, store, plan);
+      return;
+    }
+    store.choosePlan(plan);
+    setState(() => browsing = false);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    showNotice(context, 'Welcome to ${plan.title}');
+  }
+
+  @override
   Widget build(BuildContext context) => ListenableBuilder(
       listenable: store,
       builder: (context, _) => Scaffold(
@@ -3467,6 +3487,8 @@ class _MembershipScreenState extends State<MembershipScreen> {
                 child: TextButton(
                     onPressed: () => setState(() => browsing = true),
                     child: const Text('Change plan'))),
+            const SizedBox(height: 16),
+            UpiPaymentsSection(payments: store.upiPayments),
           ]);
 
   Widget _allPlans(BuildContext context) => ListView(
@@ -3479,25 +3501,31 @@ class _MembershipScreenState extends State<MembershipScreen> {
                     'Blocking, reporting, privacy controls and account deletion are free on every plan. Paid plans add convenience and discovery; none can promise a match.',
                     style: TextStyle(color: EverlaneColors.muted, height: 1.5)),
                 const SizedBox(height: 24),
+                UpiPaymentsSection(payments: store.upiPayments),
                 for (final plan in Plan.values)
                   Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: _PlanCard(
                           plan: plan,
                           current: store.plan == plan,
-                          onChoose: () {
-                            store.choosePlan(plan);
-                            setState(() => browsing = false);
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            showNotice(context, 'Welcome to ${plan.title}');
-                          })),
-                const Center(child: Eyebrow('Preview · no payment is taken')),
-                const SizedBox(height: 8),
-                Text(
-                    'Prices are test prices for launch. Before purchase you’ll see the renewal period, total charge and how to cancel.',
-                    textAlign: TextAlign.center,
-                    style:
-                        TextStyle(fontSize: 11, color: EverlaneColors.muted)),
+                          onChoose: () => choose(context, plan))),
+                if (store.upiCheckout) ...[
+                  const Center(child: Eyebrow('Pay with any UPI app')),
+                  const SizedBox(height: 8),
+                  Text(
+                      'We verify every payment by hand, usually within a few hours. Your plan turns on once it’s verified.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 11, color: EverlaneColors.muted)),
+                ] else ...[
+                  const Center(child: Eyebrow('Preview · no payment is taken')),
+                  const SizedBox(height: 8),
+                  Text(
+                      'Prices are test prices for launch. Before purchase you’ll see the renewal period, total charge and how to cancel.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 11, color: EverlaneColors.muted)),
+                ],
               ]);
 }
 

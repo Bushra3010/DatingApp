@@ -124,6 +124,25 @@ class ProfileBackend {
   Future<void> choosePreviewPlan(String plan) =>
       client.rpc('choose_preview_plan', params: {'p_plan': plan});
 
+  /// Tells the team the member paid for [plan] by UPI, with the reference
+  /// (UTR) from their payment app. The server takes the amount from the
+  /// plan's price and returns the payment's id; an admin then verifies it.
+  Future<int> submitUpiPayment(
+      {required String plan, required String utr, String note = ''}) async {
+    final data = await client.rpc('submit_upi_payment',
+        params: {'p_plan': plan, 'p_utr': utr, 'p_note': note});
+    return switch (data) {
+      num n => n.toInt(),
+      String s => int.tryParse(s) ?? 0,
+      _ => 0,
+    };
+  }
+
+  /// The member's UPI payments: {id, plan, amount, utr, status ('pending',
+  /// 'approved' or 'rejected'), reason, created_at, reviewed_at}.
+  Future<List<Map<String, dynamic>>> myUpiPayments() async =>
+      _rows(await client.rpc('my_upi_payments'));
+
   /// Uploads a live-selfie burst into the private "verifications" bucket
   /// and queues it for an admin to review.
   Future<void> submitVerification(List<Uint8List> frames) async {

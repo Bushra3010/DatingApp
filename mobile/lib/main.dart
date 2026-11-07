@@ -52,16 +52,21 @@ class _EverlaneAppState extends State<EverlaneApp> {
   /// the app comes back to the front.
   late final AppLifecycleListener lifecycle;
 
+  /// App-wide snackbars, shown on whichever screen is open.
+  final messengerKey = GlobalKey<ScaffoldMessengerState>();
+
   @override
   void initState() {
     super.initState();
     if (widget.onboarded) store.onboarded = true;
     EverlaneColors.dark = store.darkMode;
     store.addListener(syncTheme);
+    store.planActivated.addListener(planActivated);
     lifecycle = AppLifecycleListener(onResume: () {
       store.loadSettings();
       store.loadAnnouncements();
       store.loadTickets();
+      store.loadUpiPayments();
     });
     legalBackend = store.backend;
     store.loadSettings();
@@ -91,9 +96,21 @@ class _EverlaneAppState extends State<EverlaneApp> {
     (context as Element).visitChildren(rebuild);
   }
 
+  /// A UPI payment was verified and the plan is on.
+  void planActivated() {
+    final text = store.planActivated.value;
+    if (text == null) return;
+    store.planActivated.value = null;
+    messengerKey.currentState
+      ?..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(text), duration: const Duration(seconds: 6)));
+  }
+
   @override
   void dispose() {
     lifecycle.dispose();
+    store.planActivated.removeListener(planActivated);
     store.removeListener(syncTheme);
     store.dispose();
     EverlaneColors.dark = true;
@@ -104,6 +121,7 @@ class _EverlaneAppState extends State<EverlaneApp> {
   Widget build(BuildContext context) => MaterialApp(
       title: 'Everlane',
       debugShowCheckedModeBanner: false,
+      scaffoldMessengerKey: messengerKey,
       theme: everlaneTheme(),
       home: ListenableBuilder(
           listenable: store,

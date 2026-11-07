@@ -78,6 +78,7 @@ class AppSettings {
     this.referralEnabled = false,
     this.referralRewardDays = 0,
     this.referralRewardPlan = '',
+    this.upi = const UpiSettings(),
   });
 
   factory AppSettings.fromJson(Map<String, dynamic> j) {
@@ -115,6 +116,7 @@ class AppSettings {
       referralEnabled: _bool(r['enabled'], false),
       referralRewardDays: _int(r['reward_days'], 0),
       referralRewardPlan: _str(r['reward_plan']),
+      upi: UpiSettings.fromJson(_section(j, 'upi')),
     );
   }
 
@@ -144,6 +146,9 @@ class AppSettings {
   final int referralRewardDays;
   final String referralRewardPlan;
 
+  /// Paying for a plan by UPI; off unless the team has set it up.
+  final UpiSettings upi;
+
   /// Never below 18, whatever the panel says.
   int get adultAge => minAge < 18 ? 18 : minAge;
 
@@ -171,6 +176,83 @@ class AppSettings {
     return min.isNotEmpty && compareVersions(version, min) < 0;
   }
 }
+
+/// `app_settings().upi`: where members send UPI payments for a plan.
+class UpiSettings {
+  const UpiSettings(
+      {this.enabled = false,
+      this.vpa = '',
+      this.payeeName = '',
+      this.note = ''});
+  factory UpiSettings.fromJson(Map<String, dynamic> j) => UpiSettings(
+      enabled: _bool(j['enabled'], false),
+      vpa: _str(j['vpa']).trim(),
+      payeeName: _str(j['payee_name']).trim(),
+      note: _str(j['note']).trim());
+
+  final bool enabled;
+
+  /// The UPI ID payments go to, e.g. "name@bank".
+  final String vpa;
+  final String payeeName, note;
+
+  /// Switched on, with somewhere to pay.
+  bool get ready => enabled && vpa.isNotEmpty;
+  String get payee => payeeName.isEmpty ? 'Everlane' : payeeName;
+}
+
+/// A row from `my_upi_payments()`.
+class UpiPayment {
+  const UpiPayment(
+      {required this.id,
+      required this.plan,
+      required this.amount,
+      required this.utr,
+      required this.status,
+      this.reason = '',
+      this.createdAt,
+      this.reviewedAt});
+  factory UpiPayment.fromRow(Map<String, dynamic> r) => UpiPayment(
+      id: '${r['id']}',
+      plan: _str(r['plan']),
+      amount: switch (r['amount']) {
+        num n => n,
+        String s => num.tryParse(s) ?? 0,
+        _ => 0,
+      },
+      utr: _str(r['utr']),
+      status: _str(r['status']),
+      reason: _str(r['reason']),
+      createdAt: DateTime.tryParse(_str(r['created_at']))?.toLocal(),
+      reviewedAt: DateTime.tryParse(_str(r['reviewed_at']))?.toLocal());
+
+  final String id, plan, utr, status, reason;
+  final num amount;
+  final DateTime? createdAt, reviewedAt;
+
+  bool get pending => status == 'pending';
+  bool get approved => status == 'approved';
+  bool get rejected => status == 'rejected';
+
+  /// The tier's name as the app shows it ("Gold").
+  String get planTitle {
+    for (final p in Plan.values) {
+      if (p.name == plan) return p.title;
+    }
+    return plan.isEmpty ? 'Plan' : '${plan[0].toUpperCase()}${plan.substring(1)}';
+  }
+
+  /// "₹499".
+  String get amountLabel => '₹${formatAmount(amount)}';
+}
+
+/// 499 → "499", 499.5 → "499.50".
+String formatAmount(num n) =>
+    n == n.roundToDouble() ? '${n.toInt()}' : n.toStringAsFixed(2);
+
+/// The amount to pay for [plan], from its displayed price ("₹1,299" → 1299).
+num planAmount(Plan plan) =>
+    num.tryParse(plan.displayPrice.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
 
 /// Why a signed-in member can't use the app right now.
 class AccountRestriction {
