@@ -1301,7 +1301,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
         <div class="row" style="margin-top:10px"><button class="btn primary">Save UPI settings</button><span class="muted" id="upiUpdated"></span></div>
       </form>
       <div class="grid g4" id="upiKpis" style="margin-bottom:12px"></div>
-      <p class="note info">Check each UTR against your bank or UPI app before verifying. Verified payments appear in Transactions as store “UPI”.</p>
+      <p class="note info">Check each UTR against your bank or UPI app before verifying. The payment note shows who paid, e.g. “Everlane Gold - Pratik (9C0375)”: match the code to the member’s Code here. Verified payments appear in Transactions as store “UPI”.</p>
       <div class="toolbar">
         <div class="chips" id="upiFilter" role="group" aria-label="Which payments">
           <button type="button" class="chip" data-upi="pending">Pending</button>
@@ -4014,6 +4014,9 @@ async function loadUpi() {
   refreshUpiBadge(upiPays);
   renderUpi();
 }
+// The member code the app puts in the UPI note ("Everlane Gold - Pratik
+// (9C0375)"): the first 6 characters of their account id.
+const upiCode = id => String(id || '').replace(/-/g, '').slice(0, 6).toUpperCase();
 function paintUpiPreview() {
   const vpa = $('#upiVpa').value.trim(), payee = $('#upiPayee').value.trim(), on = $('#upiOn').checked;
   const gold = indiaPrice('gold');
@@ -4052,7 +4055,7 @@ $('#upiForm').onsubmit = e => {
 function filteredUpi() {
   const q = $('#upiSearch').value.trim().toLowerCase();
   return upiPays.filter(r => (!upiStatus || r.status === upiStatus)
-    && (!q || [r.member_name, r.member_email, r.member_phone, r.utr].some(v => String(v || '').toLowerCase().includes(q))));
+    && (!q || [r.member_name, r.member_email, r.member_phone, r.utr, r.user_id && upiCode(r.user_id)].some(v => String(v || '').toLowerCase().includes(q))));
 }
 function renderUpi() {
   document.querySelectorAll('#upiFilter [data-upi]').forEach(b => {
@@ -4077,7 +4080,7 @@ function renderUpi() {
     return `<tr style="cursor:default">
     <td style="white-space:nowrap">${fmtTime(r.created_at)}</td>
     <td>${r.user_id ? `<a href="#" data-upi-member="${esc(r.user_id)}"><b>${who}</b></a>` : `<b style="color:var(--text)">${who}</b>`}
-      <br><span class="code">${contact}</span></td>
+      <br><span class="code">${contact}</span>${r.user_id ? `<br><span class="code" title="The note on their UPI payment">Code ${esc(upiCode(r.user_id))}</span>` : ''}</td>
     <td>${esc(PLAN_NAMES[r.plan] || r.plan)}${now ? `<br><span class="code">${now}</span>` : ''}</td>
     <td style="white-space:nowrap">${money(r.amount)}</td>
     <td style="white-space:nowrap"><span style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px">${esc(r.utr || '—')}</span>

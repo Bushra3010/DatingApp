@@ -69,6 +69,15 @@ void main() {
     expect(uri, contains('tn=Everlane%20Gold'));
   });
 
+  test('The payment note names the member, so the team knows who paid', () {
+    expect(upiNote(Plan.platinum, name: 'Pratik', userId: '9c037512-d000-4931'),
+        'Everlane Platinum - Pratik (9C0375)');
+    expect(upiNote(Plan.gold), 'Everlane Gold');
+    final uri = upiPayUri(_upiOn.upi, Plan.gold, name: 'Pratik', userId: '9c037512-d000')
+        .toString();
+    expect(uri, contains('tn=Everlane%20Gold%20-%20Pratik%20(9C0375)'));
+  });
+
   test('UTRs are 6–35 letters or digits', () {
     expect(validUtr('123456789012'), isTrue);
     expect(validUtr('AXIS1234ab'), isTrue);

@@ -19,12 +19,29 @@ final _utrPattern = RegExp(r'^[A-Za-z0-9]{6,35}$');
 
 bool validUtr(String utr) => _utrPattern.hasMatch(utr.trim());
 
+/// The short member code shown in the payment note and the admin panel:
+/// the first 6 characters of the account id, so two members with the same
+/// name can be told apart.
+String memberCode(String userId) =>
+    userId.replaceAll('-', '').toUpperCase().substring(0, userId.isEmpty ? 0 : 6);
+
+/// The payment note: plan, the member's name and code, e.g.
+/// "Everlane Platinum - Pratik (9C0375)". UPI apps keep notes short.
+String upiNote(Plan plan, {String name = '', String userId = ''}) {
+  final who = [
+    if (name.trim().isNotEmpty) name.trim(),
+    if (userId.isNotEmpty) '(${memberCode(userId)})',
+  ].join(' ');
+  final note = who.isEmpty ? 'Everlane ${plan.title}' : 'Everlane ${plan.title} - $who';
+  return note.length > 50 ? note.substring(0, 50) : note;
+}
+
 /// The `upi://pay` link UPI apps open with everything filled in.
-Uri upiPayUri(UpiSettings upi, Plan plan) {
+Uri upiPayUri(UpiSettings upi, Plan plan, {String name = '', String userId = ''}) {
   String enc(String v) => Uri.encodeComponent(v).replaceAll('%40', '@');
   return Uri.parse('upi://pay?pa=${enc(upi.vpa)}&pn=${enc(upi.payee)}'
       '&am=${formatAmount(planAmount(plan))}&cu=INR'
-      '&tn=${enc('Everlane ${plan.title}')}');
+      '&tn=${enc(upiNote(plan, name: name, userId: userId))}');
 }
 
 /// Opens the "Pay with UPI" sheet for [plan]; on a successful submission,
@@ -83,11 +100,16 @@ class _UpiPaySheetState extends State<UpiPaySheet> {
       defaultTargetPlatform == TargetPlatform.android ||
       defaultTargetPlatform == TargetPlatform.iOS;
 
+  /// Pay link with this member's name and code in the note, so the team
+  /// can see who paid in their UPI app.
+  Uri get payUri => upiPayUri(upi, plan,
+      name: widget.store.myName, userId: widget.store.backend?.user?.id ?? '');
+
   Future<void> openUpiApp() async {
     var opened = false;
     if (onPhone) {
       try {
-        opened = await launchUrl(upiPayUri(upi, plan),
+        opened = await launchUrl(payUri,
             mode: LaunchMode.externalApplication,
             // In a phone's browser, hand the link to the system so it can
             // offer the installed UPI apps (a new tab would be blocked).
@@ -189,7 +211,7 @@ class _UpiPaySheetState extends State<UpiPaySheet> {
               decoration: BoxDecoration(
                   color: Colors.white, borderRadius: BorderRadius.circular(16)),
               child: QrImageView(
-                  data: upiPayUri(upi, plan).toString(),
+                  data: payUri.toString(),
                   size: 180,
                   backgroundColor: Colors.white,
                   semanticsLabel: 'UPI QR code to pay $price'))),
