@@ -1310,6 +1310,12 @@ class PreviewStore extends ChangeNotifier {
       'Good food, better company, and finding a new favourite place.';
   Plan plan = Plan.free;
 
+  /// True when [plan] was paid for (a verified UPI payment) or given by the
+  /// team, rather than picked in the preview. Such a plan runs until
+  /// [planUntil] (or for good when that's null) and can't be dropped here.
+  bool planPaid = false;
+  DateTime? planUntil;
+
   /// Photos added during sign-up or from Edit profile, main photo first.
   /// When signed in, each is uploaded and its storage path kept here.
   final List<Uint8List> myPhotos = [];
@@ -2103,6 +2109,8 @@ class PreviewStore extends ChangeNotifier {
   }
 
   void choosePlan(Plan next) {
+    // A paid plan stays until it ends; the server would bring it back anyway.
+    if (planPaid && !next.atLeast(plan)) return;
     plan = next;
     if (!next.atLeast(Plan.plus)) {
       filters = filters.copyWith(intents: const {}, verifiedOnly: false);
@@ -2361,9 +2369,9 @@ class PreviewStore extends ChangeNotifier {
     // A plan set by an admin (support, or a verified UPI payment) wins,
     // until it ends.
     final adminPlan = row['plan'] as String? ?? '';
-    final planUntil = DateTime.tryParse(row['plan_until'] as String? ?? '');
+    final until = DateTime.tryParse(row['plan_until'] as String? ?? '');
     var adminSet = false;
-    if (planUntil == null || planUntil.isAfter(DateTime.now())) {
+    if (until == null || until.isAfter(DateTime.now())) {
       for (final p in Plan.values) {
         if (p.name == adminPlan) {
           plan = p;
@@ -2371,6 +2379,8 @@ class PreviewStore extends ChangeNotifier {
         }
       }
     }
+    planPaid = adminSet;
+    planUntil = adminSet ? until : null;
     // Otherwise the plan picked in the app, while payments aren't live.
     if (!adminSet) {
       final picked = row['preview_plan'] as String? ?? '';
