@@ -3439,10 +3439,31 @@ class _MembershipScreenState extends State<MembershipScreen> {
 
   /// Paid plans are paid for by UPI when it's set up; otherwise (and for
   /// Free) the plan switches here, as in the preview.
-  void choose(BuildContext context, Plan plan) {
+  Future<void> choose(BuildContext context, Plan plan) async {
     if (plan != Plan.free && store.upiCheckout) {
       payWithUpi(context, store, plan);
       return;
+    }
+    // Dropping to Free is one tap too easy to undo by accident, and with
+    // UPI live a paid plan has to be paid for again.
+    if (plan == Plan.free && store.plan != Plan.free) {
+      final current = store.plan;
+      final ok = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+                  title: Text('Switch to Free?'),
+                  content: Text(store.upiCheckout
+                      ? 'You’ll lose your ${current.title} perks right away. To get ${current.title} back you’ll need to pay ${current.displayPrice} by UPI.'
+                      : 'You’ll lose your ${current.title} perks right away.'),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: Text('Keep ${current.title}')),
+                    TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text('Switch to Free')),
+                  ]));
+      if (ok != true || !context.mounted) return;
     }
     store.choosePlan(plan);
     setState(() => browsing = false);
@@ -3508,6 +3529,13 @@ class _MembershipScreenState extends State<MembershipScreen> {
                       child: _PlanCard(
                           plan: plan,
                           current: store.plan == plan,
+                          // A paid plan runs until it ends.
+                          lockedNote: store.planPaid &&
+                                  !plan.atLeast(store.plan)
+                              ? (store.planUntil == null
+                                  ? 'Your ${store.plan.title} plan is active'
+                                  : 'Your ${store.plan.title} plan runs until ${shortDate(store.planUntil)}')
+                              : null,
                           onChoose: () => choose(context, plan))),
                 if (store.upiCheckout) ...[
                   const Center(child: Eyebrow('Pay with any UPI app')),
@@ -3531,9 +3559,15 @@ class _MembershipScreenState extends State<MembershipScreen> {
 
 class _PlanCard extends StatelessWidget {
   const _PlanCard(
-      {required this.plan, required this.current, required this.onChoose});
+      {required this.plan,
+      required this.current,
+      required this.onChoose,
+      this.lockedNote});
   final Plan plan;
   final bool current;
+
+  /// Shown instead of the Choose button when this plan can't be picked.
+  final String? lockedNote;
   final VoidCallback onChoose;
   @override
   Widget build(BuildContext context) => Container(
@@ -3605,7 +3639,15 @@ class _PlanCard extends StatelessWidget {
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16))),
                 child: const Text('Current plan'))
-            : FilledButton(
+            : lockedNote != null
+                ? OutlinedButton(
+                    onPressed: null,
+                    style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16))),
+                    child: Text(lockedNote!, textAlign: TextAlign.center))
+                : FilledButton(
                 onPressed: onChoose,
                 style: plan == Plan.free
                     ? null
