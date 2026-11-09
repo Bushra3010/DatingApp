@@ -454,8 +454,9 @@ class Person {
   /// are saved. Demo people stay local.
   final bool remote;
 
-  /// Sample profile flag (disabled so bot profiles appear as regular profiles).
-  bool get sample => false;
+  /// An admin-made automated profile. Always labelled "Automated profile"
+  /// so nobody takes it for a real person.
+  bool get sample => remote && sampleProfileIds.contains(id);
 
   /// A short line shown over the photo on the Discover card.
   final String bio;

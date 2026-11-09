@@ -82,4 +82,22 @@ void main() {
     store.choosePlan(Plan.free);
     expect(store.plan, Plan.gold);
   });
+
+  testWidgets('The Play Store build doesn’t sell plans (Play Billing rules)',
+      (tester) async {
+    purchasesOff = true;
+    addTearDown(() => purchasesOff = false);
+    // Tall enough that every plan card is built.
+    tester.view.physicalSize = const Size(390, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final store = _SignedInStore()..settings = _upiOn;
+    await tester.pumpWidget(MaterialApp(
+        theme: everlaneTheme(), home: MembershipScreen(store: store)));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose Platinum'), findsNothing);
+    expect(find.text('Not available in the app'), findsWidgets);
+    expect(find.byType(UpiPaySheet), findsNothing);
+  });
 }
