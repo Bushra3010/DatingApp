@@ -314,7 +314,7 @@ class _ShareCard extends StatelessWidget {
         ]),
         const SizedBox(height: 4),
         Text(
-            'We only keep a rough ~1 km area and the day, never your exact location or time. Areas are deleted after 30 days, or straight away when you turn this off.'
+            'We only store a rough ~1 km area and date, never your exact location or time. Areas are deleted after 30 days, or straightaway when you turn this off.'
             '${live ? '' : ' In this preview the people shown are demo profiles.'}',
             style: TextStyle(
                 fontSize: 12, height: 1.5, color: EverlaneColors.muted)),
