@@ -1043,6 +1043,10 @@ class PreviewStore extends ChangeNotifier {
   /// ~1 km area and the day are ever saved.
   bool shareArea = false;
   (double, double)? myArea;
+
+  /// Where the member is right now (rounded to ~1 km), from the device's
+  /// location; used to centre the Crossed paths map. Null until found.
+  (double, double)? myPosition;
   final List<Crossing> crossings = [..._demoCrossings()];
 
   static List<Crossing> _demoCrossings() {
@@ -1069,6 +1073,7 @@ class PreviewStore extends ChangeNotifier {
   /// marker moves.
   Future<void> recordArea(double lat, double lng) async {
     myArea = snapToArea(lat, lng);
+    myPosition = myArea;
     shareArea = true;
     notifyListeners();
     final b = backend;
@@ -1093,11 +1098,17 @@ class PreviewStore extends ChangeNotifier {
             _failed('Couldn’t clear your area history. Try again.'));
   }
 
+  /// False until the signed-in member's crossings have loaded once.
+  bool crossingsLoaded = false;
+
   Future<void> refreshCrossings() async {
+    // Signed-in members never see the demo crossings.
+    if (live && !crossingsLoaded) crossings.clear();
     final b = backend;
     if (b == null || !b.signedIn) return;
     try {
       final rows = await b.crossedPaths();
+      crossingsLoaded = true;
       crossings
         ..clear()
         ..addAll([
@@ -1107,6 +1118,7 @@ class PreviewStore extends ChangeNotifier {
         ].where((c) => !passed.contains(c.person.id)));
       notifyListeners();
     } catch (_) {
+      crossingsLoaded = true;
       _failed('Couldn’t load crossed paths right now.');
     }
   }
@@ -1759,6 +1771,10 @@ class PreviewStore extends ChangeNotifier {
   Future<void> _shareLiveLocation(ProfileBackend b) async {
     final at = await currentPosition();
     if (at == null || !b.signedIn) return;
+    myPosition = snapToArea(at.$1, at.$2);
+    notifyListeners();
+    // While Crossed paths is on, every visit counts as being in this area.
+    if (shareArea) recordArea(at.$1, at.$2).ignore();
     try {
       await b.recordLocation(at.$1, at.$2);
       await refreshMembers();
@@ -2316,6 +2332,10 @@ class PreviewStore extends ChangeNotifier {
     }
     // People, likes and chats load alongside the member's own photos.
     final community = _loadCommunitySafely();
+    shareArea = row['share_area'] as bool? ?? false;
+    if (!shareArea) myArea = null;
+    // Real crossings replace the demo ones.
+    crossings.clear();
     _shareLiveLocation(b).ignore();
     myName = row['name'] as String? ?? '';
     myBirthday = DateTime.tryParse(row['birthday'] as String? ?? '');

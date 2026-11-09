@@ -3,13 +3,17 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:latlong2/latlong.dart';
 
+import 'cities.dart';
 import 'models.dart';
 import 'screens.dart' show PersonDetailsScreen;
 import 'theme.dart';
 import 'widgets.dart';
 
-/// Indiranagar, Bengaluru: where the demo people are.
+/// Indiranagar, Bengaluru: where the demo people are (account-less preview).
 const _demoCentre = LatLng(12.9719, 77.6300);
+
+/// Middle of India, when nothing better is known yet.
+const _indiaCentre = LatLng(22.5, 79.0);
 
 /// Asks for the current position once, at low accuracy (the store rounds it
 /// to a ~1 km area anyway). Returns an error to show, or null on success.
@@ -61,11 +65,40 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
   final map = MapController();
   String? selected;
   bool locating = false;
+  bool mapReady = false;
+
+  /// Where the map was last moved to automatically, so it only follows
+  /// new information (your position arriving) and not every rebuild.
+  LatLng? movedTo;
 
   @override
   void initState() {
     super.initState();
     widget.store.refreshCrossings();
+    if (widget.store.live) locateMe(quiet: true);
+  }
+
+  /// Finds where you are and centres the map there. While sharing is on,
+  /// that also records today's area and reloads who you crossed paths with.
+  Future<void> locateMe({bool quiet = false}) async {
+    final store = widget.store;
+    setState(() => locating = true);
+    final at = await currentPosition();
+    if (!mounted) return;
+    setState(() => locating = false);
+    if (at == null) {
+      if (!quiet) {
+        showNotice(context,
+            'Couldn’t find your location. Allow location access for Everlane and try again.');
+      }
+      return;
+    }
+    if (store.shareArea) {
+      await store.recordArea(at.$1, at.$2);
+    } else {
+      store.myPosition = snapToArea(at.$1, at.$2);
+      store.update();
+    }
   }
 
   Future<void> share() async {
@@ -78,7 +111,15 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
       return;
     }
     final me = widget.store.myArea;
-    if (me != null) map.move(LatLng(me.$1, me.$2), 13);
+    if (me != null && mapReady) map.move(LatLng(me.$1, me.$2), 13);
+  }
+
+  /// Your city's centre, from the profile.
+  LatLng? get cityCentre {
+    final city = widget.store.myCity;
+    if (city.trim().isEmpty) return null;
+    final match = suggestCities(city, limit: 1).firstOrNull;
+    return match == null ? null : LatLng(match.lat, match.lng);
   }
 
   @override
@@ -93,13 +134,28 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
         final shown = selected == null
             ? store.crossings
             : areas[selected] ?? const <Crossing>[];
-        final me = store.myArea;
+        final me = store.myArea ?? store.myPosition;
         final first = store.crossings.firstOrNull;
+        final city = store.live ? cityCentre : null;
         final centre = me != null
             ? LatLng(me.$1, me.$2)
             : first != null
                 ? LatLng(first.lat, first.lng)
-                : _demoCentre;
+                : city ??
+                    (store.live ? _indiaCentre : _demoCentre);
+        final zoom = me != null || first != null
+            ? 13.0
+            : city != null
+                ? 11.0
+                : store.live
+                    ? 4.5
+                    : 12.0;
+        // Follow your position once it's found.
+        if (mapReady && me != null && movedTo != centre) {
+          movedTo = centre;
+          WidgetsBinding.instance
+              .addPostFrameCallback((_) => map.move(centre, 13));
+        }
         return Scaffold(
             appBar: AppBar(
                 title: const Text('Crossed paths',
@@ -111,8 +167,12 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
                       mapController: map,
                       options: MapOptions(
                           initialCenter: centre,
-                          initialZoom: 12,
+                          initialZoom: zoom,
                           minZoom: 4,
+                          onMapReady: () {
+                            mapReady = true;
+                            if (me != null) movedTo = centre;
+                          },
                           maxZoom: 15,
                           onTap: (_, __) => setState(() => selected = null)),
                       children: [
@@ -147,6 +207,27 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
                         const SimpleAttributionWidget(
                             source: Text('© OpenStreetMap contributors',
                                 style: TextStyle(fontSize: 10))),
+                        Align(
+                            alignment: Alignment.topRight,
+                            child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: FloatingActionButton.small(
+                                    heroTag: 'locate-me',
+                                    tooltip: 'Show my location',
+                                    onPressed: locating
+                                        ? null
+                                        : () {
+                                            movedTo = null;
+                                            locateMe();
+                                          },
+                                    child: locating
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2))
+                                        : const Icon(
+                                            Icons.my_location_rounded)))),
                       ])),
               Expanded(
                   flex: 4,
@@ -172,7 +253,12 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
                                     ? 'You crossed paths near ${shown.first.area}'
                                     : 'You crossed paths in this area'),
                             const SizedBox(height: 12),
-                            if (shown.isEmpty)
+                            if (shown.isEmpty && store.live && !store.crossingsLoaded)
+                              const Center(
+                                  child: Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: CircularProgressIndicator()))
+                            else if (shown.isEmpty)
                               Text(
                                   store.shareArea
                                       ? 'No one yet. Paths you cross over the next few days show up here.'
