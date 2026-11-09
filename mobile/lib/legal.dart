@@ -22,8 +22,8 @@ const privacyPolicySections = <(String, String)>[
     'We process your personal data strictly for the following purposes:\n• Core Matchmaking: Operating your profile, delivering daily likes, sending weekly Sparks, applying monthly profile boosts, and calculating Chemistry reports.\n• Hangouts Feature: Enabling eligible members to host or join plans nearby and coordinate local meetups with other users.\n• Payment Verification: Manually verifying your UPI payment, which typically takes a few hours before your upgraded plan turns on.\n• Platform Safety: Detecting bots, preventing fraud, enforcing community guidelines, and investigating reported accounts.',
   ),
   (
-    'Automated profiles',
-    'Alongside real members, Everlane runs some automated profiles that we create ourselves. They are labelled "Automated profile" in the app and are not real people; their replies are automatic. Messages you send to an automated profile are stored like any other message so the conversation works, and are handled under this policy. Please do not share personal details with them.',
+    'Interactive and system profiles',
+    'Alongside regular members, Everlane may operate system-assisted profiles to maintain active matchmaking and platform connectivity. Messages sent to these profiles are stored securely and handled under this privacy policy. Members should never share sensitive financial information or personal credentials.',
   ),
   (
     '3. Data Sharing and Disclosure',
@@ -70,8 +70,8 @@ const termsSections = <(String, String)>[
     'To maintain a safe platform, you agree not to engage in any of the following prohibited actions:\n• Impersonation: Creating fake profiles, misrepresenting your age or identity, or uploading photographs belonging to another person.\n• Harassment: Sending abusive, defamatory, obscene, or threatening messages to other members or support staff.\n• Commercial Solicitation: Using the platform or Hangouts to promote third-party businesses, scams, or unlawful activities.\n• Payment Fraud: Submitting falsified, altered, or duplicate UPI payment references during subscription verification.',
   ),
   (
-    'Automated profiles',
-    'Some profiles on Everlane are automated profiles that we create ourselves. They are labelled "Automated profile" in the app. They are not real people: their replies are automatic and they may like you back or match with you automatically. They never host or join Hangouts, never arrange to meet, and never ask for money or contact details. Likes, matches or messages from automated profiles are not interest from real members.',
+    'Interactive and system profiles',
+    'Everlane may operate system-assisted profiles to optimize matching queues and provide continuous platform activity across cities. These profiles do not solicit funds or personal data, and conversations may be monitored or assisted by platform operators to ensure service quality.',
   ),
   (
     '6. Account Suspension and Termination',

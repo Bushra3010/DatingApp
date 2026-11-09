@@ -157,3 +157,4 @@ end $$;
 
 revoke all on function public.admin_bots_action(uuid[], text, jsonb) from public, anon;
 grant execute on function public.admin_bots_action(uuid[], text, jsonb) to authenticated;
+

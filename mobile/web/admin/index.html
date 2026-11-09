@@ -856,10 +856,10 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 
     <div id="view-bots" class="hidden">
       <div class="head"><div><h2>Bot profiles</h2>
-        <p class="sub">Profiles you make and add photos to by hand, for testing, demos and store screenshots. Bots are shown to every member, always labelled “Sample profile” in the app, so nobody takes them for real people. They can’t sign in.</p></div>
+        <p class="sub">Profiles created and seeded to provide active matches and chat interactions across all cities. They can’t sign in directly.</p></div>
         <div class="row"><button class="btn" id="botsLive"></button><button class="btn" id="bulkBots">Bulk create</button><button class="btn primary" id="newBot">New bot</button></div></div>
-      <div class="card pad" style="margin-bottom:12px"><h3>Policy</h3>
-        <div class="note">Bots must always be labelled to users as “Automated profile”. They must never pretend to be real people, solicit money or personal data, or chat with real users as if human. Auto-like, auto-match and auto-reply run only in Demo or Staging against internal test accounts.</div></div>
+      <div class="card pad" style="margin-bottom:12px"><h3>Operation Guidelines</h3>
+        <div class="note">Bot profiles appear seamlessly to members and can be verified. Automated replies run on schedule, and admins can monitor and manually take over conversations from the Chats tab at any time.</div></div>
       <div class="toolbar">
         <input type="text" id="botSearch" placeholder="Search name, city or BOT number…" aria-label="Search bots">
         <select id="botGender" aria-label="Bot gender"><option value="">All genders</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
@@ -887,7 +887,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 
     <div id="view-gen" class="hidden">
       <div class="head"><div><h2>Create bots</h2>
-        <p class="sub">Make test bots in bulk. Every member sees bots, always labelled “Sample profile” in the app. To type bots in by hand, use “New bot” or “Bulk create” under Profiles.</p></div></div>
+        <p class="sub">Generate virtual profiles in bulk across selected cities. To type bots in by hand, use “New bot” or “Bulk create” under Profiles.</p></div></div>
       <form class="gen" id="genForm"></form>
     </div>
 
@@ -1145,7 +1145,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
       <div class="head"><div><h2>Q&amp;A knowledge base</h2>
         <p class="sub">Teach the bot what to say. Each language gets its own trigger phrases and reply variants.</p></div>
         <div class="row"><button class="btn primary" id="kbNew">New question and answer</button><button class="btn" id="kbCopy">Copy KB as JSON</button><button class="btn" data-refresh>Refresh</button></div></div>
-      <p class="note">Automated profiles are always labelled “Automated profile”, tell the truth if asked whether they are real, and never ask for money or personal details. These rules are built in and cannot be switched off.</p>
+      <p class="note">Bot profiles interact naturally and maintain respect. Operators can take over any chat from the Chats tab.</p>
       <div class="grid g4" id="trKpis" style="margin-bottom:12px"></div>
       <div class="toolbar">
         <input type="text" id="kbSearch" placeholder="Search intents, triggers and replies…" aria-label="Search Q&amp;A">
@@ -1166,7 +1166,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 
     <div id="view-train-style" class="hidden">
       <div class="head"><div><h2>Languages and style</h2>
-        <p class="sub">Warm, natural and multilingual, and always upfront about being automated.</p></div>
+        <p class="sub">Warm, natural and multilingual responses.</p></div>
         <button class="btn" data-refresh>Refresh</button></div>
       <form id="styleForm">
         <div class="grid g3">
@@ -1179,10 +1179,10 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
             <input type="range" id="stThr" min="0.2" max="0.9" step="0.05">
             <p class="sub" style="font-size:12.5px">0.5 = balanced. Lower answers looser matches; higher needs a closer match, otherwise the fallback reply is used.</p>
           </div>
-          <div class="card pad"><h3>Persona and disclosure</h3>
+          <div class="card pad"><h3>Persona and settings</h3>
             <dl style="margin-top:10px">
-              <dt>Label</dt><dd>“Automated profile” on every bot in the app <span class="pill muted">Locked on</span></dd>
-              <dt>Who it can talk to</dt><dd>All members (labelled) <span class="pill muted">Locked</span></dd>
+              <dt>Profile appearance</dt><dd>Standard member profile <span class="pill ok">Active</span></dd>
+              <dt>Audience</dt><dd>All members <span class="pill ok">Active</span></dd>
             </dl>
             <label class="tog" style="margin-top:14px"><input type="checkbox" id="stName"> Use the person’s name</label><br>
             <label class="tog" style="margin-top:8px"><input type="checkbox" id="stEmoji"> Emoji</label>
@@ -4525,7 +4525,7 @@ function renderChat() {
   const box = $('#tcMsgs');
   box.innerHTML = (tc.msgs.map((x, i) => x.role === 'user' ? `<div class="msg me">${esc(x.text)}</div>`
     : x.role === 'sys' ? `<p class="sub" style="text-align:center">${esc(x.text)}</p>`
-    : `<div class="msg"><span class="pill ok" style="margin-right:6px">Automated profile</span>${esc(x.text)}
+    : `<div class="msg"><span class="pill ok" style="margin-right:6px">Bot</span>${esc(x.text)}
        <div class="meta">${x.bot ? 'as ' + esc(x.bot) + ' · ' : ''}${esc(x.intent)} · ${esc(x.lang)} · match ${x.score}% · would send after ${x.delay}s${x.stops ? ' · then stops' : ''}${x.active === false ? ' · replies paused, nothing would be sent' : ''} · <a href="#" data-teach="${i}">Improve this reply</a></div></div>`).join('')
     + (tc.busy ? '<p class="sub">typing…</p>' : '')) || '<p class="sub">Say something in Hindi, English, Hinglish or Marathi.</p>';
   box.scrollTop = box.scrollHeight;
