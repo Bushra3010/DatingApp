@@ -2680,6 +2680,39 @@ class PreviewStore extends ChangeNotifier {
     return meta is String ? meta.trim() : '';
   }
 
+  static const _inviteKey = 'invite_ref';
+
+  /// The invite code from a shared link (everlanedating.com/?ref=CODE): filled
+  /// into sign-up at once, and kept on this device so a Google sign-in
+  /// round-trip (which comes back without the link) doesn't lose it.
+  Future<void> loadInviteFromLink() async {
+    final fromUrl = kIsWeb
+        ? (Uri.base.queryParameters['ref'] ?? '').trim().toUpperCase()
+        : '';
+    if (fromUrl.isNotEmpty && pendingReferralCode.isEmpty) {
+      pendingReferralCode = fromUrl;
+      notifyListeners();
+    }
+    try {
+      final p = await SharedPreferences.getInstance();
+      if (fromUrl.isNotEmpty) {
+        await p.setString(_inviteKey, fromUrl);
+      } else if (pendingReferralCode.isEmpty) {
+        final saved = p.getString(_inviteKey) ?? '';
+        if (saved.isNotEmpty) {
+          pendingReferralCode = saved;
+          notifyListeners();
+        }
+      }
+    } catch (_) {
+      // Not remembered on this device; the link still filled it in above.
+    }
+  }
+
+  /// The link a member shares: opens Everlane with their code filled in.
+  static String inviteLink(String code) =>
+      '${kIsWeb ? Uri.base.origin : 'https://everlanedating.com'}/?ref=${Uri.encodeQueryComponent(code)}';
+
   Future<void> loadReferral() async {
     final b = backend;
     if (b == null || !b.signedIn || !referralsOn) return;

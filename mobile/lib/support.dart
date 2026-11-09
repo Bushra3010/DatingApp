@@ -3,6 +3,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'admin.dart';
 import 'backend.dart' show errorMessage;
@@ -724,6 +726,27 @@ class InviteCard extends StatefulWidget {
 }
 
 class _InviteCardState extends State<InviteCard> {
+  static String _message(String code) =>
+      'Join me on Everlane — a thoughtful place to meet your person. Use my invite code $code: ${PreviewStore.inviteLink(code)}';
+
+  /// The phone's share sheet (WhatsApp, Instagram, SMS…); where there is none
+  /// (desktop browsers), the invite is copied instead.
+  Future<void> _share(BuildContext context, String code) async {
+    final box = context.findRenderObject() as RenderBox?;
+    try {
+      final r = await SharePlus.instance.share(ShareParams(
+          text: _message(code),
+          subject: 'Join me on Everlane',
+          sharePositionOrigin:
+              box == null ? null : box.localToGlobal(Offset.zero) & box.size));
+      if (r.status != ShareResultStatus.unavailable) return;
+    } catch (_) {
+      // Fall through to copying.
+    }
+    await Clipboard.setData(ClipboardData(text: _message(code)));
+    if (context.mounted) showNotice(context, 'Invite link copied — paste it anywhere');
+  }
+
   @override
   void initState() {
     super.initState();
@@ -785,16 +808,54 @@ class _InviteCardState extends State<InviteCard> {
                   IconButton(
                       tooltip: 'Copy invite',
                       onPressed: () async {
-                        await Clipboard.setData(ClipboardData(
-                            text:
-                                'Join me on Everlane with my invite code ${r.code}'));
+                        await Clipboard.setData(
+                            ClipboardData(text: _message(r.code)));
                         if (context.mounted) {
                           showNotice(context, 'Invite copied');
                         }
                       },
                       icon: const Icon(Icons.copy_rounded)),
                 ]),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
+                // The link opens Everlane with the code already filled in.
+                InkWell(
+                    borderRadius: BorderRadius.circular(10),
+                    onTap: () async {
+                      await Clipboard.setData(ClipboardData(
+                          text: PreviewStore.inviteLink(r.code)));
+                      if (context.mounted) showNotice(context, 'Link copied');
+                    },
+                    child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(children: [
+                          Icon(Icons.link_rounded,
+                              size: 18, color: EverlaneColors.muted),
+                          const SizedBox(width: 6),
+                          Expanded(
+                              child: Text(PreviewStore.inviteLink(r.code),
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: EverlaneColors.muted))),
+                        ]))),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                      child: FilledButton.icon(
+                          onPressed: () => _share(context, r.code),
+                          icon: const Icon(Icons.share_rounded, size: 18),
+                          label: const Text('Share link'))),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: OutlinedButton.icon(
+                          onPressed: () => launchUrl(
+                              Uri.parse(
+                                  'https://wa.me/?text=${Uri.encodeComponent(_message(r.code))}'),
+                              mode: LaunchMode.externalApplication),
+                          icon: const Icon(Icons.chat_rounded, size: 18),
+                          label: const Text('WhatsApp'))),
+                ]),
+                const SizedBox(height: 12),
                 Text(
                     r.joined == 1
                         ? '1 friend joined'
