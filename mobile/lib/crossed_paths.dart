@@ -179,12 +179,10 @@ class _CrossedPathsScreenState extends State<CrossedPathsScreen> {
                         // OpenStreetMap's own tiles are for light use only;
                         // switch to a paid provider (MapTiler, Mapbox,
                         // Stadia) before launch.
+                        // Always the light map, in dark mode too.
                         TileLayer(
                             urlTemplate:
                                 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                            tileBuilder: EverlaneColors.dark
-                                ? darkModeTileBuilder
-                                : null,
                             userAgentPackageName: 'app.everlane'),
                         MarkerLayer(markers: [
                           for (final MapEntry(:key, :value) in areas.entries)
@@ -358,6 +356,9 @@ class _AreaBubble extends StatelessWidget {
                           fontWeight: FontWeight.w800))))));
 }
 
+/// The familiar "you are here" blue.
+const _blue = Color(0xFF1A73E8);
+
 class _MeDot extends StatelessWidget {
   const _MeDot();
   @override
@@ -366,12 +367,12 @@ class _MeDot extends StatelessWidget {
       child: Container(
           decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: EverlaneColors.boost,
+              color: _blue,
               border: Border.all(color: Colors.white, width: 3),
               boxShadow: [
+                BoxShadow(color: _blue.withValues(alpha: .35), blurRadius: 14),
                 BoxShadow(
-                    color: EverlaneColors.boost.withValues(alpha: .5),
-                    blurRadius: 12)
+                    color: Colors.black.withValues(alpha: .25), blurRadius: 4)
               ])));
 }
 
