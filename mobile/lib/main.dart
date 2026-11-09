@@ -69,6 +69,7 @@ class _EverlaneAppState extends State<EverlaneApp> {
       store.loadUpiPayments();
     });
     legalBackend = store.backend;
+    store.loadInviteFromLink();
     store.loadSettings();
     store.loadContent();
     store.loadFilters();

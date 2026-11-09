@@ -34,7 +34,8 @@ class _AuthFlowState extends State<_AuthFlow> {
   final phone = TextEditingController();
   final code = TextEditingController();
   final email = TextEditingController();
-  final referral = TextEditingController();
+  late final referral =
+      TextEditingController(text: widget.store.signUpReferralCode);
   final password = TextEditingController();
   bool busy = false, hidden = true;
   String? error;
