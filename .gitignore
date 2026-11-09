@@ -6,3 +6,7 @@ coverage/
 .DS_Store
 .vercel
 .env.local
+
+# Release builds (large; kept locally)
+play-store/*.aab
+play-store/*.apk

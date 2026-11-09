@@ -587,9 +587,11 @@ class _PersonCard extends StatelessWidget {
                         Expanded(
                             child: IgnorePointer(
                                 child: Center(
-                                    child: person.presence == null
-                                        ? const SizedBox.shrink()
-                                        : PresenceBadge(person.presence!)))),
+                                    child: person.sample
+                                        ? const SampleBadge(onPhoto: true)
+                                        : person.presence == null
+                                            ? const SizedBox.shrink()
+                                            : PresenceBadge(person.presence!)))),
                         _RoundAction(
                             icon: Icons.favorite_rounded,
                             label: 'Like ${person.name}’s photo',
@@ -654,6 +656,10 @@ class PersonDetailsScreen extends StatelessWidget {
                 child: ListView(
                     padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
                     children: [
+                      if (person.sample) ...[
+                        const SampleNotice(),
+                        const SizedBox(height: 14),
+                      ],
                       AspectRatio(
                           aspectRatio: 1.05,
                           child: ClipRRect(
@@ -1636,6 +1642,10 @@ class MessagesScreen extends StatelessWidget {
                               fontWeight: chat.unread > 0
                                   ? FontWeight.w800
                                   : FontWeight.w600))),
+                  if (chat.person.sample) ...[
+                    const SizedBox(width: 8),
+                    const Flexible(child: SampleBadge()),
+                  ],
                 ]),
                 subtitle: Text(
                     chat.messages.isEmpty
@@ -1784,7 +1794,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           padding: const EdgeInsets.all(12),
                           color: EverlaneColors.blush,
                           child: Text(
-                              widget.chat.person.remote
+                              widget.chat.person.sample
+                                  ? 'Automated profile · Replies are automatic, not from a real person'
+                                  : widget.chat.person.remote
                                   ? 'You matched · Be kind, be yourself'
                                   : 'Demo conversation · Messages stay on this device',
                               textAlign: TextAlign.center,
@@ -3425,6 +3437,11 @@ class MembershipScreen extends StatefulWidget {
   State<MembershipScreen> createState() => _MembershipScreenState();
 }
 
+/// Google Play only allows digital subscriptions through Play Billing, so
+/// the Play Store build (`--dart-define=PLAY_STORE=true`) doesn't sell plans
+/// (no UPI, no preview switch). Plans bought on the website still apply.
+bool purchasesOff = const bool.fromEnvironment('PLAY_STORE');
+
 class _MembershipScreenState extends State<MembershipScreen> {
   /// A paying member sees just their plan until they ask to change it.
   bool browsing = false;
@@ -3440,6 +3457,7 @@ class _MembershipScreenState extends State<MembershipScreen> {
   /// Paid plans are paid for by UPI when it's set up; otherwise (and for
   /// Free) the plan switches here, as in the preview.
   Future<void> choose(BuildContext context, Plan plan) async {
+    if (plan != Plan.free && purchasesOff) return;
     if (plan != Plan.free && store.upiCheckout) {
       payWithUpi(context, store, plan);
       return;
@@ -3535,9 +3553,13 @@ class _MembershipScreenState extends State<MembershipScreen> {
                               ? (store.planUntil == null
                                   ? 'Your ${store.plan.title} plan is active'
                                   : 'Your ${store.plan.title} plan runs until ${shortDate(store.planUntil)}')
-                              : null,
+                              : plan != Plan.free && purchasesOff
+                                  ? 'Not available in the app'
+                                  : null,
                           onChoose: () => choose(context, plan))),
-                if (store.upiCheckout) ...[
+                if (purchasesOff)
+                  const SizedBox.shrink()
+                else if (store.upiCheckout) ...[
                   const Center(child: Eyebrow('Pay with any UPI app')),
                   const SizedBox(height: 8),
                   Text(
