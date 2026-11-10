@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'india_towns.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -30,9 +31,39 @@ class City {
 /// with or without the state.
 String cityKey(String city) => city.split(',').first.trim().toLowerCase();
 
-/// Up to [limit] cities for what's been typed: names starting with it
-/// first, then other names, then names or states containing it.
+/// Smaller towns (GeoNames, 1,000+ people), biggest first, read from
+/// [townTable] the first time they're needed.
+final List<City> indianTowns = [
+  for (final line in townTable.split('\n'))
+    if (line.contains('|'))
+      () {
+        final f = line.split('|');
+        return City(f[0], townStates[int.parse(f[1])], double.parse(f[2]),
+            double.parse(f[3]));
+      }()
+];
+
+/// Up to [limit] places for what's been typed: main cities first (names
+/// starting with it, then other names, then containing it), then towns.
 List<City> suggestCities(String query, {int limit = 6}) {
+  final main = _suggestMain(query, limit: limit);
+  if (main.length >= limit) return main;
+  final q = cityKey(query);
+  if (q.length < 2) return main;
+  final starts = <City>[], contains = <City>[];
+  for (final t in indianTowns) {
+    final name = t.name.toLowerCase();
+    if (name.startsWith(q)) {
+      starts.add(t);
+      if (starts.length >= limit) break;
+    } else if (q.length >= 4 && contains.length < limit && name.contains(q)) {
+      contains.add(t);
+    }
+  }
+  return [...main, ...starts, ...contains].take(limit).toList();
+}
+
+List<City> _suggestMain(String query, {int limit = 6}) {
   final q = cityKey(query);
   if (q.length < 2) return const [];
   final starts = <City>[], aliasStarts = <City>[], contains = <City>[];
@@ -49,11 +80,24 @@ List<City> suggestCities(String query, {int limit = 6}) {
   return [...starts, ...aliasStarts, ...contains].take(limit).toList();
 }
 
-/// The listed city nearest to a point, if one is within [maxKm].
-City? nearestCity(double lat, double lng, {double maxKm = 60}) {
+/// Where a point is: a main city when it's within 15 km, otherwise the
+/// biggest town within 12 km, otherwise the nearest town within 30 km,
+/// otherwise a main city within 60 km.
+City? nearestCity(double lat, double lng) {
+  final main = _nearest(indianCities, lat, lng, 15);
+  if (main != null) return main;
+  // Towns are biggest first, so the first one this close is the biggest.
+  for (final t in indianTowns) {
+    if (t.kmTo(lat, lng) <= 12) return t;
+  }
+  return _nearest(indianTowns, lat, lng, 30) ??
+      _nearest(indianCities, lat, lng, 60);
+}
+
+City? _nearest(List<City> places, double lat, double lng, double maxKm) {
   City? best;
   var bestKm = double.infinity;
-  for (final c in indianCities) {
+  for (final c in places) {
     final km = c.kmTo(lat, lng);
     if (km < bestKm) {
       best = c;
@@ -216,6 +260,15 @@ class _CityFieldState extends State<CityField> {
                       style: const TextStyle(fontWeight: FontWeight.w600)),
                   subtitle: Text(c.state),
                   onTap: () => _pick(c)),
+            if (matches.any((c) => !indianCities.contains(c)))
+              Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: Align(
+                      alignment: Alignment.centerRight,
+                      child: Text('Places: GeoNames (CC BY 4.0)',
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: scheme.onSurfaceVariant)))),
           ]),
         ),
       Align(
