@@ -70,7 +70,14 @@ With Play App Signing (the default) a lost upload key can be reset through Play 
 
 ## Screenshots
 
-Install the APK on a phone, sign in, and take 4–6 screenshots (Discover card, profile details, Chemistry, Hangouts, Messages, Filters).
+The app blocks screenshots and screen recording (FLAG_SECURE), so build a separate APK just for taking them — never upload this one to Play:
+
+```bash
+cd mobile
+flutter build apk --release --dart-define=PLAY_STORE=true -Peverlane.allowScreenshots=true
+```
+
+Install that APK on a phone, sign in, and take 4–6 screenshots (Discover card, profile details, Chemistry, Hangouts, Messages, Filters). Then reinstall the normal APK.
 Play needs at least 2 phone screenshots, 1080×1920 or similar (9:16), PNG or JPEG.
 Don't show real members' faces without their permission — use your own or test accounts.
 
@@ -122,6 +129,19 @@ So the Play build (`--dart-define=PLAY_STORE=true`) doesn't sell plans: paid pla
 Members who bought a plan on everlanedating.com keep it in the Android app.
 The website keeps UPI as it is.
 To sell inside the Android app later, add Google Play Billing (in_app_purchase) — that's a separate piece of work.
+
+## Screenshot and recording protection
+
+The whole Android app is a secure window (`FLAG_SECURE` in `MainActivity.kt`):
+
+- Screenshots (Power + Volume down, or the screenshot button) are blocked — Android shows "Can't take screenshot".
+- Built-in and third-party screen recorders, screen sharing (Meet, Zoom…) and casting / mirroring record a black screen while Everlane is open, and show it again as soon as you leave the app.
+- The recent-apps preview is blank.
+- Every screen is covered (profiles, photos, chats, matches, likes, payments, settings), because Flutter draws all of them in that one window — navigating can't get around it.
+
+Limits: rooted phones and a second phone's camera can still capture the screen, and the **website** (everlanedating.com) can't block screenshots — no browser lets a site do that. The app doesn't send push notifications, so nothing shows outside it.
+
+Test before each release: Power + Volume down, the built-in screen recorder, a third-party recorder app, recent apps, and casting to a TV.
 
 ## Before you press "Send for review"
 

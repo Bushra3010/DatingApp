@@ -37,6 +37,17 @@ android {
         // flag during build.
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        // Screenshots and recording are blocked unless built with
+        // -Peverlane.allowScreenshots=true (store listing screenshots only).
+        buildConfigField(
+            "boolean",
+            "ALLOW_SCREENSHOTS",
+            (project.findProperty("everlane.allowScreenshots") == "true").toString(),
+        )
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     signingConfigs {
