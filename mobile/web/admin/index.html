@@ -265,6 +265,20 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
   .seg { display: inline-flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
   .seg button.on, .presets button.on { background: var(--acc); border-color: var(--acc); color: #fff; }
   .tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+  /* City autocomplete */
+  .ac { position: relative; flex: 1; min-width: 0; }
+  .ac-list { position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 40; margin: 0; padding: 4px;
+             list-style: none; background: var(--surf); border: 1px solid var(--line); border-radius: 12px;
+             box-shadow: var(--sh); max-height: 280px; overflow-y: auto; }
+  .ac-list li { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px; border-radius: 8px; cursor: pointer; }
+  .ac-list li[aria-selected="true"], .ac-list li:hover { background: var(--tint); }
+  .ac-list li b { font-weight: 600; color: var(--ink); }
+  .ac-list li span { color: var(--mute); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-list li.ac-note { cursor: default; color: var(--mute); font-size: 13px; }
+  .ac-list li.ac-note:hover { background: none; }
+  .ac-spin { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--acc); border-radius: 50%;
+             animation: acspin .7s linear infinite; flex: none; }
+  @keyframes acspin { to { transform: rotate(360deg); } }
   .tags .tag { background: var(--acc); color: #fff; border-radius: 20px; padding: 4px 6px 4px 12px; font-size: 12px; font-weight: 600; }
   .tags .tag button { background: none; border: 0; color: #fff; cursor: pointer; padding: 0 4px; }
   .summary { padding: 12px 16px; border: 1px solid var(--acc); background: var(--tint); border-radius: 14px; color: var(--ink); }
@@ -2695,13 +2709,13 @@ function moveBots(ids) {
   ov.innerHTML = `<div class="backdrop"></div><div class="modal"><form class="box" id="moveForm" style="width:min(420px,100%)">
     <h2>Move ${ids.length} bot${ids.length > 1 ? 's' : ''}</h2>
     <label for="moveCity">City</label>
-    <input type="text" id="moveCity" list="cityList" required placeholder="e.g. Pune">
-    <datalist id="cityList">${CITIES.map(c => `<option value="${esc(c.name)}">`).join('')}</datalist>
+    <div class="ac"><input type="text" id="moveCity" autocomplete="off" required placeholder="Start typing, e.g. Pune"></div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px">
       <button type="button" class="btn" data-close>Cancel</button><button class="btn primary">Move</button></div>
   </form></div>`;
   const close = () => ov.innerHTML = '';
   $('.backdrop', ov).onclick = close; $('[data-close]', ov).onclick = close;
+  cityAutocomplete($('#moveCity', ov), () => {});
   $('#moveCity', ov).focus();
   $('#moveForm', ov).onsubmit = async e => {
     e.preventDefault();
@@ -2978,6 +2992,12 @@ const REGIONS = {
     surnames: ['Fernandes', 'D’Souza', 'Naik', 'Gomes', 'Kamat', 'Rodrigues', 'Sawant', 'Pereira'] } };
 const NEUTRAL = ['Kiran', 'Ashu', 'Noor', 'Arya', 'Sam', 'Rumi', 'Jas', 'Kabir', 'Sky', 'Tara', 'Alex', 'Rishi'];
 // Weight sets how often a city comes up in "Random across India": metros more often.
+const CITY_STATE = { Mumbai: 'Maharashtra', Delhi: 'Delhi', Bengaluru: 'Karnataka', Hyderabad: 'Telangana', Chennai: 'Tamil Nadu',
+  Kolkata: 'West Bengal', Pune: 'Maharashtra', Gurugram: 'Haryana', Ahmedabad: 'Gujarat', Noida: 'Uttar Pradesh', Jaipur: 'Rajasthan',
+  Lucknow: 'Uttar Pradesh', Chandigarh: 'Chandigarh', Kochi: 'Kerala', Indore: 'Madhya Pradesh', Surat: 'Gujarat', Nagpur: 'Maharashtra',
+  Bhopal: 'Madhya Pradesh', Coimbatore: 'Tamil Nadu', Visakhapatnam: 'Andhra Pradesh', Thiruvananthapuram: 'Kerala', Mysuru: 'Karnataka',
+  Mangaluru: 'Karnataka', Vadodara: 'Gujarat', Bhubaneswar: 'Odisha', Guwahati: 'Assam', Dehradun: 'Uttarakhand', Goa: 'Goa',
+  Patna: 'Bihar', Amritsar: 'Punjab', Ludhiana: 'Punjab' };
 const CITIES = [['Mumbai', 10, 'marathi'], ['Delhi', 10, 'north'], ['Bengaluru', 9, 'kannada'], ['Hyderabad', 7, 'telugu'],
   ['Chennai', 7, 'tamil'], ['Kolkata', 6, 'bengali'], ['Pune', 6, 'marathi'], ['Gurugram', 4, 'north'], ['Ahmedabad', 4, 'gujarati'],
   ['Noida', 3, 'north'], ['Jaipur', 3, 'north'], ['Lucknow', 3, 'north'], ['Chandigarh', 2, 'punjab'], ['Kochi', 2, 'malayalam'],
@@ -2985,7 +3005,7 @@ const CITIES = [['Mumbai', 10, 'marathi'], ['Delhi', 10, 'north'], ['Bengaluru',
   ['Visakhapatnam', 2, 'telugu'], ['Thiruvananthapuram', 1, 'malayalam'], ['Mysuru', 1, 'kannada'], ['Mangaluru', 1, 'kannada'],
   ['Vadodara', 1, 'gujarati'], ['Bhubaneswar', 1, 'odia'], ['Guwahati', 1, 'northeast'], ['Dehradun', 1, 'north'],
   ['Goa', 1, 'goa'], ['Patna', 1, 'north'], ['Amritsar', 1, 'punjab'], ['Ludhiana', 1, 'punjab']]
-  .map(([name, weight, region]) => ({ name, weight, region }));
+  .map(([name, weight, region]) => ({ name, weight, region, state: CITY_STATE[name] || '' }));
 const QUICK_CITIES = ['Bengaluru', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Pune', 'Kolkata'];
 const JOBS = ['Product designer', 'Software engineer', 'Doctor', 'Lawyer', 'Teacher', 'Architect', 'Chartered accountant',
   'Marketing manager', 'Data analyst', 'Journalist', 'Chef', 'Photographer', 'Consultant', 'HR manager', 'Startup founder',
@@ -3007,7 +3027,97 @@ const between = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
 const weighted = pairs => { let t = Math.random() * pairs.reduce((s, p) => s + p[1], 0);
   for (const [v, w] of pairs) if ((t -= w) < 0) return v; return pairs[0][0]; };
 const some = (list, n) => [...list].sort(() => Math.random() - .5).slice(0, n);
-const cityInfo = name => CITIES.find(c => c.name.toLowerCase() === name.toLowerCase()) || { name, region: 'north' };
+// Names for towns outside CITIES follow their state.
+const STATE_REGION = { maharashtra: 'marathi', gujarat: 'gujarati', karnataka: 'kannada', 'tamil nadu': 'tamil',
+  puducherry: 'tamil', kerala: 'malayalam', 'andhra pradesh': 'telugu', telangana: 'telugu', 'west bengal': 'bengali',
+  tripura: 'bengali', odisha: 'odia', punjab: 'punjab', goa: 'goa', assam: 'northeast', meghalaya: 'northeast',
+  manipur: 'northeast', mizoram: 'northeast', nagaland: 'northeast', 'arunachal pradesh': 'northeast', sikkim: 'northeast' };
+// "Shirdi, Maharashtra" or "Pune": a listed city keeps its short name.
+const cityInfo = name => {
+  const [place, state = ''] = name.split(',').map(x => x.trim());
+  const listed = CITIES.find(c => c.name.toLowerCase() === place.toLowerCase());
+  if (listed && (!state || state.toLowerCase() === (listed.state || '').toLowerCase() || !listed.state)) return listed;
+  return { name: state ? `${place}, ${state}` : place, region: STATE_REGION[state.toLowerCase()] || 'north' };
+};
+
+// Old or other names, shown as the main name ("Ban" finds Bengaluru).
+const CITY_ALIASES = { bangalore: 'Bengaluru', bombay: 'Mumbai', madras: 'Chennai', calcutta: 'Kolkata', gurgaon: 'Gurugram',
+  mysore: 'Mysuru', mangalore: 'Mangaluru', trivandrum: 'Thiruvananthapuram', cochin: 'Kochi', vizag: 'Visakhapatnam',
+  poona: 'Pune', baroda: 'Vadodara', 'chhatrapati sambhajinagar': 'Aurangabad', 'new delhi': 'Delhi' };
+const CITY_NOTE = { 'aurangabad|maharashtra': 'Chhatrapati Sambhajinagar' };
+
+// Best 8 suggestions for [q] from geo_cities rows: listed cities, then main
+// names, then towns; shorter names first.
+function rankCities(q, rows) {
+  const seen = new Set(), ql = q.toLowerCase();
+  const rank = c => (CITIES.some(x => x.name.toLowerCase() === c.name.toLowerCase()) ? 0 : 2) + (c.main ? 0 : 1)
+                    + (c.name.toLowerCase() === ql ? -3 : 0);
+  // Listed cities match without the database too.
+  const local = CITIES.filter(c => c.name.toLowerCase().startsWith(ql)).map(c => ({ name: c.name, state: c.state || '', main: true }));
+  const aliasLocal = Object.entries(CITY_ALIASES).filter(([a]) => a.startsWith(ql))
+    .map(([a, name]) => ({ name, state: CITY_STATE[name] || 'Maharashtra', main: true, alias: a }));
+  return [...local, ...aliasLocal, ...rows]
+    .map(c => { const to = CITY_ALIASES[c.name.toLowerCase()];
+      return to ? { name: to, state: c.state, main: true } : c; })
+    .filter(c => { const k = c.name.toLowerCase(); if (seen.has(k + '|' + (c.state || '').toLowerCase()) || (c.state === '' && [...seen].some(s => s.startsWith(k + '|')))) return false; seen.add(k + '|' + (c.state || '').toLowerCase()); return true; })
+    .sort((a, b) => rank(a) - rank(b) || a.name.length - b.name.length || a.name.localeCompare(b.name))
+    .slice(0, 8);
+}
+
+// Google Maps-style suggestions for a city input, from every town and city
+// in India (geo_cities). [onPick] gets the chosen name ("Pune" for listed
+// cities, otherwise "Shirdi, Maharashtra").
+function cityAutocomplete(input, onPick) {
+  const box = input.closest('.ac') || input.parentElement;
+  const list = document.createElement('ul');
+  list.className = 'ac-list'; list.hidden = true; list.setAttribute('role', 'listbox');
+  list.id = input.id + 'List';
+  box.appendChild(list);
+  input.setAttribute('role', 'combobox'); input.setAttribute('aria-autocomplete', 'list');
+  input.setAttribute('aria-controls', list.id); input.setAttribute('aria-expanded', 'false');
+  let items = [], active = -1, timer = 0, seq = 0;
+  const show = html => { list.innerHTML = html; list.hidden = false; input.setAttribute('aria-expanded', 'true'); };
+  const hide = () => { list.hidden = true; active = -1; input.setAttribute('aria-expanded', 'false'); };
+  const paint = () => {
+    if (!items.length) return show(`<li class="ac-note">No matching city. Press Add to use “${esc(input.value.trim())}” as typed.</li>`);
+    show(items.map((c, i) => {
+      const note = CITY_NOTE[c.name.toLowerCase() + '|' + (c.state || '').toLowerCase()];
+      return `<li role="option" data-i="${i}" aria-selected="${i === active}"><b>${esc(c.name)}</b><span>${note ? esc(note) + ' · ' : ''}${esc(c.state)}</span></li>`;
+    }).join(''));
+  };
+  const pick = c => {
+    const value = CITIES.some(x => x.name.toLowerCase() === c.name.toLowerCase()) ? c.name : `${c.name}, ${c.state}`;
+    input.value = value; hide(); onPick(value);
+  };
+  async function search(q) {
+    const mine = ++seq;
+    show('<li class="ac-note" style="display:flex;gap:8px;align-items:center"><span class="ac-spin"></span> Searching…</li>');
+    const like = q.replace(/[\\%_]/g, m => '\\' + m);
+    // Rows come back unordered, so fetch plenty and rank them here.
+    const { data, error } = await sb.from('geo_cities').select('name,state,main').ilike('name', like + '%').limit(300);
+    if (mine !== seq || document.activeElement !== input) return;
+    items = rankCities(q, error ? [] : data || []);
+    active = items.length ? 0 : -1;
+    paint();
+  }
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2) { seq++; return hide(); }
+    timer = setTimeout(() => search(q), 180);
+  });
+  input.addEventListener('keydown', e => {
+    if (list.hidden || !items.length) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault(); active = (active + (e.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length; paint();
+      list.children[active]?.scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter' && active >= 0) { e.preventDefault(); e.stopImmediatePropagation(); pick(items[active]); }
+    else if (e.key === 'Escape') hide();
+  }, true);
+  // pointerdown so the pick happens before the input loses focus.
+  list.addEventListener('pointerdown', e => { const li = e.target.closest('li[data-i]'); if (li) { e.preventDefault(); pick(items[+li.dataset.i]); } });
+  input.addEventListener('blur', () => setTimeout(hide, 120));
+}
 
 // A bio in one of four styles, built from the bot's own interests, job and city.
 function makeBio(b, style) {
@@ -3121,12 +3231,11 @@ function renderGenerator() {
       <p class="muted" id="gRandomHint" style="font-size:12px;margin:10px 0 0">Cities are chosen at random across ${CITIES.length} Indian cities, weighted by size (metros get more bots). Names match the region of each city.</p>
       <div id="gCitiesBox">
         <label for="gCityIn">Type a city or choose from the list</label>
-        <div style="display:flex;gap:8px"><input type="text" id="gCityIn" list="gCityList" placeholder="For example Bengaluru, Mysuru"><button type="button" class="btn" id="gCityAdd">Add</button></div>
-        <datalist id="gCityList">${CITIES.map(c => `<option value="${esc(c.name)}">`).join('')}</datalist>
+        <div style="display:flex;gap:8px;align-items:flex-start"><div class="ac"><input type="text" id="gCityIn" autocomplete="off" placeholder="Start typing, e.g. Auran or Shirdi"></div><button type="button" class="btn" id="gCityAdd">Add</button></div>
         <div class="tags" id="gTags"></div>
         <label>Quick add</label>
         <div class="presets" style="margin-top:0">${QUICK_CITIES.map(c => `<button type="button" class="btn small" data-quick="${c}">+ ${c}</button>`).join('')}</div>
-        <p class="muted" style="font-size:12px;margin:10px 0 0">Bots are split evenly across your cities. Cities not on the list use North Indian names.</p>
+        <p class="muted" style="font-size:12px;margin:10px 0 0">Bots are split evenly across your cities. Names follow each city’s state.</p>
       </div></div>
     <div class="card"><h3>5. Photos</h3>
       <label style="display:flex;gap:8px;align-items:center;color:var(--body);margin:6px 0 0"><input type="checkbox" id="gPhotos" style="width:auto"> Give each bot a drawn placeholder photo</label>
@@ -3155,10 +3264,13 @@ function renderGenerator() {
   const addCity = name => {
     name = name.trim(); if (!name) return;
     name = cityInfo(name).name;
-    if (gen.cities.some(c => c.toLowerCase() === name.toLowerCase())) return toast('Already added');
+    const key = n => cityInfo(n).name.split(',')[0].trim().toLowerCase() + '|' + (n.split(',')[1] || '').trim().toLowerCase();
+    if (gen.cities.some(c => c.toLowerCase() === name.toLowerCase() || key(c) === key(name))) { $('#gCityIn').value = ''; return toast('Already added'); }
     gen.cities.push(name); $('#gCityIn').value = ''; updateGenerator();
   };
   $('#gCityAdd').onclick = () => addCity($('#gCityIn').value);
+  // Picking a suggestion adds it straight away; Add still takes typed text.
+  cityAutocomplete($('#gCityIn'), addCity);
   $('#gCityIn').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); addCity(e.target.value); } };
   f.querySelectorAll('[data-quick]').forEach(b => b.onclick = () => addCity(b.dataset.quick));
   $('#gTags').onclick = e => { const b = e.target.closest('[data-untag]'); if (b) { gen.cities.splice(+b.dataset.untag, 1); updateGenerator(); } };
