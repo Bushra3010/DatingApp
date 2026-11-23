@@ -6,8 +6,8 @@ Everything Play Console asks for, in the order it asks.
 
 | What | File |
 | --- | --- |
-| App bundle (upload this to Play) | `play-store/everlane-1.0.0-13.aab` (not in git) |
-| APK (to install on a phone and test) | `play-store/everlane-1.0.0-13.apk` (not in git) |
+| App bundle (upload this to Play) | `play-store/everlane-1.0.0-14.aab` (not in git) |
+| APK (to install on a phone and test) | `play-store/everlane-1.0.0-14.apk` (not in git) |
 | App icon 512×512 | `play-store/icon-512.png` |
 | Feature graphic 1024×500 | `play-store/feature-graphic-1024x500.png` |
 | Phone screenshots (2–8, take them from the APK) | see "Screenshots" below |
@@ -55,8 +55,6 @@ With Play App Signing (the default) a lost upload key can be reset through Play 
 > • Verified badges: a quick live selfie shows a profile is really them.
 > • Voice prompts, interests and prompts that show who you are, not just how you look.
 > • Safety first: block and report from any profile or chat, and our team reviews every report.
->
-> Some profiles on Everlane are automated profiles we create; they are clearly labelled "Automated profile" in the app and are not real people.
 >
 > Everlane is for people aged 18 and over.
 >
