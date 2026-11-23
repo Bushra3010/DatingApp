@@ -85,7 +85,7 @@ Don't show real members' faces without their permission — use your own or test
 | --- | --- |
 | Privacy policy | https://www.everlanedating.com/privacy.html |
 | Ads | No, the app has no ads |
-| App access | Restricted — give reviewers a test account (email + password) that is onboarded, with a photo. Create it yourself; don't use a real member's account. |
+| App access | Restricted — give reviewers this test account: **Email:** `reviewer@everlanedating.com` · **Password:** `EverlaneReview2026!` (Instructions: Tap "Log in", choose "Continue with email", enter credentials, and tap "Log in". Pre-onboarded with photo, access to Discover, Hangouts, Chemistry and Chat). |
 | Content rating | Fill the IARC questionnaire: category "Social / Communication". Answer **Yes** to: users can interact/communicate, users can share location (Hangouts/distance), users can share user-generated content (photos). No violence, no gambling, no purchases of digital goods in the Play build. Dating apps normally come out **18+ / Adults only** in India. |
 | Target audience | 18 and over only |
 | News app | No |
