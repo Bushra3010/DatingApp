@@ -587,9 +587,11 @@ class _PersonCard extends StatelessWidget {
                         Expanded(
                             child: IgnorePointer(
                                 child: Center(
-                                    child: person.presence == null
-                                        ? const SizedBox.shrink()
-                                        : PresenceBadge(person.presence!)))),
+                                    child: person.sample
+                                        ? const SampleBadge(onPhoto: true)
+                                        : person.presence == null
+                                            ? const SizedBox.shrink()
+                                            : PresenceBadge(person.presence!)))),
                         _RoundAction(
                             icon: Icons.favorite_rounded,
                             label: 'Like ${person.name}’s photo',
@@ -654,6 +656,10 @@ class PersonDetailsScreen extends StatelessWidget {
                 child: ListView(
                     padding: const EdgeInsets.fromLTRB(24, 12, 24, 30),
                     children: [
+                      if (person.sample) ...[
+                        const SampleNotice(),
+                        const SizedBox(height: 14),
+                      ],
                       AspectRatio(
                           aspectRatio: 1.05,
                           child: ClipRRect(
@@ -1636,10 +1642,9 @@ class MessagesScreen extends StatelessWidget {
                               fontWeight: chat.unread > 0
                                   ? FontWeight.w800
                                   : FontWeight.w600))),
-                  if (chat.person.verified) ...[
-                    const SizedBox(width: 5),
-                    const Icon(Icons.verified,
-                        size: 15, color: EverlaneColors.boost),
+                  if (chat.person.sample) ...[
+                    const SizedBox(width: 8),
+                    const Flexible(child: SampleBadge()),
                   ],
                 ]),
                 subtitle: Text(
@@ -1789,7 +1794,9 @@ class _ChatScreenState extends State<ChatScreen> {
                           padding: const EdgeInsets.all(12),
                           color: EverlaneColors.blush,
                           child: Text(
-                              widget.chat.person.remote
+                              widget.chat.person.sample
+                                  ? 'Automated profile · Replies are automatic, not from a real person'
+                                  : widget.chat.person.remote
                                   ? 'You matched · Be kind, be yourself'
                                   : 'Demo conversation · Messages stay on this device',
                               textAlign: TextAlign.center,
@@ -3279,6 +3286,7 @@ Future<void> showSafety(BuildContext context, PreviewStore store, Person person,
             'Fake or misleading profile',
             'Inappropriate content',
             'Harassment or unsafe behaviour',
+            'Under 18 or child safety concern',
             'Something else'
           ])
             ListTile(
@@ -3997,19 +4005,56 @@ String? _likeQuote(PreviewStore store, Person p) {
       : 'I know just the place. Coffee and a bookstore sounds like a pretty perfect start.';
 }
 
-/// The "Sample profile" label on admin-made bot profiles (disabled).
+/// The "Sample profile" label on admin-made bot profiles.
 class SampleBadge extends StatelessWidget {
   const SampleBadge({super.key, this.onPhoto = false});
 
   /// Over a photo it's a dark glass pill; elsewhere a tinted chip.
   final bool onPhoto;
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) => Tooltip(
+      message: 'An automated profile, not a real person',
+      child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+          decoration: BoxDecoration(
+              color: onPhoto
+                  ? Colors.black.withValues(alpha: .5)
+                  : EverlaneColors.star.withValues(alpha: .16),
+              border: Border.all(
+                  color: EverlaneColors.star.withValues(alpha: onPhoto ? .7 : .4)),
+              borderRadius: BorderRadius.circular(30)),
+          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.info_outline_rounded,
+                size: 14, color: EverlaneColors.star),
+            SizedBox(width: 6),
+            Flexible(
+                child: Text('Automated profile',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: EverlaneColors.star))),
+          ])));
 }
 
-/// Explains a sample profile at the top of its details page (disabled).
+/// Explains a sample profile at the top of its details page.
 class SampleNotice extends StatelessWidget {
   const SampleNotice({super.key});
   @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
+  Widget build(BuildContext context) => Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+          color: EverlaneColors.star.withValues(alpha: .12),
+          border: Border.all(color: EverlaneColors.star.withValues(alpha: .35)),
+          borderRadius: BorderRadius.circular(16)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Icon(Icons.info_outline_rounded,
+            size: 20, color: EverlaneColors.star),
+        const SizedBox(width: 10),
+        Expanded(
+            child: Text(
+                'This is an automated profile run by Everlane, not a real person. It shows how Everlane works while more members join. Its chat replies are automatic, and it never meets anyone or asks for money.',
+                style: TextStyle(height: 1.45, color: EverlaneColors.body))),
+      ]));
 }

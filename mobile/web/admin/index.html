@@ -870,21 +870,21 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 
     <div id="view-bots" class="hidden">
       <div class="head"><div><h2>Bot profiles</h2>
-        <p class="sub">Profiles created and seeded to provide active matches and chat interactions across all cities. They can’t sign in directly.</p></div>
+        <p class="sub">Profiles you make and add photos to by hand, for testing, demos and store screenshots. Bots are shown to every member, always labelled “Sample profile” in the app, so nobody takes them for real people. They can’t sign in.</p></div>
         <div class="row"><button class="btn" id="botsLive"></button><button class="btn" id="bulkBots">Bulk create</button><button class="btn primary" id="newBot">New bot</button></div></div>
-      <div class="card pad" style="margin-bottom:12px"><h3>Operation Guidelines</h3>
-        <div class="note">Bot profiles appear seamlessly to members and can be verified. Automated replies run on schedule, and admins can monitor and manually take over conversations from the Chats tab at any time.</div></div>
+      <div class="card pad" style="margin-bottom:12px"><h3>Policy</h3>
+        <div class="note">Bots must always be labelled to users as “Automated profile”. They must never pretend to be real people, solicit money or personal data, or chat with real users as if human. Auto-like, auto-match and auto-reply run only in Demo or Staging against internal test accounts.</div></div>
       <div class="toolbar">
         <input type="text" id="botSearch" placeholder="Search name, city or BOT number…" aria-label="Search bots">
         <select id="botGender" aria-label="Bot gender"><option value="">All genders</option><option>Woman</option><option>Man</option><option>Non-binary</option></select>
         <select id="botCity" aria-label="Bot city"><option value="">All cities</option></select>
-        <select id="botStatus" aria-label="Bot status"><option value="">Any status</option><option value="live">Live</option><option value="paused">Paused</option><option value="off">Switched off</option><option value="verified">Verified only</option><option value="unverified">Unverified only</option><option value="nophoto">Needs a real photo</option></select>
+        <select id="botStatus" aria-label="Bot status"><option value="">Any status</option><option value="live">Live</option><option value="paused">Paused</option><option value="off">Switched off</option><option value="nophoto">Needs a real photo</option></select>
         <select id="botBatch" aria-label="Bot batch"><option value="">All batches</option></select>
       </div>
       <div class="bulkbar">
         <button class="btn small" id="botSelAll"></button><button class="btn small" id="botSelClear">Clear</button>
         <span class="muted" id="botSelCount" style="margin-right:8px"></span>
-        <button class="btn small ok" data-bulk="verify">✓ Verify</button><button class="btn small" data-bulk="unverify">Unverify</button>
+        
         <button class="btn small" data-bulk="activate">Activate</button><button class="btn small" data-bulk="pause">Pause</button>
         <button class="btn small" data-bulk="bios">New bios</button><button class="btn small" data-bulk="city">Move city</button>
         <button class="btn small danger" data-bulk="delete">Delete</button>
@@ -901,15 +901,15 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 
     <div id="view-gen" class="hidden">
       <div class="head"><div><h2>Create bots</h2>
-        <p class="sub">Generate virtual profiles in bulk across selected cities. To type bots in by hand, use “New bot” or “Bulk create” under Profiles.</p></div></div>
+        <p class="sub">Make test bots in bulk. Every member sees bots, always labelled “Sample profile” in the app. To type bots in by hand, use “New bot” or “Bulk create” under Profiles.</p></div></div>
       <form class="gen" id="genForm"></form>
     </div>
 
     <div id="view-bots-chats" class="hidden">
       <div class="head">
         <div>
-          <h2>Bot chats &amp; live takeover</h2>
-          <p class="sub">Live conversation feed between real members and bot profiles. Reply manually on behalf of any bot to take over the conversation.</p>
+          <h2>Bot chats</h2>
+          <p class="sub">Read-only feed of conversations between members and automated profiles. Staff can’t reply as a bot: members are told these replies are automatic.</p>
         </div>
         <div class="row">
           <button class="btn" id="bcRefreshBtn">Refresh</button>
@@ -969,19 +969,6 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 
             <div id="bcMessages" class="bc-messages" aria-live="polite"></div>
 
-            <div class="bc-composer">
-              <div class="bc-composer-hint">
-                <span>Replying as <b id="bcComposerBotName">Bot</b></span>
-                <span class="muted" style="font-size:11.5px">Manual reply will pause auto-scripts for this conversation</span>
-              </div>
-              <form id="bcReplyForm" class="bc-reply-form">
-                <textarea id="bcReplyInput" rows="2" placeholder="Type a message to send as the bot…" required></textarea>
-                <div class="bc-composer-actions">
-                  <span id="bcSendingStatus" class="muted" style="font-size:12px"></span>
-                  <button type="submit" class="btn primary" id="bcSendBtn">Send reply</button>
-                </div>
-              </form>
-            </div>
           </div>
         </div>
       </div>
@@ -1159,7 +1146,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
       <div class="head"><div><h2>Q&amp;A knowledge base</h2>
         <p class="sub">Teach the bot what to say. Each language gets its own trigger phrases and reply variants.</p></div>
         <div class="row"><button class="btn primary" id="kbNew">New question and answer</button><button class="btn" id="kbCopy">Copy KB as JSON</button><button class="btn" data-refresh>Refresh</button></div></div>
-      <p class="note">Bot profiles interact naturally and maintain respect. Operators can take over any chat from the Chats tab.</p>
+      <p class="note">Automated profiles are always labelled “Automated profile”, tell the truth if asked whether they are real, and never ask for money or personal details. These rules are built in and cannot be switched off.</p>
       <div class="grid g4" id="trKpis" style="margin-bottom:12px"></div>
       <div class="toolbar">
         <input type="text" id="kbSearch" placeholder="Search intents, triggers and replies…" aria-label="Search Q&amp;A">
@@ -1180,7 +1167,7 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
 
     <div id="view-train-style" class="hidden">
       <div class="head"><div><h2>Languages and style</h2>
-        <p class="sub">Warm, natural and multilingual responses.</p></div>
+        <p class="sub">Warm, natural and multilingual, and always upfront about being automated.</p></div>
         <button class="btn" data-refresh>Refresh</button></div>
       <form id="styleForm">
         <div class="grid g3">
@@ -1193,10 +1180,10 @@ try { const t = localStorage.getItem('everlane-admin-theme'); if (t === 'light' 
             <input type="range" id="stThr" min="0.2" max="0.9" step="0.05">
             <p class="sub" style="font-size:12.5px">0.5 = balanced. Lower answers looser matches; higher needs a closer match, otherwise the fallback reply is used.</p>
           </div>
-          <div class="card pad"><h3>Persona and settings</h3>
+          <div class="card pad"><h3>Persona and disclosure</h3>
             <dl style="margin-top:10px">
-              <dt>Profile appearance</dt><dd>Standard member profile <span class="pill ok">Active</span></dd>
-              <dt>Audience</dt><dd>All members <span class="pill ok">Active</span></dd>
+              <dt>Label</dt><dd>“Automated profile” on every bot in the app <span class="pill muted">Locked on</span></dd>
+              <dt>Who it can talk to</dt><dd>All members (labelled) <span class="pill muted">Locked</span></dd>
             </dl>
             <label class="tog" style="margin-top:14px"><input type="checkbox" id="stName"> Use the person’s name</label><br>
             <label class="tog" style="margin-top:8px"><input type="checkbox" id="stEmoji"> Emoji</label>
@@ -2612,10 +2599,10 @@ function renderBots() {
   $('#bots').innerHTML = list.slice(botPage * BOT_PAGE, (botPage + 1) * BOT_PAGE).map(b => `<tr data-bot="${esc(b.id)}">
     <td><input type="checkbox" data-sel="${esc(b.id)}" ${botSel.has(b.id) ? 'checked' : ''} aria-label="Select ${esc(b.name)}"></td>
     <td style="white-space:nowrap">${b.photos?.length ? `<img class="avatar" src="${esc(photoUrl(b.photos[0]))}" alt="" loading="lazy">` : `<span class="avatar">${esc((b.name || '?')[0])}</span>`}
-      <span style="display:inline-block;vertical-align:middle;margin-left:8px"><b style="color:var(--text)">${esc(b.name || 'Unnamed')}</b>${b.verified ? '<span title="Verified" style="color:var(--primary);margin-left:4px;font-size:13px;font-weight:bold"> ✓</span>' : ''}<br><span class="code">${botCode(b)}</span></span></td>
+      <span style="display:inline-block;vertical-align:middle;margin-left:8px"><b style="color:var(--text)">${esc(b.name || 'Unnamed')}</b><br><span class="code">${botCode(b)}</span></span></td>
     <td>${ageOf(b) || '—'}</td><td>${esc(b.gender || '—')} → ${esc(b.interested_in || '—')}</td><td>${esc(b.city || '—')}</td>
     <td>${esc(b.bot_batch || 'By hand')}</td><td>${STATUS_PILL[botStatus(b)]}</td>
-    <td><button type="button" class="btn small ${b.verified ? 'ok' : ''}" data-verify="${esc(b.id)}" title="${b.verified ? 'Click to unverify' : 'Click to verify'}">${b.verified ? '✓ Verified' : '+ Verify'}</button></td>
+    <td><span class="pill muted">Automated profile</span></td>
     <td><button class="btn small" data-photo="${esc(b.id)}">${hasRealPhoto(b) ? 'Add photo' : 'Upload photo'}</button></td>
   </tr>`).join('') || `<tr><td colspan="9" class="muted">${bots.length ? 'No bots match.' : 'No bots yet. Use Generate bots, “New bot” or “Bulk create”.'}</td></tr>`;
   $('#botPager').innerHTML = pages > 1 ? `<button class="btn small" id="botPrev" ${botPage ? '' : 'disabled'}>Previous</button>
@@ -2804,7 +2791,7 @@ async function editProfile(bot, member = false) {
     <label>Interests</label>${pick('interest', optionValues('interest'), b.interests || [])}
     <label>Languages</label>${pick('language', optionValues('language'), b.languages || [])}
     ${member ? '' : `<label>Compatibility quiz <button type="button" class="btn small" id="bShuffle">Shuffle answers</button></label><div id="bQuiz"></div>`}
-    <div style="margin:12px 0;padding:10px 14px;background:var(--card-sub);border-radius:10px;display:flex;align-items:center;justify-content:space-between">
+    ${member ? `    <div style="margin:12px 0;padding:10px 14px;background:var(--card-sub);border-radius:10px;display:flex;align-items:center;justify-content:space-between">
       <div>
         <b style="color:var(--text);font-size:13.5px">Verified badge</b>
         <p class="muted" style="margin:2px 0 0;font-size:12px">Show the blue verified checkmark icon next to this profile in the app.</p>
@@ -2813,7 +2800,7 @@ async function editProfile(bot, member = false) {
         <input type="checkbox" id="bVerified" ${b.verified ? 'checked' : ''} style="width:18px;height:18px">
         <span style="font-weight:600;font-size:13px">Verified</span>
       </label>
-    </div>
+    </div>` : ''}
     <div class="err" id="bErr"></div>
     <div style="display:flex;gap:10px;justify-content:space-between;margin-top:12px;flex-wrap:wrap">
       <div>${bot && !member ? '<button type="button" class="btn danger" id="bDelete">Delete bot</button>' : ''}</div>
@@ -2862,7 +2849,7 @@ async function editProfile(bot, member = false) {
       job: $('#bJob', ov).value.trim(), looking_for: $('#bLooking', ov).value, bio: $('#bBio', ov).value.trim(),
       prompt_label: $('#bPrompt', ov).value, prompt_answer: $('#bAnswer', ov).value.trim(),
       height_cm: height ? +height : null, interests: checked('interest'), languages: checked('language'),
-      verified: $('#bVerified', ov)?.checked ?? b.verified ?? false,
+      verified: member ? ($('#bVerified', ov)?.checked ?? b.verified ?? false) : false,
       ...(member ? {} : { quiz_answers: quiz }) };
     $('#bSave', ov).disabled = true; $('#bSave', ov).textContent = 'Saving…';
     try {
@@ -3173,7 +3160,7 @@ function drawAvatar(gender) {
 const canvasBlob = c => new Promise(r => c.toBlob(r, 'image/webp', .85));
 
 const gen = { count: 50, women: 55, men: 40, nb: 5, wants: 'Realistic', goal: 'Mixed', ageMin: 22, ageMax: 36,
-  bio: 'Mixed', likes: 20, where: 'random', cities: [], photos: true, verified: true };
+  bio: 'Mixed', likes: 20, where: 'random', cities: [], photos: true, verified: false };
 
 function makeGenBot(gender, city) {
   const info = cityInfo(city), R = REGIONS[info.region];
@@ -3187,7 +3174,7 @@ function makeGenBot(gender, city) {
     looking_for: gen.goal === 'Mixed' ? weighted(GOAL_WEIGHTS) : gen.goal, interests, languages,
     prompt_label: rnd(optionValues('prompt').length ? optionValues('prompt') : ['My ideal Sunday is']), prompt_answer: rnd(ANSWERS),
     height_cm: gender === 'Woman' ? between(152, 172) : gender === 'Man' ? between(165, 188) : between(155, 182),
-    quiz_answers: randomQuizAnswers(), likes_test: chance(gen.likes), verified: gen.verified ?? true };
+    quiz_answers: randomQuizAnswers(), likes_test: chance(gen.likes), verified: false };
   b.bio = makeBio(b, gen.bio);
   return b;
 }
@@ -3225,7 +3212,7 @@ function renderGenerator() {
       <label for="gBio">Bio style</label><select id="gBio">${['Mixed', 'Short', 'Playful', 'Thoughtful'].map(v => `<option>${v}</option>`).join('')}</select>
       <label for="gLikes">Chance a bot has already liked a test account: <b id="gLikesV"></b></label><input type="range" id="gLikes" min="0" max="100">
       <p class="muted" style="font-size:12px;margin:4px 0 0">Bots are only seen by test accounts, so their likes go to a random test account, never a real member.</p>
-      <label style="display:flex;gap:8px;align-items:center;color:var(--body);margin:12px 0 0;cursor:pointer"><input type="checkbox" id="gVerified" style="width:auto"> <b>Verified badge</b> · Give generated bots the blue verified checkmark badge</label></div>
+      </div>
     <div class="card"><h3>4. Location</h3>
       <div class="seg"><button type="button" class="btn small" data-where="random">Random across India</button><button type="button" class="btn small" data-where="cities">Specific cities</button></div>
       <p class="muted" id="gRandomHint" style="font-size:12px;margin:10px 0 0">Cities are chosen at random across ${CITIES.length} Indian cities, weighted by size (metros get more bots). Names match the region of each city.</p>
@@ -3256,7 +3243,7 @@ function renderGenerator() {
     if (e.target.id === 'gCount') $('#gCountR').value = e.target.value;
     Object.assign(gen, { count: Math.max(1, Math.min(500, +$('#gCount').value || 1)), women: +$('#gW').value, men: +$('#gM').value,
       nb: +$('#gN').value, wants: $('#gWants').value, goal: $('#gGoal').value, ageMin: +$('#gMin').value, ageMax: +$('#gMax').value,
-      bio: $('#gBio').value, likes: +$('#gLikes').value, photos: $('#gPhotos').checked, verified: $('#gVerified')?.checked ?? true });
+      bio: $('#gBio').value, likes: +$('#gLikes').value, photos: $('#gPhotos').checked });
     updateGenerator();
   });
   f.querySelectorAll('[data-count]').forEach(b => b.onclick = () => { $('#gCount').value = b.dataset.count; f.dispatchEvent(new Event('input')); });
@@ -4637,7 +4624,7 @@ function renderChat() {
   const box = $('#tcMsgs');
   box.innerHTML = (tc.msgs.map((x, i) => x.role === 'user' ? `<div class="msg me">${esc(x.text)}</div>`
     : x.role === 'sys' ? `<p class="sub" style="text-align:center">${esc(x.text)}</p>`
-    : `<div class="msg"><span class="pill ok" style="margin-right:6px">Bot</span>${esc(x.text)}
+    : `<div class="msg"><span class="pill ok" style="margin-right:6px">Automated profile</span>${esc(x.text)}
        <div class="meta">${x.bot ? 'as ' + esc(x.bot) + ' · ' : ''}${esc(x.intent)} · ${esc(x.lang)} · match ${x.score}% · would send after ${x.delay}s${x.stops ? ' · then stops' : ''}${x.active === false ? ' · replies paused, nothing would be sent' : ''} · <a href="#" data-teach="${i}">Improve this reply</a></div></div>`).join('')
     + (tc.busy ? '<p class="sub">typing…</p>' : '')) || '<p class="sub">Say something in Hindi, English, Hinglish or Marathi.</p>';
   box.scrollTop = box.scrollHeight;

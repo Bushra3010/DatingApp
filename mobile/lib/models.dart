@@ -454,8 +454,9 @@ class Person {
   /// are saved. Demo people stay local.
   final bool remote;
 
-  /// Whether this profile is a sample profile (disabled so all profiles appear real).
-  bool get sample => false;
+  /// An admin-made automated profile. Always labelled "Automated profile"
+  /// so nobody takes it for a real person.
+  bool get sample => remote && sampleProfileIds.contains(id);
 
   /// A short line shown over the photo on the Discover card.
   final String bio;
